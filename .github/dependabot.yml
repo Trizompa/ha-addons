@@ -1,10 +1,14 @@
-# Dependency updates once a month, grouped to keep the noise low.
+# Dependency updates once a month, grouped to keep the noise low. Major versions (TypeScript,
+# Node.js types, Playwright…) are updated by hand, with the full test suite.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /editha/server
     schedule:
       interval: monthly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       server:
         patterns: ["*"]
@@ -12,6 +16,9 @@ updates:
     directory: /editha/web
     schedule:
       interval: monthly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       web:
         patterns: ["*"]
