@@ -1,0 +1,828 @@
+import { expect, test, type Page } from '@playwright/test';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+
+const configDir = path.join(process.env.EDITHA_E2E_ROOT!, 'config');
+const disk = (rel: string) => readFile(path.join(configDir, rel), 'utf8');
+
+const row = (page: Page, p: string) => page.locator(`editha-file-tree .row[data-path="${p}"]`);
+const tab = (page: Page, p: string) => page.locator(`editha-tab-bar .tab[data-path="${p}"]`);
+const activeTab = (page: Page) => page.locator('editha-tab-bar .tab.active');
+const editor = (page: Page) => page.locator('editha-editor-pane .cm-content');
+const dialogButton = (page: Page, label: string) =>
+  page.locator('editha-dialog dialog[open] button', { hasText: new RegExp(`^\\s*${label}\\s*$`) });
+const menuItem = (page: Page, label: string) =>
+  page.locator('editha-context-menu button', { hasText: label });
+
+async function openFile(page: Page, p: string) {
+  const parts = p.split('/');
+  for (let i = 1; i < parts.length; i++) {
+    const dir = parts.slice(0, i).join('/');
+    const r = row(page, dir);
+    if ((await r.getAttribute('aria-expanded')) !== 'true') await r.click();
+  }
+  await row(page, p).click();
+  await expect(activeTab(page)).toHaveAttribute('data-path', p);
+}
+
+test.beforeEach(async ({ page, request }) => {
+  // Ogni test parte da sessione e impostazioni pulite.
+  await request.put('api/session', { data: { tabs: [], active: null } });
+  for (const d of (await (await request.get('api/drafts')).json()).drafts) {
+    await request.delete(`api/draft?path=${encodeURIComponent(d.path)}`);
+  }
+  await request.post('api/settings', { data: { theme: 'auto', sidebarVisible: true, wordWrap: false, showSystem: false, language: 'it' } });
+  await page.goto('./');
+  // Su telefono l'albero parte chiuso: basta che sia caricato.
+  await expect(row(page, 'configuration.yaml')).toBeAttached();
+});
+
+test('FEP #19 – chiudendo la tab attiva l\'editor mostra la nuova tab attiva e salva il file giusto', async ({ page }) => {
+  await openFile(page, 'tabs/a.yaml');
+  await openFile(page, 'tabs/b.yaml');
+  await openFile(page, 'tabs/c.yaml');
+  await tab(page, 'tabs/b.yaml').click();
+  await expect(editor(page)).toContainText('contenuto: B');
+
+  await tab(page, 'tabs/b.yaml').locator('button.close').click();
+  await expect(tab(page, 'tabs/b.yaml')).toHaveCount(0);
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'tabs/c.yaml');
+  await expect(editor(page)).toContainText('contenuto: C');
+
+  await editor(page).click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('modificato: si\n');
+  await page.keyboard.press('Control+s');
+  await expect(activeTab(page)).not.toHaveClass(/dirty/);
+  expect(await disk('tabs/c.yaml')).toBe('contenuto: C\nmodificato: si\n');
+  expect(await disk('tabs/b.yaml')).toBe('contenuto: B\n');
+  expect(await disk('tabs/a.yaml')).toBe('contenuto: A\n');
+
+  // Chiudendo tutte le tab si torna alla schermata iniziale.
+  await page.keyboard.press('Alt+w');
+  await page.keyboard.press('Alt+w');
+  await expect(page.locator('editha-app .welcome')).toBeVisible();
+});
+
+test('FEP #18 – rinomina dal menu contestuale, anche con il file aperto', async ({ page }) => {
+  await openFile(page, 'rename/vecchio.yaml');
+  await row(page, 'rename/vecchio.yaml').click({ button: 'right' });
+  await menuItem(page, 'Rinomina').click();
+  const input = page.locator('editha-dialog input');
+  await input.fill('nuovo.yaml');
+  await dialogButton(page, 'Rinomina').click();
+  await expect(row(page, 'rename/nuovo.yaml')).toBeVisible();
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'rename/nuovo.yaml');
+  expect(await disk('rename/nuovo.yaml')).toBe('x: 1\n');
+});
+
+test('FEP #11 e #12 – nuovo file nella cartella vuota selezionata, dal menu contestuale', async ({ page }) => {
+  await row(page, 'vuota').click({ button: 'right' });
+  await menuItem(page, 'Nuovo file').click();
+  await page.locator('editha-dialog input').fill('scene.yaml');
+  await dialogButton(page, 'Crea').click();
+  await expect(row(page, 'vuota/scene.yaml')).toBeVisible();
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'vuota/scene.yaml');
+  expect(await disk('vuota/scene.yaml')).toBe('');
+
+  // Dalla barra in alto: destinazione = cartella selezionata.
+  await row(page, 'vuota').click();
+  await row(page, 'vuota').click();
+  await page.locator('editha-toolbar button[title="Nuova cartella"]').click();
+  await page.locator('editha-dialog input').fill('sotto');
+  await dialogButton(page, 'Crea').click();
+  await expect(row(page, 'vuota/sotto')).toBeVisible();
+});
+
+test('FEP #10 – chiudere un file modificato chiede cosa fare', async ({ page }) => {
+  await openFile(page, 'unsaved/file.yaml');
+  await editor(page).click();
+  await page.keyboard.type('# modifica ');
+  await expect(activeTab(page)).toHaveClass(/dirty/);
+
+  await page.keyboard.press('Alt+w');
+  await expect(page.locator('editha-dialog h2')).toHaveText('Modifiche non salvate');
+  await dialogButton(page, 'Annulla').click();
+  await expect(tab(page, 'unsaved/file.yaml')).toBeVisible();
+
+  await page.keyboard.press('Alt+w');
+  await dialogButton(page, 'Non salvare').click();
+  await expect(tab(page, 'unsaved/file.yaml')).toHaveCount(0);
+  expect(await disk('unsaved/file.yaml')).toBe('originale: true\n');
+});
+
+test('FEP #6 – il tema scelto resta dopo essere usciti e rientrati', async ({ page }) => {
+  const themeButton = page.locator('editha-toolbar button[title^="Tema"]');
+  await themeButton.click(); // chiaro
+  await themeButton.click(); // scuro
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.waitForTimeout(300);
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('editha-toolbar button[title="Tema: Scuro"]')).toBeVisible();
+});
+
+test('FEP #13 – rientrando si ritrovano le tab e la tab attiva', async ({ page }) => {
+  await openFile(page, 'session/uno.yaml');
+  await openFile(page, 'session/due.yaml');
+  await tab(page, 'session/uno.yaml').click();
+  await page.waitForTimeout(900); // salvataggio della sessione
+  await page.reload();
+  await expect(tab(page, 'session/uno.yaml')).toBeVisible();
+  await expect(tab(page, 'session/due.yaml')).toBeVisible();
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'session/uno.yaml');
+  await expect(editor(page)).toContainText('uno: 1');
+  const order = await page.locator('editha-tab-bar .tab').evaluateAll((els) => els.map((e) => e.getAttribute('data-path')));
+  expect(order).toEqual(['session/uno.yaml', 'session/due.yaml']);
+});
+
+test('FEP #5 – niente controllo ortografico o traduzione nell\'editor', async ({ page }) => {
+  await openFile(page, 'configuration.yaml');
+  await expect(editor(page)).toHaveAttribute('spellcheck', 'false');
+  await expect(editor(page)).toHaveAttribute('translate', 'no');
+  await expect(page.locator('editha-editor-pane .cm-lintRange')).toHaveCount(0);
+});
+
+test('FEP #4 – l\'albero scorre fino all\'ultimo file', async ({ page }) => {
+  await row(page, 'many').click();
+  const last = row(page, 'many/file_60.yaml');
+  await last.scrollIntoViewIfNeeded();
+  await last.click();
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'many/file_60.yaml');
+});
+
+test('FEP #15 – l\'editor scorre fino all\'ultima riga di un file lungo', async ({ page }) => {
+  await openFile(page, 'long/lungo.yaml');
+  await editor(page).click();
+  await page.keyboard.press('Control+End');
+  await expect(page.locator('editha-editor-pane .cm-line', { hasText: 'riga_300: 300' })).toBeInViewport();
+  await expect(page.locator('editha-status-bar')).toContainText('Riga 301');
+});
+
+test('FEP #8 e #14 – Tab indenta la selezione e Annulla la riporta com\'era', async ({ page }) => {
+  await openFile(page, 'indent/file.yaml');
+  await editor(page).click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.press('Tab');
+  await expect(editor(page)).toContainText('  uno: 1');
+  expect(await page.locator('editha-editor-pane .cm-line').allTextContents()).toEqual(['  uno: 1', '  due: 2', '  tre: 3', '']);
+  await page.keyboard.press('Control+z');
+  expect(await page.locator('editha-editor-pane .cm-line').allTextContents()).toEqual(['uno: 1', 'due: 2', 'tre: 3', '']);
+  await expect(activeTab(page)).not.toHaveClass(/dirty/);
+});
+
+test('SEC-4 – file modificato fuori da Editha: ricarica dal disco', async ({ page }) => {
+  await openFile(page, 'conflict/file.yaml');
+  await writeFile(path.join(configDir, 'conflict/file.yaml'), 'versione: esterna\n');
+  await editor(page).click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('mia: modifica\n');
+  await page.keyboard.press('Control+s');
+  await expect(page.locator('editha-dialog h2')).toHaveText('File modificato fuori da Editha');
+  await dialogButton(page, 'Ricarica dal disco').click();
+  await expect(editor(page)).toContainText('versione: esterna');
+  await expect(activeTab(page)).not.toHaveClass(/dirty/);
+  expect(await disk('conflict/file.yaml')).toBe('versione: esterna\n');
+});
+
+test('FS-4 – eliminare un file chiede conferma e chiude la sua tab', async ({ page }) => {
+  await openFile(page, 'delete/via.yaml');
+  await row(page, 'delete/via.yaml').click({ button: 'right' });
+  await menuItem(page, 'Elimina').click();
+  await dialogButton(page, 'Elimina').click();
+  await expect(row(page, 'delete/via.yaml')).toHaveCount(0);
+  await expect(tab(page, 'delete/via.yaml')).toHaveCount(0);
+  await expect(disk('delete/via.yaml')).rejects.toThrow();
+});
+
+test('SEC-8 – le cartelle di sistema sono nascoste, si mostrano a richiesta e la scelta resta', async ({ page }) => {
+  await expect(row(page, '.storage')).toHaveCount(0);
+  await expect(row(page, 'configuration.yaml')).toBeVisible();
+  await page.locator('editha-file-tree button[data-action="toggle-system"]').click();
+  await expect(row(page, '.storage')).toBeVisible();
+  await page.waitForTimeout(300);
+  await page.reload();
+  await expect(row(page, '.storage')).toBeVisible();
+  await page.locator('editha-file-tree button[data-action="toggle-system"]').click();
+  await expect(row(page, '.storage')).toHaveCount(0);
+});
+
+test('SEC-8 – le cartelle protette si leggono ma non si modificano', async ({ page }) => {
+  await page.locator('editha-file-tree button[data-action="toggle-system"]').click();
+  await openFile(page, '.storage/core.config');
+  await expect(page.locator('editha-status-bar')).toContainText('Sola lettura');
+  await expect(page.locator('editha-toolbar button[title^="Salva ("]')).toBeDisabled();
+  await row(page, '.storage').click({ button: 'right' });
+  await expect(menuItem(page, 'Elimina')).toBeDisabled();
+});
+
+const fakeHaCalls = async (): Promise<string[]> => (await fetch('http://127.0.0.1:8097/_calls')).json();
+
+test.describe('Home Assistant', () => {
+  test('HA-2 – pannello Inserisci: cerca un\'entità e la inserisce al cursore', async ({ page }) => {
+    await openFile(page, 'tabs/a.yaml');
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('luce: ');
+    await page.locator('editha-toolbar button[title^="Inserisci"]').click();
+    const panel = page.locator('editha-insert-panel');
+    await panel.locator('.search input').fill('cucina');
+    await expect(panel.locator('.item')).toHaveCount(1);
+    await expect(panel.locator('.item .state')).toHaveText('on');
+    await panel.locator('.item').click();
+    await expect(editor(page)).toContainText('luce: light.cucina');
+  });
+
+  test('HA-2 – autocompletamento delle entità scrivendo "dominio."', async ({ page }) => {
+    await openFile(page, 'tabs/b.yaml');
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('entity_id: sensor.');
+    const option = page.locator('.cm-tooltip-autocomplete li', { hasText: 'sensor.temperatura' });
+    await expect(option).toBeVisible();
+    await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('21.5 °C');
+    // CodeMirror ignora l'Invio nei primi istanti dopo l'apertura dei suggerimenti.
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Enter');
+    await expect(editor(page)).toContainText('entity_id: sensor.temperatura');
+  });
+
+  test('Snippet predefiniti e personali', async ({ page }) => {
+    await openFile(page, 'tabs/c.yaml');
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.locator('editha-toolbar button[title^="Inserisci"]').click();
+    const panel = page.locator('editha-insert-panel');
+    await panel.locator('.tabs button', { hasText: 'Snippet' }).click();
+    await panel.locator('.item', { hasText: 'Trigger: orario' }).click();
+    await expect(editor(page)).toContainText('- trigger: time');
+    await expect(editor(page)).toContainText('at: "07:00:00"');
+
+    // Salva la selezione come snippet personale, poi lo elimina.
+    await editor(page).click();
+    await page.keyboard.press('Control+a');
+    await panel.locator('footer button').click();
+    await page.locator('editha-dialog input').fill('Il mio snippet');
+    await dialogButton(page, 'Salva').click();
+    await expect(panel.locator('.item', { hasText: 'Il mio snippet' })).toBeVisible();
+
+    // Modifica nome e testo.
+    await panel.locator('.row', { hasText: 'Il mio snippet' }).locator('button[title="Modifica snippet"]').click();
+    const editorDialog = page.locator('editha-snippet-editor dialog[open]');
+    await editorDialog.locator('input').fill('Snippet rinominato');
+    await editorDialog.locator('textarea').fill('modificato: si');
+    await editorDialog.locator('button[type="submit"]').click();
+    await expect(editorDialog).toHaveCount(0);
+    const renamed = panel.locator('.row', { hasText: 'Snippet rinominato' });
+    await expect(renamed).toContainText('modificato: si');
+
+    await renamed.locator('button[title="Elimina snippet"]').click();
+    await dialogButton(page, 'Elimina').click();
+    await expect(panel.locator('.item', { hasText: 'Snippet rinominato' })).toHaveCount(0);
+  });
+
+  test('ACT-1 e ACT-4 – configurazione con errori: verifica li mostra, il riavvio viene bloccato', async ({ page }) => {
+    await mkdir(path.join(configDir, 'check'), { recursive: true });
+    await writeFile(path.join(configDir, 'check/rotto.yaml'), 'rotto: [\n');
+    try {
+      await page.locator('editha-toolbar button[title^="Home Assistant"]').click();
+      await menuItem(page, 'Verifica configurazione').click();
+      await expect(page.locator('editha-dialog h2')).toHaveText('Configurazione non valida');
+      await expect(page.locator('editha-dialog pre')).toContainText('check/rotto.yaml');
+      await dialogButton(page, 'Chiudi').click();
+
+      await page.locator('editha-toolbar button[title^="Home Assistant"]').click();
+      await menuItem(page, 'Riavvia Home Assistant').click();
+      await dialogButton(page, 'Riavvia').click();
+      await expect(page.locator('editha-dialog h2')).toHaveText('Configurazione non valida');
+      await dialogButton(page, 'Chiudi').click();
+      expect((await fakeHaCalls()).filter((c) => c.includes('/services/homeassistant/restart'))).toHaveLength(0);
+    } finally {
+      await rm(path.join(configDir, 'check'), { recursive: true, force: true });
+    }
+  });
+
+  test('ACT-2 / FEP #16 – ricarica YAML: esito reale da Home Assistant', async ({ page }) => {
+    await page.locator('editha-toolbar button[title^="Home Assistant"]').click();
+    await menuItem(page, 'Ricarica configurazione YAML').click();
+    await expect(page.locator('editha-toasts')).toContainText('Configurazione YAML ricaricata');
+    expect(await fakeHaCalls()).toContain('POST /api/services/homeassistant/reload_all');
+  });
+
+  test('Colonna dei numeri di riga compatta anche su desktop', async ({ page }) => {
+    await openFile(page, 'long/lungo.yaml');
+    const gutter = await page.locator('editha-editor-pane .cm-gutters').evaluate((e) => e.getBoundingClientRect().width);
+    expect(gutter).toBeLessThan(52);
+  });
+});
+
+test('Editha irraggiungibile: banner con "Ricarica", che sparisce da solo quando torna', async ({ page }) => {
+  await page.route('**/api/**', (route) => route.abort());
+  await row(page, 'configuration.yaml').click();
+  const banner = page.locator('editha-app .banner');
+  await expect(banner).toContainText('Editha non risponde');
+  await expect(banner.locator('button')).toHaveText('Ricarica la pagina');
+  await page.unroute('**/api/**');
+  await expect(banner).toHaveCount(0, { timeout: 10_000 });
+  await expect(page.locator('editha-toasts')).toContainText('Connessione con Editha ripristinata');
+});
+
+test.describe('Upload e download (FS-6)', () => {
+  test('scarica un file e una cartella come zip', async ({ page }) => {
+    await row(page, 'configuration.yaml').click({ button: 'right' });
+    const [file] = await Promise.all([page.waitForEvent('download'), menuItem(page, 'Scarica sul PC').click()]);
+    expect(file.suggestedFilename()).toBe('configuration.yaml');
+    expect(await readFile((await file.path())!, 'utf8')).toBe(await disk('configuration.yaml'));
+
+    await row(page, 'tabs').click({ button: 'right' });
+    const [zip] = await Promise.all([page.waitForEvent('download'), menuItem(page, 'Scarica come zip').click()]);
+    expect(zip.suggestedFilename()).toBe('tabs.zip');
+    const bytes = await readFile((await zip.path())!);
+    expect(bytes.subarray(0, 4).toString('hex')).toBe('504b0304');
+  });
+
+  test('carica file dal PC nella cartella selezionata, chiedendo prima di sostituire', async ({ page }) => {
+    await openFile(page, 'upload/esistente.yaml');
+    await row(page, 'upload').click(); // chiude la cartella
+    await row(page, 'upload').click(); // la riapre, resta selezionata
+    const [chooser] = await Promise.all([
+      page.waitForEvent('filechooser'),
+      page.locator('editha-file-tree button[data-action="upload"]').click(),
+    ]);
+    await chooser.setFiles([
+      { name: 'nuovo.yaml', mimeType: 'text/yaml', buffer: Buffer.from('nuovo: si\n') },
+      { name: 'esistente.yaml', mimeType: 'text/yaml', buffer: Buffer.from('aggiornato: 2\n') },
+    ]);
+    await expect(page.locator('editha-dialog h2')).toHaveText('File già presente');
+    await dialogButton(page, 'Sostituisci').click();
+    await expect(page.locator('editha-toasts')).toContainText('Caricati 2 file');
+    await expect(row(page, 'upload/nuovo.yaml')).toBeVisible();
+    expect(await disk('upload/nuovo.yaml')).toBe('nuovo: si\n');
+    expect(await disk('upload/esistente.yaml')).toBe('aggiornato: 2\n');
+    // La tab aperta mostra subito il nuovo contenuto.
+    await expect(editor(page)).toContainText('aggiornato: 2');
+  });
+
+  test('carica un file trascinandolo dal PC su una cartella dell\'albero', async ({ page }) => {
+    const target = row(page, 'drop');
+    const dataTransfer = await page.evaluateHandle(() => {
+      const dt = new DataTransfer();
+      dt.items.add(new File(['trascinato: true\n'], 'trascinato.yaml', { type: 'text/yaml' }));
+      return dt;
+    });
+    await target.dispatchEvent('dragover', { dataTransfer });
+    await expect(page.locator('editha-file-tree .drop-hint')).toContainText('/config/drop');
+    await target.dispatchEvent('drop', { dataTransfer });
+    await expect(page.locator('editha-toasts')).toContainText('Caricato trascinato.yaml');
+    expect(await disk('drop/trascinato.yaml')).toBe('trascinato: true\n');
+  });
+});
+
+test('Lingua: passa all\'inglese dal menu e la scelta resta dopo il rientro', async ({ page, request }) => {
+  await page.locator('editha-toolbar button.lang').click();
+  await menuItem(page, 'English').click();
+  await expect(page.locator('editha-toolbar button.lang')).toHaveText('EN');
+  await expect(page.locator('editha-file-tree header')).toHaveAttribute('aria-label', 'File explorer');
+  await expect(page.locator('editha-status-bar')).toContainText('No file open');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await page.waitForTimeout(300);
+  await page.reload();
+  await expect(page.locator('editha-file-tree header')).toHaveAttribute('aria-label', 'File explorer');
+  await openFile(page, 'configuration.yaml');
+  await expect(page.locator('editha-status-bar')).toContainText('Ln 1, Col 1');
+  await editor(page).click();
+  await page.keyboard.press('Control+f');
+  await expect(page.locator('.cm-search input[name=search]')).toHaveAttribute('placeholder', 'Find');
+  await request.post('api/settings', { data: { language: 'it' } });
+});
+
+test('Lingua: il pannello di ricerca dell\'editor è in italiano', async ({ page }) => {
+  await openFile(page, 'configuration.yaml');
+  await editor(page).click();
+  await page.keyboard.press('Control+f');
+  await expect(page.locator('.cm-search input[name=search]')).toHaveAttribute('placeholder', 'Cerca');
+});
+
+test.describe('Cronologia e duplicazione', () => {
+  test('BK-2/3/4 – confronta una versione e la ripristina; il ripristino si annulla', async ({ page }) => {
+    await openFile(page, 'history/luci.yaml');
+    for (const value of ['accesa', 'blu']) {
+      await editor(page).click();
+      await page.keyboard.press('Control+a');
+      await page.keyboard.type(`luce: ${value}\n`);
+      await page.keyboard.press('Control+s');
+      await expect(activeTab(page)).not.toHaveClass(/dirty/);
+    }
+    expect(await disk('history/luci.yaml')).toBe('luce: blu\n');
+
+    await page.locator('editha-toolbar button[title="Cronologia del file"]').click();
+    const panel = page.locator('editha-history-panel');
+    const versions = panel.locator('.version');
+    await expect(versions).toHaveCount(2);
+    await expect(versions.first()).toContainText('Prima di un salvataggio');
+    // Confronto affiancato: a sinistra la versione, a destra il contenuto attuale.
+    await expect(panel.locator('.cm-merge-a')).toContainText('luce: accesa');
+    await expect(panel.locator('.cm-merge-b')).toContainText('luce: blu');
+
+    await versions.nth(1).click();
+    await expect(panel.locator('.cm-merge-a')).toContainText('luce: spenta');
+    await panel.locator('button[data-action="restore"]').click();
+    await dialogButton(page, 'Ripristina questa versione').click();
+    await expect(panel).toHaveCount(0);
+    await expect(editor(page)).toContainText('luce: spenta');
+    expect(await disk('history/luci.yaml')).toBe('luce: spenta\n');
+
+    // Il contenuto sostituito è finito nella cronologia.
+    await page.locator('editha-toolbar button[title="Cronologia del file"]').click();
+    await expect(versions.first()).toContainText('Prima di un ripristino');
+    await page.keyboard.press('Escape');
+    await expect(panel).toHaveCount(0);
+  });
+
+  test('FS-8 – duplica un file YAML in .bak, che HA non carica; un nome .yaml va confermato', async ({ page }) => {
+    await row(page, 'dup').click();
+    await row(page, 'dup/originale.yaml').click({ button: 'right' });
+    await menuItem(page, 'Duplica').click();
+    const input = page.locator('editha-dialog input');
+    await expect(input).toHaveValue('originale_copia.yaml.bak');
+    await dialogButton(page, 'Crea').click();
+    await expect(row(page, 'dup/originale_copia.yaml.bak')).toBeVisible();
+    await expect(activeTab(page)).toHaveAttribute('data-path', 'dup/originale_copia.yaml.bak');
+    // La copia .bak si legge comunque come YAML.
+    await expect(page.locator('editha-status-bar')).toContainText('YAML');
+    expect(await disk('dup/originale_copia.yaml.bak')).toBe('copia: no\n');
+    expect(await disk('dup/originale.yaml')).toBe('copia: no\n');
+
+    await row(page, 'dup/originale.yaml').click({ button: 'right' });
+    await menuItem(page, 'Duplica').click();
+    await input.fill('altra.yaml');
+    await dialogButton(page, 'Crea').click();
+    await expect(page.locator('editha-dialog dialog[open]')).toContainText('caricherà sia l\'originale sia la copia');
+    await dialogButton(page, 'Annulla').click();
+    await expect(row(page, 'dup/altra.yaml')).toHaveCount(0);
+  });
+});
+
+test.describe('Bozze (ED-14)', () => {
+  async function typeAndLeave(page: Page, request: import('@playwright/test').APIRequestContext, p: string) {
+    await openFile(page, p);
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('bozza: si\n');
+    await expect
+      .poll(async () => (await (await request.get('api/drafts')).json()).drafts.map((d: { path: string }) => d.path))
+      .toEqual([p]);
+    const context = page.context();
+    await page.close();
+    const again = await context.newPage();
+    await again.goto('./');
+    await expect(again.locator('editha-dialog dialog[open]')).toContainText('Modifiche non salvate');
+    await expect(again.locator('editha-dialog dialog[open]')).toContainText(p);
+    return again;
+  }
+
+  test('chiudendo la pagina senza salvare, alla riapertura le modifiche si recuperano', async ({ page, request }) => {
+    const again = await typeAndLeave(page, request, 'drafts/recupera.yaml');
+    await dialogButton(again, 'Recupera').click();
+    await expect(activeTab(again)).toHaveAttribute('data-path', 'drafts/recupera.yaml');
+    await expect(activeTab(again)).toHaveClass(/dirty/);
+    await expect(editor(again)).toContainText('bozza: si');
+    expect(await disk('drafts/recupera.yaml')).toBe('stato: salvato\n');
+
+    await editor(again).click();
+    await again.keyboard.press('Control+s');
+    await expect(activeTab(again)).not.toHaveClass(/dirty/);
+    expect(await disk('drafts/recupera.yaml')).toBe('stato: salvato\nbozza: si\n');
+    await expect.poll(async () => (await (await request.get('api/drafts')).json()).drafts.length).toBe(0);
+  });
+
+  test('le modifiche recuperate si possono scartare', async ({ page, request }) => {
+    const again = await typeAndLeave(page, request, 'drafts/scarta.yaml');
+    await dialogButton(again, 'Scarta').click();
+    await expect.poll(async () => (await (await request.get('api/drafts')).json()).drafts.length).toBe(0);
+    expect(await disk('drafts/scarta.yaml')).toBe('stato: salvato\n');
+    await expect(again.locator('editha-tab-bar .tab.dirty')).toHaveCount(0);
+  });
+});
+
+test.describe('Vista divisa (ED-17)', () => {
+  const side = (page: Page) => page.locator('editha-side-pane .cm-content');
+  const sideSelect = (page: Page) => page.locator('editha-app .side-head select');
+
+  test('lo stesso file in due colonne: le modifiche passano da una all\'altra e si salva la tab', async ({ page }) => {
+    await openFile(page, 'split/sinistra.yaml');
+    await page.locator('editha-toolbar button[title="Vista divisa in due colonne"]').click();
+    await expect(side(page)).toContainText('lato: sinistra');
+    await expect(sideSelect(page)).toHaveValue('split/sinistra.yaml');
+    // L'elenco aperto ha colori propri, leggibili anche nel tema scuro (Windows usa quelli delle opzioni).
+    const colors = await sideSelect(page).evaluate((el) => {
+      const o = getComputedStyle(el.querySelector('option')!);
+      return [o.backgroundColor, o.color];
+    });
+    expect(colors[0]).not.toBe('rgba(0, 0, 0, 0)');
+    expect(colors[0]).not.toBe(colors[1]);
+
+    await side(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('da_destra: si\n');
+    await expect(editor(page)).toContainText('da_destra: si');
+    await expect(activeTab(page)).toHaveClass(/dirty/);
+
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('da_sinistra: si\n');
+    await expect(side(page)).toContainText('da_sinistra: si');
+
+    await side(page).click();
+    await page.keyboard.press('Control+s');
+    await expect(activeTab(page)).not.toHaveClass(/dirty/);
+    expect(await disk('split/sinistra.yaml')).toBe('lato: sinistra\nda_destra: si\nda_sinistra: si\n');
+  });
+
+  test('"Apri a destra" affianca un altro file; la scelta resta rientrando', async ({ page }) => {
+    await openFile(page, 'split/fermo.yaml');
+    await row(page, 'split/destra.yaml').click({ button: 'right' });
+    await menuItem(page, 'Apri a destra').click();
+    await expect(side(page)).toContainText('lato: destra');
+    await expect(editor(page)).toContainText('lato: fermo');
+    await expect(activeTab(page)).toHaveAttribute('data-path', 'split/fermo.yaml');
+
+    // Salva agisce sulla colonna usata per ultima.
+    await side(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('modificato: a_destra\n');
+    await expect(tab(page, 'split/destra.yaml')).toHaveClass(/dirty/);
+    await expect(activeTab(page)).not.toHaveClass(/dirty/);
+    await page.keyboard.press('Control+s');
+    await expect(tab(page, 'split/destra.yaml')).not.toHaveClass(/dirty/);
+    expect(await disk('split/destra.yaml')).toBe('lato: destra\nmodificato: a_destra\n');
+    expect(await disk('split/fermo.yaml')).toBe('lato: fermo\n');
+
+    await page.waitForTimeout(800);
+    await page.reload();
+    await expect(side(page)).toContainText('lato: destra');
+    await expect(editor(page)).toContainText('lato: fermo');
+
+    await page.locator('editha-app .side-head button').click();
+    await expect(page.locator('editha-app .side')).toBeHidden();
+  });
+});
+
+test('Informazioni: autore, versione e licenza', async ({ page }) => {
+  await page.locator('editha-toolbar button[title="Informazioni su Editha"]').click();
+  const about = page.locator('editha-about-dialog dialog[open]');
+  await expect(about).toContainText('Trizompa');
+  await expect(about).toContainText('MIT');
+  await expect(about.locator('[data-field="version"]')).toHaveText(/^\d+\.\d+\.\d+$/);
+  await about.locator('button', { hasText: 'Chiudi' }).click();
+  await expect(about).toHaveCount(0);
+});
+
+test('Controllo YAML: il conteggio nella barra apre l\'elenco dei problemi con le spiegazioni', async ({ page }) => {
+  await openFile(page, 'lint/problemi.yaml');
+  const count = page.locator('editha-status-bar button.problems');
+  await expect(count).toContainText('2 avvisi');
+  await count.click();
+  const panel = page.locator('editha-editor-pane .cm-panel-lint');
+  await expect(panel).toContainText('«on» senza virgolette');
+  await expect(panel).toContainText('Riga 3');
+  await expect(panel).toContainText('Scrivi «service: light.turn_on»');
+  // Un clic su un problema porta il cursore alla sua riga.
+  await panel.locator('li', { hasText: 'Riga 5' }).click();
+  await expect(page.locator('editha-status-bar')).toContainText('Riga 5');
+});
+
+test.describe('Collegamenti !include e !secret (HA-4, HA-5)', () => {
+  const lineOf = (page: Page, text: string) => page.locator('editha-editor-pane .cm-line', { hasText: text });
+
+  test('Ctrl+clic su !include apre il file; su !include_dir_… mostra la cartella', async ({ page }) => {
+    await openFile(page, 'links/main.yaml');
+    await lineOf(page, 'auto.yaml').locator('.cm-ha-link').click({ modifiers: ['Control'] });
+    await expect(activeTab(page)).toHaveAttribute('data-path', 'links/auto.yaml');
+    await expect(editor(page)).toContainText('alias: incluso');
+
+    await tab(page, 'links/main.yaml').click();
+    await lineOf(page, 'sensori').locator('.cm-ha-link').click({ modifiers: ['Control'] });
+    await expect(row(page, 'links/sensori/a.yaml')).toBeVisible();
+    await expect(row(page, 'links/sensori')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('dopo !secret propone le chiavi (mai i valori); Ctrl+clic apre secrets.yaml sulla chiave', async ({ page }) => {
+    await openFile(page, 'links/main.yaml');
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('token: !secret chiave_');
+    const list = page.locator('editha-editor-pane .cm-tooltip-autocomplete');
+    await expect(list).toContainText('chiave_uno');
+    await expect(list).toContainText('chiave_due');
+    await expect(list).not.toContainText('valore_segreto');
+    await page.keyboard.press('Escape');
+
+    await lineOf(page, 'api_key').locator('.cm-ha-link').click({ modifiers: ['Control'] });
+    await expect(activeTab(page)).toHaveAttribute('data-path', 'links/secrets.yaml');
+    await expect(page.locator('editha-status-bar')).toContainText('Riga 2');
+  });
+});
+
+test.describe('Sposta in… (FS-5)', () => {
+  const picker = (page: Page) => page.locator('editha-folder-picker dialog[open]');
+  const folder = (page: Page, f: string) => picker(page).locator(`.folder[data-folder="${f}"]`);
+
+  test('sposta un file aperto in un\'altra cartella: la tab lo segue', async ({ page }) => {
+    await openFile(page, 'move/da_spostare.yaml');
+    await row(page, 'move/da_spostare.yaml').click({ button: 'right' });
+    await menuItem(page, 'Sposta in…').click();
+    await expect(folder(page, 'move')).toBeDisabled();
+    await picker(page).locator('input').fill('dest');
+    await expect(folder(page, 'tabs')).toHaveCount(0);
+    await folder(page, 'move/dest').click();
+    await picker(page).locator('button', { hasText: 'Sposta qui' }).click();
+    await expect(row(page, 'move/dest/da_spostare.yaml')).toBeVisible();
+    await expect(activeTab(page)).toHaveAttribute('data-path', 'move/dest/da_spostare.yaml');
+    expect(await disk('move/dest/da_spostare.yaml')).toBe('spostato: si\n');
+  });
+
+  test('una cartella non si può spostare dentro sé stessa', async ({ page }) => {
+    await row(page, 'move').click();
+    await row(page, 'move/cartella').click({ button: 'right' });
+    await menuItem(page, 'Sposta in…').click();
+    await expect(folder(page, 'move/cartella')).toBeDisabled();
+    await folder(page, '').click();
+    await picker(page).locator('button', { hasText: 'Sposta qui' }).click();
+    await expect(row(page, 'cartella')).toBeVisible();
+    expect(await disk('cartella/dentro.yaml')).toBe('x: 1\n');
+  });
+});
+
+test.describe('Ricerca in tutti i file (SR-1, SR-4)', () => {
+  const panel = (page: Page) => page.locator('editha-search-panel');
+
+  test('cerca in tutti i file e apre il risultato selezionando il testo trovato', async ({ page }) => {
+    await expect(page.locator('editha-toolbar button[title^="Cerca in tutti i file"]')).toHaveCount(0);
+    await page.locator('editha-file-tree button[title^="Cerca in tutti i file"]').click();
+    await panel(page).locator('input').fill('ago_nel_pagliaio');
+    await expect(panel(page)).toContainText('2 risultati in 1 file');
+    await panel(page).locator('button[title="Maiuscole/minuscole"]').click();
+    await expect(panel(page)).toContainText('1 risultato in 1 file');
+    await panel(page).locator('.match[data-path="cerca/uno.yaml"]').first().click();
+    await expect(activeTab(page)).toHaveAttribute('data-path', 'cerca/uno.yaml');
+    await expect(page.locator('editha-status-bar')).toContainText('16 selez.');
+    // Torna all'elenco dei file.
+    await panel(page).locator('button[title="Torna all\'elenco dei file"]').click();
+    await expect(row(page, 'cerca')).toBeVisible();
+  });
+
+  test('dove è usata un\'entità: dal pannello Inserisci, solo le parole intere', async ({ page }) => {
+    await openFile(page, 'cerca/due.yaml');
+    await page.locator('editha-toolbar button[title="Inserisci entità o snippet"]').click();
+    const insert = page.locator('editha-insert-panel');
+    await insert.locator('input').fill('cucina');
+    await insert.locator('button[title="Dove è usata light.cucina"]').click();
+    await expect(panel(page)).toContainText('Luce cucina');
+    const hits = panel(page).locator('.match[data-path="cerca/due.yaml"]');
+    // light.cucina e states.light.cucina sì, light.cucina_2 no.
+    await expect(hits).toHaveCount(2);
+  });
+});
+
+test('due Ctrl+S ravvicinati: niente falso conflitto, niente bozza rimasta', async ({ page, request }) => {
+  // Salvataggi lenti, come su una rete lenta o un HA occupato.
+  await page.route('**/api/file', async (route) => {
+    if (route.request().method() === 'PUT') await new Promise((r) => setTimeout(r, 500));
+    await route.continue();
+  });
+  await openFile(page, 'race/doppio.yaml');
+  await editor(page).click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('primo: 1\n');
+  await page.waitForTimeout(1200); // parte anche la bozza
+  await page.keyboard.press('Control+s');
+  await page.keyboard.type('secondo: 2\n');
+  await page.keyboard.press('Control+s');
+  await expect(activeTab(page)).not.toHaveClass(/dirty/, { timeout: 5000 });
+  await expect(page.locator('editha-dialog dialog[open]')).toHaveCount(0);
+  expect(await disk('race/doppio.yaml')).toBe('base: 1\nprimo: 1\nsecondo: 2\n');
+  await expect.poll(async () => (await (await request.get('api/drafts')).json()).drafts.length).toBe(0);
+});
+
+test('icone MDI: dopo "mdi:" propone le icone con l\'anteprima', async ({ page }) => {
+  await openFile(page, 'tabs/a.yaml');
+  await editor(page).click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('icon: mdi:lightbulb-on-1');
+  const list = page.locator('editha-editor-pane .cm-tooltip-autocomplete');
+  await expect(list).toContainText('lightbulb-on-10');
+  await expect(list.locator('.cm-mdi-preview svg').first()).toBeVisible();
+  await page.waitForTimeout(300);
+  await page.keyboard.press('Enter');
+  await expect(editor(page)).toContainText(/icon: mdi:lightbulb-on-1\d/);
+});
+
+test('SR-3 – sostituisci in più file: conferma, cronologia, tab aperte aggiornate, file non salvati saltati', async ({ page }) => {
+  await openFile(page, 'sost/uno.yaml');
+  await openFile(page, 'sost/aperto.yaml');
+  await editor(page).click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('# non salvato\n');
+  await tab(page, 'sost/uno.yaml').click();
+
+  await page.locator('editha-file-tree button[title^="Cerca in tutti i file"]').click();
+  const panel = page.locator('editha-search-panel');
+  await panel.locator('button[title="Parola intera"]').click();
+  await panel.locator('.box input').fill('light.vecchia');
+  await expect(panel).toContainText('3 risultati in 3 file');
+  await panel.locator('button[title="Sostituisci nei file"]').click();
+  await panel.locator('.replace input').fill('light.nuova');
+  await panel.locator('button[data-action="replace-all"]').click();
+  const dialog = page.locator('editha-dialog dialog[open]');
+  await expect(dialog).toContainText('aperto.yaml');
+  await dialogButton(page, 'Sostituisci tutto').click();
+
+  await expect.poll(() => disk('sost/due.yaml')).toBe('target: light.nuova\naltro: light.vecchia_2\n');
+  await expect.poll(() => disk('sost/uno.yaml')).toBe('luce: light.nuova\n');
+  expect(await disk('sost/aperto.yaml')).toBe('x: light.vecchia\n');
+  // La tab aperta e non modificata mostra il testo nuovo; i risultati si aggiornano.
+  await expect(editor(page)).toContainText('luce: light.nuova');
+  await expect(panel).toContainText('1 risultato in 1 file');
+});
+
+test('BK-6 – confronta due file dal menu contestuale', async ({ page }) => {
+  await row(page, 'confronta').click();
+  await row(page, 'confronta/prima.yaml').click({ button: 'right' });
+  await menuItem(page, 'Seleziona per il confronto').click();
+  await row(page, 'confronta/dopo.yaml').click({ button: 'right' });
+  await menuItem(page, 'Confronta con prima.yaml').click();
+  const panel = page.locator('editha-compare-panel');
+  await expect(panel.locator('.cm-merge-a')).toContainText('stanze: 3');
+  await expect(panel.locator('.cm-merge-b')).toContainText('stanze: 4');
+  await expect(panel).toContainText('confronta/prima.yaml');
+  await page.keyboard.press('Escape');
+  await expect(panel).toHaveCount(0);
+});
+
+test.describe('telefono', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('UI-2 – colonna dei numeri compatta e righe spezzate allineate alla loro indentazione', async ({ page, request }) => {
+    await request.post('api/settings', { data: { wordWrap: true } });
+    await page.reload();
+    await page.locator('editha-toolbar button[title^="Mostra"]').click();
+    await row(page, 'long').click();
+    await row(page, 'long/lungo.yaml').click();
+    const gutter = await page.locator('editha-editor-pane .cm-gutters').evaluate((e) => e.getBoundingClientRect().width);
+    expect(gutter).toBeLessThan(60);
+
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('  descrizione: ' + 'parola '.repeat(20));
+    const line = page.locator('editha-editor-pane .cm-line', { hasText: 'descrizione' });
+    const box = await line.evaluate((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const rects = [...range.getClientRects()];
+      return { first: rects[0]!.left, last: rects[rects.length - 1]!.left, lines: new Set(rects.map((r) => Math.round(r.top))).size };
+    });
+    expect(box.lines).toBeGreaterThan(1);
+    // Il seguito della riga non riparte dal margine: resta più a destra dell'inizio della chiave.
+    expect(box.last).toBeGreaterThan(box.first);
+    await request.post('api/settings', { data: { wordWrap: false } });
+  });
+
+  test('pressione prolungata su un file apre il menu contestuale', async ({ page }) => {
+    await page.locator('editha-toolbar button[title^="Mostra"]').click();
+    await row(page, 'dup').click();
+    const target = row(page, 'dup/telefono.yaml');
+    const box = (await target.boundingBox())!;
+    const point = { pointerType: 'touch', clientX: box.x + 20, clientY: box.y + 10, bubbles: true, composed: true };
+    await target.dispatchEvent('pointerdown', point);
+    await expect(menuItem(page, 'Cronologia')).toBeVisible();
+    await target.dispatchEvent('pointerup', point);
+    await menuItem(page, 'Duplica').click();
+    await dialogButton(page, 'Crea').click();
+    await expect(row(page, 'dup/telefono_copia.yaml.bak')).toBeAttached();
+  });
+
+  test('l\'editor non ha l\'effetto elastico che sposta la colonna dei numeri', async ({ page }) => {
+    await page.locator('editha-toolbar button[title^="Mostra"]').click();
+    await row(page, 'configuration.yaml').click();
+    const scroller = page.locator('editha-editor-pane .cm-scroller');
+    await expect(scroller).toHaveCSS('overscroll-behavior-x', 'none');
+    expect(await page.evaluate(() => getComputedStyle(document.body).overscrollBehaviorX)).toBe('none');
+  });
+
+  test('con la tastiera aperta c\'è il pulsante per chiuderla, accanto al cursore', async ({ page }) => {
+    await page.locator('editha-toolbar button[title^="Mostra"]').click();
+    await row(page, 'configuration.yaml').click();
+    const hide = page.locator('editha-editor-pane .cm-hide-keyboard button');
+    await expect(hide).toHaveCount(0);
+    await editor(page).tap();
+    await expect(hide).toBeVisible();
+    // Dentro lo schermo, sul lato destro (iOS sposta la pagina: la barra in alto non si vede).
+    const box = (await hide.boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    expect(box.x).toBeGreaterThan(250);
+    await hide.tap();
+    await expect(hide).toHaveCount(0);
+    expect(await editor(page).evaluate((el) => el.matches(':focus'))).toBe(false);
+  });
+});

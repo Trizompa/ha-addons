@@ -1,0 +1,40 @@
+name: Release
+
+# Pushing a tag such as v1.0.0 publishes a GitHub release with the matching CHANGELOG section.
+# Home Assistant does not need it (it reads the version from editha/config.yaml), but it gives
+# users a page to follow and a clear history.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: GitHub release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Tag and add-on version must match
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(sed -n 's/^version: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' editha/config.yaml)
+          echo "tag $tag, config.yaml $version"
+          test "$tag" = "$version"
+      - name: Notes from the changelog
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            $0 == "## " v { on = 1; next }
+            /^## / && on { exit }
+            on { print }
+          ' editha/CHANGELOG.md > notes.md
+          test -s notes.md || { echo "no CHANGELOG section for $version"; exit 1; }
+          printf '\n---\n[Documentation](https://github.com/%s/blob/%s/editha/DOCS.md) · update from the add-on page in Home Assistant.\n' \
+            "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" >> notes.md
+          cat notes.md
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "EDITHA $GITHUB_REF_NAME" --notes-file notes.md --verify-tag

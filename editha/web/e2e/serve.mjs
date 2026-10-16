@@ -1,0 +1,106 @@
+// Avvia il server compilato su una /config di prova (usato da playwright.config.ts).
+import { spawn } from 'node:child_process';
+import http from 'node:http';
+import { access } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = process.env.EDITHA_E2E_ROOT;
+const configDir = path.join(root, 'config');
+const dataDir = path.join(root, 'data');
+
+const files = {
+  'configuration.yaml': 'homeassistant:\n  name: Casa\n\nautomation: !include automations.yaml\n',
+  'automations.yaml': '[]\n',
+  'tabs/a.yaml': 'contenuto: A\n',
+  'tabs/b.yaml': 'contenuto: B\n',
+  'tabs/c.yaml': 'contenuto: C\n',
+  'rename/vecchio.yaml': 'x: 1\n',
+  'history/luci.yaml': 'luce: spenta\n',
+  'drafts/recupera.yaml': 'stato: salvato\n',
+  'split/sinistra.yaml': 'lato: sinistra\n',
+  'split/destra.yaml': 'lato: destra\n',
+  'split/fermo.yaml': 'lato: fermo\n',
+  'links/main.yaml': 'automation: !include auto.yaml\nsensor: !include_dir_merge_list sensori\napi_key: !secret chiave_due\n',
+  'links/auto.yaml': '- alias: incluso\n',
+  'move/da_spostare.yaml': 'spostato: si\n',
+  'race/doppio.yaml': 'base: 1\n',
+  'sost/uno.yaml': 'luce: light.vecchia\n',
+  'confronta/prima.yaml': 'nome: casa\nstanze: 3\n',
+  'confronta/dopo.yaml': 'nome: casa\nstanze: 4\n',
+  'sost/due.yaml': 'target: light.vecchia\naltro: light.vecchia_2\n',
+  'sost/aperto.yaml': 'x: light.vecchia\n',
+  'cerca/uno.yaml': 'ago_nel_pagliaio: 1\naltro: AGO_NEL_PAGLIAIO\n',
+  'cerca/due.yaml': 'target: light.cucina\nlight.cucina_2: no\nvalue: "{{ states.light.cucina.state }}"\n',
+  'move/dest/.keep': '',
+  'move/cartella/dentro.yaml': 'x: 1\n',
+  'links/sensori/a.yaml': '- platform: template\n',
+  'links/secrets.yaml': 'chiave_uno: valore_segreto_1\nchiave_due: valore_segreto_2\n',
+  'lint/problemi.yaml': 'trigger:\n  - platform: state\n    to: on\naction:\n  - service:light.turn_on\n',
+  'drafts/scarta.yaml': 'stato: salvato\n',
+  'dup/originale.yaml': 'copia: no\n',
+  'dup/telefono.yaml': 't: 1\n',
+  'unsaved/file.yaml': 'originale: true\n',
+  'indent/file.yaml': 'uno: 1\ndue: 2\ntre: 3\n',
+  'conflict/file.yaml': 'versione: editha\n',
+  'delete/via.yaml': 'via: true\n',
+  'long/lungo.yaml': Array.from({ length: 300 }, (_, i) => `riga_${i + 1}: ${i + 1}`).join('\n') + '\n',
+  'session/uno.yaml': 'uno: 1\n',
+  'session/due.yaml': 'due: 2\n',
+  'upload/esistente.yaml': 'vecchio: 1\n',
+  'drop/.keep': '',
+  '.storage/core.config': '{}\n',
+};
+for (let i = 1; i <= 60; i++) files[`many/file_${String(i).padStart(2, '0')}.yaml`] = `n: ${i}\n`;
+
+for (const [rel, content] of Object.entries(files)) {
+  const abs = path.join(configDir, rel);
+  await mkdir(path.dirname(abs), { recursive: true });
+  await writeFile(abs, content);
+}
+await mkdir(path.join(configDir, 'vuota'), { recursive: true });
+await mkdir(dataDir, { recursive: true });
+
+// Finto Home Assistant Core: la configurazione è "non valida" finché esiste check/rotto.yaml.
+const HA_TOKEN = 'e2e-token';
+const haCalls = [];
+const fakeHa = http.createServer(async (req, res) => {
+  const json = (data) => res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(data));
+  if (req.url === '/_calls') return json(haCalls);
+  if (req.headers.authorization !== `Bearer ${HA_TOKEN}`) return res.writeHead(401).end();
+  haCalls.push(`${req.method} ${req.url}`);
+  if (req.url === '/api/states') {
+    return json([
+      { entity_id: 'light.cucina', state: 'on', attributes: { friendly_name: 'Luce cucina' } },
+      { entity_id: 'light.soggiorno', state: 'off', attributes: { friendly_name: 'Luce soggiorno' } },
+      { entity_id: 'sensor.temperatura', state: '21.5', attributes: { friendly_name: 'Temperatura', unit_of_measurement: '°C' } },
+    ]);
+  }
+  if (req.url === '/api/services') return json([{ domain: 'light', services: { turn_on: { name: 'Accendi' } } }]);
+  if (req.url === '/api/config/core/check_config') {
+    const broken = await access(path.join(configDir, 'check/rotto.yaml')).then(() => true, () => false);
+    return json(broken ? { result: 'invalid', errors: 'Invalid config for [light] at check/rotto.yaml, line 1' } : { result: 'valid', errors: null });
+  }
+  if (req.url?.startsWith('/api/services/homeassistant/')) return json([]);
+  res.writeHead(404).end();
+});
+await new Promise((r) => fakeHa.listen(Number(process.env.EDITHA_FAKE_HA_PORT ?? 8097), '127.0.0.1', r));
+
+const server = spawn(process.execPath, [path.join(here, '../../server/dist/main.js')], {
+  stdio: 'inherit',
+  env: {
+    ...process.env,
+    EDITHA_CONFIG_DIR: configDir,
+    EDITHA_DATA_DIR: dataDir,
+    EDITHA_WEB_DIR: path.join(here, '../dist'),
+    EDITHA_HOST: '127.0.0.1',
+    EDITHA_ALLOWED_IPS: '127.0.0.1,::1',
+    EDITHA_LOG_LEVEL: 'warn',
+    EDITHA_HA_URL: `http://127.0.0.1:${process.env.EDITHA_FAKE_HA_PORT ?? 8097}/api`,
+    EDITHA_HA_TOKEN: HA_TOKEN,
+  },
+});
+for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { fakeHa.close(); server.kill(sig); });
+server.on('exit', (code) => process.exit(code ?? 0));

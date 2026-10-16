@@ -1,0 +1,28 @@
+name: Editha
+version: "0.18.0"
+slug: editha
+description: "Every Day I Tweak HA – the Home Assistant configuration editor"
+url: https://github.com/Trizompa/ha-addons/tree/main/editha
+stage: experimental
+arch:
+  - aarch64
+  - amd64
+init: false
+
+# Solo Ingress: nessuna porta esposta sull'host.
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:pencil
+panel_title: Editha
+
+# API di Core tramite il proxy del Supervisor (entità, servizi, verifica, ricarica, riavvio).
+homeassistant_api: true
+
+# Unico percorso dell'utente montato nel container.
+map:
+  - type: homeassistant_config
+    read_only: false
+    path: /config
+
+options: {}
+schema: {}

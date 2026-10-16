@@ -1,0 +1,24 @@
+# Dependency updates once a month, grouped to keep the noise low.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /editha/server
+    schedule:
+      interval: monthly
+    groups:
+      server:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /editha/web
+    schedule:
+      interval: monthly
+    groups:
+      web:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]

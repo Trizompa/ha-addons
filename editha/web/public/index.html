@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="it" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="google" content="notranslate">
+<title>Editha</title>
+<style>
+  /* Colori e misure: unica fonte per componenti ed editor. */
+  :root {
+    color-scheme: light;
+    --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-code: ui-monospace, "Cascadia Code", "JetBrains Mono", "Fira Code", Menlo, Consolas, "Liberation Mono", monospace;
+
+    --radius-lg: 12px;
+    --radius: 8px;
+    --radius-sm: 6px;
+    --gap: 8px;
+
+    /* Carattere dell'editor: più piccolo su PC, più leggibile su telefono. */
+    --editor-font-size: 13px;
+
+    --bg: #eef1f5;
+    --surface: #ffffff;
+    --surface-2: #f6f8fa;
+    --surface-3: #eaeef2;
+    --hover: rgba(15, 30, 50, 0.06);
+    --active: rgba(15, 30, 50, 0.1);
+    --border: #dfe4ea;
+    --border-strong: #cbd2da;
+    --text: #1f2933;
+    --text-muted: #5f6c7b;
+    --text-faint: #8794a3;
+    --accent: #0b7fd4;
+    --accent-text: #ffffff;
+    --accent-soft: rgba(11, 127, 212, 0.12);
+    --danger: #d1453b;
+    --danger-soft: rgba(209, 69, 59, 0.12);
+    --warning: #b8740a;
+    --success: #1f8f4e;
+    --shadow: 0 1px 2px rgba(15, 30, 50, 0.06), 0 4px 16px rgba(15, 30, 50, 0.08);
+    --shadow-pop: 0 8px 32px rgba(15, 30, 50, 0.18);
+    --scrim: rgba(15, 25, 35, 0.35);
+
+    --editor-bg: #ffffff;
+    --editor-gutter: #f6f8fa;
+    --editor-gutter-text: #9aa5b1;
+    --editor-active-line: rgba(11, 127, 212, 0.05);
+    --editor-selection: #cfe3fb;
+    --editor-selection-match: rgba(11, 127, 212, 0.14);
+    --editor-cursor: #0b7fd4;
+    --editor-indent-guide: #e6eaee;
+    --editor-indent-guide-active: #c3ccd5;
+
+    --syn-key: #0b62a8;
+    --syn-string: #2b7a3d;
+    --syn-number: #a35200;
+    --syn-atom: #8b3fb5;
+    --syn-comment: #8794a3;
+    --syn-tag: #b4235a;
+    --syn-keyword: #8b3fb5;
+    --syn-punct: #5f6c7b;
+    --syn-function: #9a5b00;
+    --syn-heading: #0b62a8;
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #111418;
+    --surface: #1b1f24;
+    --surface-2: #171a1f;
+    --surface-3: #22272e;
+    --hover: rgba(255, 255, 255, 0.06);
+    --active: rgba(255, 255, 255, 0.1);
+    --border: #2a3038;
+    --border-strong: #38404a;
+    --text: #e4e8ec;
+    --text-muted: #9ba6b2;
+    --text-faint: #6f7a87;
+    --accent: #4aa8ff;
+    --accent-text: #0b1520;
+    --accent-soft: rgba(74, 168, 255, 0.16);
+    --danger: #f2685e;
+    --danger-soft: rgba(242, 104, 94, 0.16);
+    --warning: #e3a33b;
+    --success: #4cc27e;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+    --shadow-pop: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --scrim: rgba(0, 0, 0, 0.55);
+
+    --editor-bg: #1b1f24;
+    --editor-gutter: #171a1f;
+    --editor-gutter-text: #5d6874;
+    --editor-active-line: rgba(255, 255, 255, 0.035);
+    --editor-selection: #27466b;
+    --editor-selection-match: rgba(74, 168, 255, 0.18);
+    --editor-cursor: #4aa8ff;
+    --editor-indent-guide: #262c33;
+    --editor-indent-guide-active: #3d4651;
+
+    --syn-key: #6cb6ff;
+    --syn-string: #8bd49c;
+    --syn-number: #f0a35e;
+    --syn-atom: #d3a2f5;
+    --syn-comment: #6f7a87;
+    --syn-tag: #f47fa8;
+    --syn-keyword: #d3a2f5;
+    --syn-punct: #9ba6b2;
+    --syn-function: #f2c66d;
+    --syn-heading: #6cb6ff;
+  }
+
+  /* Tema "Auto": segue il sistema finché l'utente non sceglie Chiaro o Scuro. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+      color-scheme: dark;
+      --bg: #111418;
+      --surface: #1b1f24;
+      --surface-2: #171a1f;
+      --surface-3: #22272e;
+      --hover: rgba(255, 255, 255, 0.06);
+      --active: rgba(255, 255, 255, 0.1);
+      --border: #2a3038;
+      --border-strong: #38404a;
+      --text: #e4e8ec;
+      --text-muted: #9ba6b2;
+      --text-faint: #6f7a87;
+      --accent: #4aa8ff;
+      --accent-text: #0b1520;
+      --accent-soft: rgba(74, 168, 255, 0.16);
+      --danger: #f2685e;
+      --danger-soft: rgba(242, 104, 94, 0.16);
+      --warning: #e3a33b;
+      --success: #4cc27e;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+      --shadow-pop: 0 8px 32px rgba(0, 0, 0, 0.5);
+      --scrim: rgba(0, 0, 0, 0.55);
+      --editor-bg: #1b1f24;
+      --editor-gutter: #171a1f;
+      --editor-gutter-text: #5d6874;
+      --editor-active-line: rgba(255, 255, 255, 0.035);
+      --editor-selection: #27466b;
+      --editor-selection-match: rgba(74, 168, 255, 0.18);
+      --editor-cursor: #4aa8ff;
+      --editor-indent-guide: #262c33;
+      --editor-indent-guide-active: #3d4651;
+      --syn-key: #6cb6ff;
+      --syn-string: #8bd49c;
+      --syn-number: #f0a35e;
+      --syn-atom: #d3a2f5;
+      --syn-comment: #6f7a87;
+      --syn-tag: #f47fa8;
+      --syn-keyword: #d3a2f5;
+      --syn-punct: #9ba6b2;
+      --syn-function: #f2c66d;
+      --syn-heading: #6cb6ff;
+    }
+  }
+
+  @media (max-width: 760px) {
+    :root { --editor-font-size: 14px; }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  /* Niente effetto elastico di iOS sulla pagina: l'interfaccia resta ferma. */
+  html, body { height: 100%; margin: 0; overscroll-behavior: none; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.4 var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  editha-app { height: 100%; }
+</style>
+<script type="module" src="./app.js?v=__BUILD__"></script>
+</head>
+<body>
+<editha-app></editha-app>
+</body>
+</html>

@@ -1,0 +1,19 @@
+name: Idea or feature request
+description: Suggest something that would make EDITHA more useful
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: You can write in English or Italian.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do?
+      description: Describe the situation and what is hard today, more than the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How could EDITHA help? Mockups and examples from other editors are welcome.

@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": false,
+    "rootDir": ".",
+    "outDir": ".test-dist",
+    "types": ["node"]
+  },
+  "include": ["src/state/tabs.ts", "src/editor/yaml-lint.ts", "src/editor/languages.ts", "src/editor/snippets.ts", "src/state/paths.ts", "src/api/connection.ts", "src/i18n/index.ts", "src/i18n/it.ts", "src/i18n/en.ts", "test"]
+}

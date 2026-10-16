@@ -1,0 +1,60 @@
+name: Bug report
+description: Something in EDITHA does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! You can write in English or Italian.
+        **Never paste passwords, tokens or the content of `secrets.yaml`.**
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, what happened instead?
+      placeholder: |
+        1. Opened automations.yaml
+        2. …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: EDITHA version
+      description: Add-on page in Home Assistant, or the About button in EDITHA.
+      placeholder: "0.17.2"
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Where
+      multiple: true
+      options:
+        - Desktop browser
+        - Home Assistant app on a phone
+        - Phone browser
+        - Tablet
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and system
+      placeholder: "Chrome 141 on Windows 11, Home Assistant app on iOS 26…"
+  - type: input
+    id: ha
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.10.1"
+  - type: textarea
+    id: log
+    attributes:
+      label: Add-on log
+      description: Add-on page → Log. Only the lines around the problem.
+      render: text
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag images here if they help.

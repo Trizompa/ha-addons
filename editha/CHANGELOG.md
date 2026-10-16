@@ -1,0 +1,235 @@
+# Changelog
+
+## 0.18.0
+
+- **Documentazione completa**, in inglese (scheda *Documentazione* dell'add-on) e in italiano (`DOCS.it.md` su GitHub), con le immagini di tutte le funzioni.
+- Errore YAML spiegato anche quando mancano i due punti tra chiave e valore sulla stessa riga: `below 30` → «Alla riga 10 mancano i due punti dopo "below": probabilmente deve essere "below: 30"».
+- Informazioni: lo sviluppatore compare con l'alias GitHub (Trizompa), con il link al profilo.
+- Descrizione dell'add-on nel negozio: "Every Day I Tweak HA – the Home Assistant configuration editor".
+
+## 0.17.2
+
+- Su telefono la barra in alto mostra solo il nome EDITHA, senza il logo: più spazio per i pulsanti.
+
+## 0.17.1
+
+- Nuovo motto: **Every Day I Tweak HA** (le iniziali formano il nome). Nell'interfaccia il nome si scrive in maiuscolo: EDITHA.
+- Sopra l'albero dei file non c'è più la scritta "Esplora file", che su schermi stretti andava su due righe: restano solo i pulsanti.
+
+## 0.17.0
+
+- **Modifica degli snippet personali**: nel pannello Inserisci → Snippet, la matita accanto a ogni snippet personale apre una finestra per cambiarne nome e testo (Tab inserisce due spazi, come nell'editor).
+
+## 0.16.1
+
+- Icona di Editha nella barra laterale: `mdi:pencil`. Per vederla, dopo l'aggiornamento spegnere e riaccendere "Mostra nella barra laterale" nella pagina dell'add-on (oppure riavviare Home Assistant).
+
+## 0.16.0
+
+- **Confronta due file**: tasto destro su un file → "Seleziona per il confronto", poi tasto destro su un altro file → "Confronta con …". I due file si vedono affiancati con le differenze evidenziate (in un'unica colonna su telefono). Se un file è aperto con modifiche non salvate, si confronta il testo dell'editor. Esc chiude il confronto.
+- Nuova icona di Editha nella barra laterale di Home Assistant: `mdi:pencil-circle-outline`.
+
+## 0.15.0
+
+- **Sostituisci in più file**: nel pannello "Cerca nei file", il pulsante con le frecce apre il campo "Sostituisci con". "Sostituisci tutto" cambia tutte le occorrenze trovate; il pulsante accanto a ogni file sostituisce solo in quel file. Prima di modificare Editha chiede conferma e conserva la versione precedente di ogni file nella sua cronologia, da cui si può ripristinare. Con le espressioni regolari si possono usare i gruppi (`$1`).
+- Protezioni: i file aperti con modifiche non salvate vengono saltati (Editha lo dice), così come `secrets.yaml`, le cartelle di sistema e i file cambiati nel frattempo. Le tab aperte si aggiornano subito con il testo nuovo. Un'espressione regolare troppo lenta non modifica nessun file.
+
+## 0.14.0
+
+- **Icone MDI**: scrivendo `mdi:` l'editor propone le icone Material Design per nome, ognuna con la sua anteprima (es. `mdi:lightb` → lightbulb, lightbulb-outline, …). L'elenco delle icone (~7400) si scarica solo la prima volta che serve.
+- "Cerca in tutti i file" resta solo come lente sopra l'albero dei file (e con Ctrl+Maiusc+F): tolto il doppione dalla barra in alto.
+
+## 0.13.2
+
+- **Chiudi la tastiera su iPhone**: il pulsante ora compare accanto al cursore, sul lato destro dell'editor, mentre scrivi. Prima stava nella barra in alto, che iOS fa scorrere fuori dallo schermo quando apre la tastiera, quindi non si vedeva. Lingua e tema restano sempre al loro posto.
+- La ricerca in tutti i file non guarda più dentro `secrets.yaml`: password e chiavi non compaiono nei risultati.
+
+## 0.13.1
+
+Revisione generale del codice, con queste correzioni:
+
+**Salvataggi e bozze**
+- Due Ctrl+S ravvicinati (con la rete o HA lenti) davano un falso "file modificato fuori da Editha" e, scegliendo "Ricarica", si perdevano le ultime modifiche. Ora i salvataggi della stessa tab vanno in coda.
+- Una bozza scritta mentre si salvava restava sul server e veniva riproposta all'apertura successiva. Ora le bozze vecchie vengono eliminate; una bozza uguale al file su disco non viene più proposta.
+- Le bozze e la sessione inviate alla chiusura della pagina arrivano a destinazione anche se la pagina si chiude subito.
+
+**Ricerca**
+- Un'espressione regolare "patologica" (es. `(a+)+$`) poteva bloccare Editha per minuti. Ora la ricerca gira separata dal resto e si ferma dopo 8 secondi, mostrando i risultati trovati fino a lì.
+- Nelle righe molto lunghe il testo trovato oltre il 400° carattere ora è visibile ed evidenziato.
+- Svuotando il campo di ricerca non ricompaiono più i risultati di una ricerca precedente.
+
+**File**
+- Due spostamenti verso lo stesso nome nello stesso istante potevano far sparire un file. Ora uno dei due si ferma con "esiste già".
+- Spostando o rinominando una cartella, la cronologia dei file al suo interno la segue.
+- La cronologia di un file aperto attraverso un collegamento ora è quella del file reale.
+- I file e le cartelle molto grandi (oltre 50 MB) si eliminano senza copia di sicurezza, invece di riempire lo spazio dell'add-on o fallire; Editha lo segnala. Duplicare una cartella oltre 50 MB non è consentito.
+- Scaricare una cartella con un file enorme non esaurisce più la memoria.
+- Errori come "disco pieno" o "permesso negato" ora vengono spiegati invece di un generico "errore interno".
+- `secrets.yaml` viene letto con un vero lettore YAML: un valore su più righe non può più comparire tra i suggerimenti come se fosse una chiave.
+
+**Controllo YAML**
+- `chiave: &ancora` e `chiave: !!map` seguite da un blocco non vengono più indicate come errore, e non nascondono più gli errori successivi.
+- Niente avvisi su più `<<: *ancora` nello stesso blocco, che HA unisce.
+- Niente avvisi su `!secret on` o `!input yes`, che sono nomi, e su elenchi di icone come `- mdi:home`.
+- Niente avvisi sul rientro delle righe interne di `[ ]` e `{ }` su più righe.
+- Il nome della chiave ripetuta ora è quello giusto anche con virgolette o dentro `{ }`.
+- Cambiando lingua, anche i messaggi del controllo cambiano subito lingua.
+
+**Altro**
+- Ctrl+clic su `!include /config/…` (percorso assoluto) apre il file giusto; i collegamenti dentro i commenti vengono ignorati.
+- Esc su un menu non chiude più anche la cronologia aperta. La cronologia si chiude se il file viene spostato o eliminato.
+- Chiudendo una tab non attiva con modifiche, resta attiva la tab di prima.
+- I suggerimenti "Piega"/"Espandi" ora sono tradotti; i nomi di file con lettere accentate rispettano il limite di lunghezza del disco.
+
+## 0.13.0
+
+- **Cerca in tutti i file** (Ctrl+Maiusc+F, pulsante nella barra o lente nell'albero): la ricerca prende il posto dell'albero nella barra laterale. Opzioni maiuscole/minuscole, parola intera ed espressione regolare. I risultati sono raggruppati per file, con la riga e il testo trovato evidenziato; un clic apre il file con il testo selezionato. Escluse le cartelle di sistema, i database e i file binari.
+- **Dove è usata un'entità**: dal pannello Inserisci, pulsante accanto a ogni entità; oppure con il cursore su un `entity_id` e Ctrl+Maiusc+F. Cerca la parola intera, quindi trova `light.cucina` anche dentro i template (`states.light.cucina.state`) ma non `light.cucina_2`, e mostra nome e stato dell'entità.
+
+## 0.12.0
+
+- **Sposta in…** nel menu contestuale di file e cartelle (anche su telefono, tenendo premuto). Si sceglie la cartella di destinazione da un elenco filtrabile; non si può spostare nella cartella dove il file sta già, né una cartella dentro sé stessa, né nelle cartelle di sistema. Le tab aperte, le bozze e la cronologia delle versioni seguono il file. Niente trascinamento, per evitare spostamenti per sbaglio.
+
+## 0.11.0
+
+- **`!secret`**: scrivendo `!secret ` l'editor propone le chiavi di `secrets.yaml` (solo i nomi: i valori non escono mai dal server). Come HA, cerca `secrets.yaml` nella cartella del file e poi in quelle sopra fino a `/config`.
+- **Ctrl+clic** (Cmd+clic su Mac) sui collegamenti, che sono sottolineati a puntini:
+  - su `!include file.yaml` apre il file (percorso relativo alla cartella del file, come in HA);
+  - su `!include_dir_named`, `!include_dir_list`, `!include_dir_merge_…` apre la cartella nell'albero;
+  - su `!secret chiave` apre `secrets.yaml` sulla riga di quella chiave.
+
+## 0.10.4
+
+- Schermi molto stretti (sotto i 370 px): nella barra resta solo il logo, così tutti i pulsanti ci stanno e la pagina non si sposta più di lato tagliando il nome e la barra di stato.
+
+## 0.10.3
+
+- Corretto: dopo una chiave senza «:» venivano segnalate come sbagliate anche le righe giuste sotto (per esempio "All mapping items must start at the same column" su `max:`). Ora per quel blocco resta solo la spiegazione della riga da correggere.
+
+## 0.10.2
+
+- Spiegazioni più chiare quando una riga è più rientrata di quella sopra:
+  - se alla riga sopra mancano i due punti: "Alla riga 28 mancano i due punti dopo «car_wican»: per contenere le righe sotto deve essere «car_wican:»";
+  - se la riga sopra ha già un valore: "La riga 12 ha già un valore («name: Casa»), quindi non può contenere la riga 13";
+  - negli altri casi il messaggio dice quale riga correggere e come.
+
+## 0.10.1
+
+- Corretto: nel tema scuro, l'elenco per scegliere il file della colonna destra (vista divisa) mostrava testo chiaro su sfondo bianco, illeggibile su Windows.
+
+## 0.10.0
+
+- **Controllo YAML più chiaro**: per gli errori di indentazione Editha spiega cosa non va e dove, con i numeri di riga. Per esempio "la riga 9 rientra di 5 spazi: nessun blocco sopra parte da lì (livelli possibili: 0, 2, 4, 6, 8)", oppure "per far parte dell'elemento di lista della riga 2 deve rientrare di 4 spazi, allineata a «platform»". Anche le chiavi ripetute dicono quale chiave è.
+- **Nuovi avvisi** per errori tipici di Home Assistant che restano YAML valido:
+  - `on`/`off`/`yes`/`no` senza virgolette, che HA legge come vero/falso (`to: on` in un trigger);
+  - `chiave:valore` senza spazio dopo i due punti, letto come testo;
+  - rientri dispari in un file che va di 2 in 2.
+- **Elenco dei problemi**: un clic sul conteggio "N errori · N avvisi" nella barra in basso (o Ctrl+Maiusc+M) apre l'elenco completo, con il numero di riga di ciascuno; un clic porta alla riga.
+
+## 0.9.1
+
+- Informazioni: sviluppatore Trizompa; tolto il riferimento a File Editor Plus.
+- Documentazione e licenza aggiornate con il nome dell'autore.
+
+## 0.9.0
+
+- **Vista divisa in due colonne** (solo su PC e tablet): pulsante nella barra, oppure "Apri a destra" nel menu di un file. Nella colonna destra si sceglie quale file mostrare tra quelli aperti; può essere anche lo stesso file della colonna sinistra, per vedere due punti diversi: le modifiche fatte in una colonna compaiono subito nell'altra. Salva, Annulla, Cerca e Inserisci agiscono sulla colonna usata per ultima (segnata da una linea blu). La vista divisa resta uscendo e rientrando.
+- **Informazioni**: pulsante accanto a lingua e tema con sviluppatore (Trizompa), GitHub, repository, versione, licenza e le librerie usate. Su telefono si trova nel menu della lingua.
+
+## 0.8.1
+
+- Corretto su iPhone: trascinando l'editor verso destra oltre il bordo, l'effetto elastico di iOS spostava anche la colonna dei numeri di riga. Ora lo scorrimento si ferma ai bordi, anche per la pagina e per il confronto della cronologia.
+
+## 0.8.0
+
+- **Bozze delle modifiche non salvate**: mentre scrivi Editha conserva le modifiche non ancora salvate (dopo un secondo di pausa, e subito quando la pagina viene chiusa o passi a un'altra app). Se chiudi la pagina, HA si riavvia o il telefono chiude l'app, alla riapertura Editha chiede se recuperarle o scartarle. Le modifiche recuperate tornano nella loro tab, da salvare; se nel frattempo il file è cambiato su disco, al salvataggio Editha chiede cosa fare.
+
+## 0.7.1
+
+- **Telefono: pulsante "Chiudi la tastiera"**. Su iPhone la tastiera si chiude solo togliendo il focus all'editor, e nella pagina non c'era un modo per farlo: ora, mentre scrivi, al posto di lingua e tema compare il pulsante con la tastiera. Aprendo un file su telefono la tastiera non si apre più da sola.
+- **Duplica più sicuro**: solo per i file. La copia di un file YAML viene proposta come `nome_copia.yaml.bak`, che Home Assistant non carica (niente automazioni o sensori doppi in `packages` o nelle cartelle `!include_dir_…`); Editha la mostra comunque come YAML. Un nome che finisce in `.yaml` va confermato.
+- Tra il testo "Easy Developer IDE for The HA" e il primo pulsante la stessa distanza che c'è tra logo e "Editha".
+
+## 0.7.0
+
+- **Cronologia dei file**: pulsante "Cronologia del file" nella barra, o voce "Cronologia…" nel menu di un file. Elenca le versioni conservate da Editha (prima di ogni salvataggio, ripristino o eliminazione), le confronta con il contenuto attuale (affiancate su PC, in un'unica colonna su telefono) e ripristina quella scelta. Il contenuto sostituito diventa a sua volta una versione, quindi il ripristino si annulla.
+- Conservate **10 versioni per file** invece di 50 (configurabile con `EDITHA_BACKUP_KEEP`); le versioni in più spariscono al salvataggio successivo.
+- **Duplica** file e cartelle dal menu contestuale, con il nome della copia proposto (`nome_copia.yaml`).
+- Su telefono il menu contestuale dell'albero si apre con una pressione prolungata.
+- Barra in alto su telefono: tutti i pulsanti stanno nella riga anche su iPhone (prima il tema era tagliato).
+
+## 0.6.1
+
+- Logo e nome di Editha nell'angolo in alto a sinistra; il pulsante che mostra/nasconde l'albero passa insieme agli altri comandi.
+- Corretto: su finestre molto basse la schermata iniziale copriva i pulsanti della barra.
+
+## 0.6.0
+
+- **Upload dal PC**: pulsante nell'albero, voce "Carica file qui…" nel menu di una cartella, oppure trascinando i file dal PC sopra una cartella. Se un file esiste già Editha chiede se sostituirlo; la versione precedente resta nei backup. Le cartelle di sistema restano protette.
+- **Download sul PC**: "Scarica sul PC" per un file (anche immagini e file binari), "Scarica come zip" per una cartella.
+- Limite di 50 MB per singolo trasferimento (configurabile con `EDITHA_MAX_TRANSFER`).
+
+## 0.5.0
+
+- Interfaccia in italiano e inglese: selettore della lingua nella barra in alto (Automatica, Italiano, English). La scelta resta memorizzata e si applica subito, senza ricaricare la pagina; "Automatica" segue la lingua del browser.
+- Tradotti anche il pannello di ricerca dell'editor, i messaggi del validatore YAML e gli snippet predefiniti (nomi e testi di esempio).
+
+## 0.4.2
+
+- Corretto: entità, autocompletamento e menu Home Assistant non funzionavano nell'add-on ("Home Assistant non è raggiungibile da qui"). Il token del Supervisor ora viene letto anche quando l'avvio passa da s6-overlay; il log indica all'avvio se le API di HA sono disponibili.
+- Carattere dell'editor a 13 px su PC (14 px su telefono).
+- Dopo un aggiornamento la nuova interfaccia viene caricata senza refresh forzato del browser.
+
+## 0.4.1
+
+- Se Editha non risponde (add-on in aggiornamento o riavvio con la pagina aperta) compare un avviso con "Ricarica la pagina", che sparisce da solo quando il server torna; dopo un aggiornamento dell'add-on l'avviso invita a ricaricare per usare la nuova versione.
+- Le letture si ritentano una volta prima di segnalare un errore.
+- Spazio tra "Editha" e "Easy Developer IDE for The HA" uguale a quello tra logo e nome.
+
+## 0.4.0
+
+- Menu **Home Assistant** nella barra: verifica della configurazione, ricarica della configurazione YAML e riavvio. Ricarica e riavvio partono solo se la verifica passa; gli errori di HA vengono mostrati per intero e l'esito è quello reale.
+- Pannello **Inserisci**: entità del proprio HA (nome, `entity_id`, stato) e snippet, predefiniti e personali ("Salva la selezione come snippet").
+- Autocompletamento di entità e azioni mentre si scrive (`light.`, `entity_id:`, `action:`), con stato attuale.
+- Colonna dei numeri di riga più stretta e vicina al codice anche su desktop.
+- Più spazio tra "Editha" e "Easy Developer IDE for The HA".
+- Le impostazioni si salvano con POST invece di PATCH (più compatibile con i proxy).
+
+## 0.3.1
+
+- Descrizione semplificata: "Easy Developer IDE for The HA".
+
+## 0.3.0
+
+- Nuovo nome: **Editha** – Easy Developer IDE for The HA. Lo slug passa da `edith` a `editha`: per Home Assistant è un add-on nuovo, quindi va installato Editha e disinstallato Edith (impostazioni e backup di Edith non vengono trasferiti).
+
+## 0.2.2
+
+- Telefono: colonna dei numeri di riga più stretta (da 82 a 51 px su un iPhone).
+- Con l'a capo automatico il seguito di una riga lunga resta allineato alla sua indentazione.
+
+## 0.2.1
+
+- Le cartelle di sistema in sola lettura (`.storage`, `.cloud`, `deps`, `tts`, `.git`) sono nascoste nell'albero; il pulsante a forma di occhio le mostra. La scelta resta memorizzata.
+
+## 0.2.0
+
+- Interfaccia grafica: albero dei file, tab, editor CodeMirror 6, barra degli strumenti e barra di stato.
+- Validazione YAML in tempo reale che riconosce `!include`, `!secret` e gli altri tag di Home Assistant.
+- Menu contestuale con nuovo file, nuova cartella, rinomina, elimina e copia percorso.
+- Avviso per le modifiche non salvate e gestione dei file modificati fuori da Editha.
+- Tema automatico, chiaro o scuro; tab aperte e tema ritrovati al rientro.
+- Utilizzabile anche da telefono: l'albero diventa un pannello laterale.
+- Test nel browser per ciascun problema segnalato su File Editor Plus (#4–#19).
+
+## 0.1.0
+
+- Server (TypeScript, Fastify) raggiungibile solo dal proxy Ingress.
+- API dei file di `/config`: elenco, lettura, salvataggio, creazione, rinomina, eliminazione.
+- Salvataggio atomico con rilevamento dei conflitti; copia della versione precedente in `/data/backups`.
+- Cartelle `.storage`, `.cloud`, `deps`, `tts`, `.git` in sola lettura.
+- Pagina provvisoria nel pannello: l'editor arriva nella prossima versione.
+
+## 0.0.1
+
+- Struttura iniziale dell'add-on (non installabile).

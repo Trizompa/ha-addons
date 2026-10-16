@@ -1,0 +1,138 @@
+name: Editha
+
+on:
+  push:
+    paths:
+      - "editha/**"
+      - ".github/workflows/editha.yaml"
+  pull_request:
+    paths:
+      - "editha/**"
+      - ".github/workflows/editha.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test del server
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: editha/server
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: editha/server/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  web:
+    name: Test dell'interfaccia
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            editha/server/package-lock.json
+            editha/web/package-lock.json
+      - name: Dipendenze
+        run: |
+          npm ci --prefix editha/server
+          npm ci --prefix editha/web
+      - name: Controllo dei tipi e test unitari
+        working-directory: editha/web
+        run: |
+          npm run typecheck
+          npm test
+      - name: Browser per i test
+        working-directory: editha/web
+        run: npx playwright install --with-deps chromium
+      - name: Test nel browser (e2e)
+        working-directory: editha/web
+        run: npm run test:e2e
+      - name: Rapporto dei test
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            editha/web/playwright-report
+            editha/web/test-results
+          retention-days: 7
+
+  build:
+    # ENG-4 / ENG-7: l'immagine deve costruirsi su entrambe le architetture,
+    # con la stessa base image che usa il Supervisor.
+    name: Build ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    needs: [test, web]
+    # La build aarch64 è emulata: se si blocca meglio fallire che restare appesa per ore.
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+          - arch: aarch64
+            platform: linux/arm64
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: editha
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            BUILD_FROM=ghcr.io/home-assistant/base:3.22
+          push: false
+          load: true
+          tags: editha:${{ matrix.arch }}
+      - name: Avvio e controllo dell'accesso
+        # Riproduce la rete del Supervisor: il proxy Ingress ha l'indirizzo 172.30.32.2
+        # e il server usa la configurazione predefinita (EDITHA_ALLOWED_IPS non impostata).
+        run: |
+          image=editha:${{ matrix.arch }}
+          platform=${{ matrix.platform }}
+          mkdir -p "$RUNNER_TEMP/config" "$RUNNER_TEMP/data"
+          echo "homeassistant:" > "$RUNNER_TEMP/config/configuration.yaml"
+          docker network create --subnet 172.30.32.0/23 hassio
+          # Come il Supervisor: il token arriva come variabile d'ambiente del container.
+          docker run -d --name editha --network hassio --ip 172.30.33.10 --platform "$platform" \
+            -e SUPERVISOR_TOKEN=token-di-prova \
+            -v "$RUNNER_TEMP/config:/config" -v "$RUNNER_TEMP/data:/data" "$image"
+          probe() {
+            docker run --rm --network hassio --ip "$1" --platform "$platform" --entrypoint wget "$image" \
+              -q -T 5 -O - "http://172.30.33.10:8099$2"
+          }
+          for i in $(seq 1 30); do
+            if probe 172.30.32.2 /api/health; then break; fi
+            if [ "$i" = 30 ]; then echo "il server non risponde"; exit 1; fi
+            sleep 2
+          done
+          echo
+          probe 172.30.32.2 /api/tree
+          echo
+          probe 172.30.32.2 / | grep -q "<editha-app>"
+          echo "interfaccia servita"
+          # Editha deve vedere il token anche quando l'avvio passa da s6-overlay.
+          probe 172.30.32.2 /api/ha/status | grep -q '"available":true'
+          echo "token del Supervisor visibile"
+          if probe 172.30.33.50 /api/health; then
+            echo "un indirizzo diverso dal proxy Ingress non deve essere accettato"
+            exit 1
+          fi
+          echo "indirizzo esterno rifiutato correttamente"
+      - name: Log del server
+        if: always()
+        run: docker logs editha || true
