@@ -4,8 +4,6 @@ export const it = {
 
   // Barra degli strumenti
   'toolbar.sidebar': 'Mostra/nascondi esplora file',
-  'toolbar.newFile': 'Nuovo file',
-  'toolbar.newFolder': 'Nuova cartella',
   'toolbar.save': 'Salva (Ctrl+S)',
   'toolbar.saveAll': 'Salva tutto (Ctrl+Alt+S)',
   'toolbar.undo': 'Annulla (Ctrl+Z)',

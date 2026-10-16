@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.1
+
+- Nuovo file e nuova cartella restano solo nei pulsanti sopra l'albero dei file (e nel menu del tasto destro): tolto il doppione dalla barra in alto.
+
 ## 0.18.0
 
 - **Documentazione completa**, in inglese (scheda *Documentazione* dell'add-on) e in italiano (`DOCS.it.md` su GitHub), con le immagini di tutte le funzioni.

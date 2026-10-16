@@ -42,7 +42,7 @@ through Home Assistant (Ingress), with your Home Assistant login.
 
 ![Main window](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-dark.png)
 
-- **Toolbar** (top): file explorer, new file and folder, save and save all, undo and redo, find,
+- **Toolbar** (top): file explorer, save and save all, undo and redo, find,
   file history, word wrap, split view, insert panel and the Home Assistant menu. On the right:
   language (Italian or English), theme (automatic, light, dark) and About.
 - **File explorer** (left): the content of `/config`. Above it: search in all files, new file,

@@ -150,8 +150,6 @@ export class EdithaToolbar extends LitElement {
     return html`
       <div class="brand"><span class="logo">E</span><span>EDITHA<small>${t('app.tagline')}</small></span></div>
       ${this.button('toggle-sidebar', t('toolbar.sidebar'), icons.sidebar, { on: s.sidebarVisible })}
-      ${this.button('new-file', t('toolbar.newFile'), icons.fileNew, { cls: 'hide-narrow' })}
-      ${this.button('new-folder', t('toolbar.newFolder'), icons.folderNew, { cls: 'hide-narrow' })}
       ${this.button('save', t('toolbar.save'), icons.save, { disabled: !s.canSave })}
       ${this.button('save-all', t('toolbar.saveAll'), icons.saveAll, { disabled: !s.canSaveAll, cls: 'hide-narrow' })}
       <span class="sep"></span>

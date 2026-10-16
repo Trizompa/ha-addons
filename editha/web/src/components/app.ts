@@ -1804,10 +1804,6 @@ export class EdithaApp extends LitElement {
     switch (e.detail.action) {
       case 'toggle-sidebar':
         return this.toggleSidebar();
-      case 'new-file':
-        return void this.create('file');
-      case 'new-folder':
-        return void this.create('directory');
       case 'save':
         return void this.save();
       case 'save-all':

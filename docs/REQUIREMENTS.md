@@ -47,7 +47,7 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 | ID | Requisito | Pr. |
 | --- | --- | --- |
 | FS-1 | Albero di `/config` con caricamento pigro delle cartelle e ordinamento cartelle → file; l'albero scorre indipendentemente dall'editor anche con molti file, con mouse e tastiera (FEP #4). | P0 |
-| FS-2 | Crea file e cartella dalla barra superiore e dal menu contestuale (tasto destro). La destinazione è la cartella selezionata, anche se vuota (o la cartella del file selezionato); l'albero si aggiorna e il nuovo file si apre (FEP #11, #12). | P0 |
+| FS-2 | Crea file e cartella dai pulsanti sopra l'albero e dal menu contestuale (tasto destro). La destinazione è la cartella selezionata, anche se vuota (o la cartella del file selezionato); l'albero si aggiorna e il nuovo file si apre (FEP #11, #12). | P0 |
 | FS-3 | **Rinomina** file e cartelle, sia dalla barra superiore sia dal menu contestuale, aggiornando le tab aperte sul percorso vecchio (FEP #18). | P0 |
 | FS-4 | Elimina con conferma; il file eliminato finisce nei backup di Editha (BK-1), non sparisce. | P0 |
 | FS-5 | Sposta con la voce "Sposta in…" del menu contestuale (niente trascinamento: troppo facile sbagliare), con aggiornamento delle tab aperte. | P1 |
@@ -249,6 +249,7 @@ editha/
 | 0.17.1 | Nome EDITHA in maiuscolo nell'interfaccia, motto "Every Day I Tweak HA"; tolta la scritta "Esplora file" sopra l'albero. |
 | 0.17.2 | Su telefono nella barra solo il nome EDITHA, senza logo. |
 | 0.18.0 | Documentazione utente (DOCS.md, DOCS.it.md) con immagini; file per GitHub (CONTRIBUTING, SECURITY, modelli, release); HA-9: «chiave valore» senza due punti spiegato. |
+| 0.18.1 | Nuovo file/cartella solo sopra l'albero (tolti dalla barra in alto). |
 
 ---
 

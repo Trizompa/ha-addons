@@ -43,7 +43,7 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
 
 ![Finestra principale](../docs/images/main-dark.png)
 
-- **Barra degli strumenti** (in alto): esplora file, nuovo file e cartella, salva e salva tutto,
+- **Barra degli strumenti** (in alto): esplora file, salva e salva tutto,
   annulla e ripeti, cerca, cronologia del file, a capo automatico, vista divisa, pannello Inserisci
   e menu di Home Assistant. A destra: lingua (italiano o inglese), tema (automatico, chiaro, scuro)
   e Informazioni.

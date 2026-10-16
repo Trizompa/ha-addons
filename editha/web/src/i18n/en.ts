@@ -5,8 +5,6 @@ export const en: Record<keyof Dictionary, string> = {
   'app.tagline': 'Every Day I Tweak HA',
 
   'toolbar.sidebar': 'Show/hide file explorer',
-  'toolbar.newFile': 'New file',
-  'toolbar.newFolder': 'New folder',
   'toolbar.save': 'Save (Ctrl+S)',
   'toolbar.saveAll': 'Save all (Ctrl+Alt+S)',
   'toolbar.undo': 'Undo (Ctrl+Z)',

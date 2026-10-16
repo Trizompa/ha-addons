@@ -85,10 +85,10 @@ test('FEP #11 e #12 – nuovo file nella cartella vuota selezionata, dal menu co
   await expect(activeTab(page)).toHaveAttribute('data-path', 'vuota/scene.yaml');
   expect(await disk('vuota/scene.yaml')).toBe('');
 
-  // Dalla barra in alto: destinazione = cartella selezionata.
+  // Dai pulsanti sopra l'albero: destinazione = cartella selezionata.
   await row(page, 'vuota').click();
   await row(page, 'vuota').click();
-  await page.locator('editha-toolbar button[title="Nuova cartella"]').click();
+  await page.locator('editha-file-tree header button[title="Nuova cartella"]').click();
   await page.locator('editha-dialog input').fill('sotto');
   await dialogButton(page, 'Crea').click();
   await expect(row(page, 'vuota/sotto')).toBeVisible();
