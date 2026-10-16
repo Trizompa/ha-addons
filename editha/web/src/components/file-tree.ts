@@ -437,7 +437,7 @@ export class EdithaFileTree extends LitElement {
       @click=${() => entry.type !== 'other' && this.onRowClick(entry)}
       @contextmenu=${(e: MouseEvent) => this.onRowContext(e, entry)}
     >
-      <span class="chevron">${isDir ? icon(open ? icons.chevronDown : icons.chevronRight, 16) : nothing}</span>
+      <span class="chevron">${isDir && (!entry.empty || open) ? icon(open ? icons.chevronDown : icons.chevronRight, 16) : nothing}</span>
       <span class="type-icon ${isDir ? 'folder' : ''}" style=${isDir ? '' : `color:${fi.color}`}>
         ${icon(isDir ? (open ? icons.folderOpen : icons.folder) : fi.path, 17)}
       </span>

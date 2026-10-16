@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.1
+
+- Nell'albero le cartelle vuote non hanno più la freccia per espanderle: si vede subito che non contengono niente.
+
 ## 0.20.0
 
 - **Schema del file**: nuovo pulsante nella barra (elenco puntato) che apre, a fianco dell'editor, lo schema del file YAML. In `automations.yaml` c'è una voce per ogni automazione, indicata con il suo alias; in `scripts.yaml` una per script; in `configuration.yaml` e nei package le sezioni, con dentro automazioni, script e helper. Un clic porta alla voce; quella in cui si trova il cursore resta evidenziata e lo schema si aggiorna mentre scrivi. Con molte voci compare un filtro. Il pulsante accende e spegne lo schema, ed EDITHA ricorda la scelta. Non disponibile sul telefono.

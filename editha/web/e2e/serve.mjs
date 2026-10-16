@@ -65,6 +65,7 @@ for (const [rel, content] of Object.entries(files)) {
   await writeFile(abs, content);
 }
 await mkdir(path.join(configDir, 'vuota'), { recursive: true });
+await mkdir(path.join(configDir, 'sempre-vuota'), { recursive: true });
 await mkdir(dataDir, { recursive: true });
 
 // Finto Home Assistant Core: la configurazione è "non valida" finché esiste check/rotto.yaml.

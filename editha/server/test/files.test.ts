@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { chmod, readdir, readFile, stat, symlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readdir, readFile, stat, symlink, writeFile } from 'node:fs/promises';
 import { BackupStore } from '../src/backups/store.js';
 import { EdithaError } from '../src/errors.js';
 import { etagOf, FileService } from '../src/fs/files.js';
@@ -69,6 +69,17 @@ describe('FileService', () => {
 
     it('rifiuta un file al posto di una cartella', async () => {
       await assert.rejects(files.list('configuration.yaml'), rejectsWith('not_a_directory'));
+    });
+
+    it('segna le cartelle vuote (i file temporanei non contano)', async () => {
+      await mkdir(abs('vuota'));
+      await mkdir(abs('quasi'));
+      await writeFile(abs('quasi/.editha-abc123.tmp'), '');
+      const root = await files.list('');
+      assert.equal(root.find((e) => e.name === 'vuota')?.empty, true);
+      assert.equal(root.find((e) => e.name === 'quasi')?.empty, true);
+      assert.equal(root.find((e) => e.name === 'packages')?.empty, false);
+      assert.equal(root.find((e) => e.name === 'configuration.yaml')?.empty, undefined);
     });
   });
 

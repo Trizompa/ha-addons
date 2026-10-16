@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { constants as fsConstants } from 'node:fs';
-import { copyFile, cp, lstat, mkdir, open, readdir, readFile, realpath, rename, rm, stat } from 'node:fs/promises';
+import { copyFile, cp, lstat, mkdir, open, opendir, readdir, readFile, realpath, rename, rm, stat } from 'node:fs/promises';
 import type { Stats } from 'node:fs';
 import { isMap, isScalar, LineCounter, parseDocument } from 'yaml';
 import { EdithaError, fromFsError } from '../errors.js';
@@ -30,6 +30,8 @@ export interface Entry {
   size: number;
   mtime: string;
   readOnly: boolean;
+  /** Solo per le cartelle: true se non contiene nulla (l'albero non mostra la freccia). */
+  empty?: boolean;
 }
 
 export interface FileContent {
@@ -172,15 +174,18 @@ export class FileService {
         st = await lstat(abs);
       }
       const outside = symlink && !this.guard.isInside(target);
-      return {
+      const type = outside ? 'other' : typeOf(st);
+      const entry: Entry = {
         name,
         path: rel,
-        type: outside ? 'other' : typeOf(st),
+        type,
         symlink,
         size: st.isFile() ? st.size : 0,
         mtime: st.mtime.toISOString(),
         readOnly: outside || this.guard.isReadOnly(target),
       };
+      if (type === 'directory') entry.empty = await isEmptyDir(target);
+      return entry;
     } catch {
       // Link interrotto o voce sparita durante la lettura.
       return symlink ? { name, path: rel, type: 'other', symlink, size: 0, mtime: '', readOnly: true } : null;
@@ -695,5 +700,23 @@ export class FileService {
   private async entryOf(target: ResolvedPath): Promise<Entry> {
     const st = await this.lstatEntry(target);
     return (await this.describe(target.abs, target.rel, path.posix.basename(target.rel), st.isSymbolicLink()))!;
+  }
+}
+
+/** Cartella senza nulla dentro (i file temporanei dei salvataggi non contano); basta leggere la prima voce. */
+async function isEmptyDir(abs: string): Promise<boolean> {
+  try {
+    const dir = await opendir(abs);
+    try {
+      for await (const d of dir) {
+        if (!isTempName(d.name)) return false;
+      }
+      return true;
+    } finally {
+      // Uscendo dal ciclo prima della fine la cartella è già chiusa: si ignora l'errore.
+      await dir.close().catch(() => {});
+    }
+  } catch {
+    return false;
   }
 }

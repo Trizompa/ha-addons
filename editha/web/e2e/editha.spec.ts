@@ -897,3 +897,8 @@ test('ED-18 – schema del file: voci, salto alla riga, voce attiva, scelta rico
   await expect(page.locator('editha-outline-panel')).toHaveCount(0);
   await expect.poll(async () => (await (await request.get('api/settings')).json()).outlineVisible).toBe(false);
 });
+
+test('FS-1 – le cartelle vuote non hanno la freccia per espanderle', async ({ page }) => {
+  await expect(row(page, 'sempre-vuota').locator('.chevron svg')).toHaveCount(0);
+  await expect(row(page, 'tabs').locator('.chevron svg')).toHaveCount(1);
+});
