@@ -13,8 +13,8 @@ A file editor for your Home Assistant configuration, from the sidebar, on PC, ta
 - **Comfortable**: tabs, split view, file outline (automations and scripts by alias), search and
   replace in all files, file history and comparison, image and PDF preview, ready-made and
   personal snippets.
-- **Private**: Ingress only, no exposed ports, secret values never leave the server, works without
-  internet.
+- **Private**: Ingress only, no exposed ports, secret values are never sent for suggestions or
+  search, works without internet.
 - **Italian and English**, light and dark theme.
 
 See the **Documentation** tab for the full guide.

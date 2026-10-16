@@ -45,10 +45,10 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
 
 ![Finestra principale](../docs/images/main-dark.png)
 
-- **Barra degli strumenti** (in alto): esplora file, salva e salva tutto,
-  annulla e ripeti, cerca, cronologia del file, a capo automatico, vista divisa, schema, pannello Inserisci
-  e menu di Home Assistant. A destra: lingua (italiano o inglese), tema (automatico, chiaro, scuro)
-  e Informazioni.
+- **Barra degli strumenti** (in alto): esplora file, salva e salva tutto, annulla e ripeti, cerca
+  e sostituisci, cronologia del file, a capo automatico, vista divisa, schema, pannello Inserisci e
+  menu di Home Assistant. A destra: lingua (Automatica (browser), Italiano, English), tema
+  (automatico, chiaro, scuro) e Informazioni.
 - **Esplora file** (a sinistra): il contenuto di `/config`. Sopra: cerca in tutti i file, nuovo
   file, nuova cartella, cartelle di sistema, carica, aggiorna e comprimi tutto.
 - **Tab ed editor** (al centro): una tab per ogni file aperto. Il pallino su una tab indica
@@ -68,22 +68,28 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 | Azione | Note |
 | --- | --- |
 | Nuovo file / Nuova cartella | Creati dentro la cartella selezionata. |
-| Rinomina (F2) | Le tab aperte seguono il nuovo nome. |
-| Duplica… | Solo file. EDITHA propone un nome libero da confermare. |
-| Sposta in… | Scegli la cartella di destinazione da un elenco. Niente trascinamento, apposta: troppo facile sbagliare cartella. |
-| Elimina | Chiede conferma. Il file eliminato resta nella cronologia di EDITHA e si può ripristinare. |
-| Scarica / Scarica come zip | Un file, oppure un'intera cartella come archivio zip. |
+| Apri a destra | Mostra il file nella colonna destra della vista divisa. Non per immagini e PDF (un SVG lì si apre come testo), e non sul telefono. |
+| Apri come testo | Solo file SVG: si aprono in anteprima, questa voce apre il loro codice nell'editor. |
+| Rinomina (F2) | Le tab aperte seguono il nuovo nome, e la cronologia del file lo segue. |
+| Duplica… | Solo file. EDITHA propone `nome_copia.est`, che puoi cambiare. Una copia YAML prende anche `.bak` in fondo (`automations_copia.yaml.bak`), così Home Assistant non la carica due volte; un nome che finisce in `.yaml` chiede conferma. |
+| Sposta in… | Scegli la cartella di destinazione da un elenco. Niente trascinamento, apposta: troppo facile sbagliare cartella. La cronologia segue il file. |
+| Elimina (Canc) | Chiede conferma. Una copia resta nella cronologia di EDITHA (vedi [Cronologia](#cronologia-e-confronto)); gli elementi oltre 50 MB vengono eliminati senza copia. |
+| Scarica sul PC / Scarica come zip | Un file, oppure un'intera cartella come archivio zip, fino a 50 MB. |
 | Copia percorso | Il percorso completo `/config/...`. |
 | Cronologia… | Le versioni salvate del file (vedi [Cronologia](#cronologia-e-confronto)). |
-| Seleziona per il confronto / Confronta con… | Confronta due file affiancati. |
+| Seleziona per il confronto / Confronta con *nome* | Confronta due file affiancati. |
 
-- **Caricare file**: pulsante di caricamento, oppure trascina i file dal PC su una cartella.
+- **Caricare file**: pulsante di caricamento, oppure trascina i file dal PC su una cartella. Fino a
+  50 MB per file; sostituire un file esistente chiede conferma, e la versione precedente va nella
+  cronologia.
 - **Filtra per nome**: il campo sopra l'albero.
 - **Immagini e PDF** si aprono in una tab di anteprima invece che nell'editor: PNG, JPEG, GIF,
   WebP, AVIF, BMP, ICO, SVG e PDF. La tab di anteprima è una sola e viene riusata dalla prossima
   immagine che apri. In alto compaiono le dimensioni in pixel e lo zoom attuale; un clic
   sull'immagine la mostra a grandezza reale (100%), un altro clic la riadatta. Le parti trasparenti
-  mostrano una scacchiera. L'anteprima si chiude con la × della sua tab o con Esc.
+  mostrano una scacchiera. Il pulsante di download in alto salva il file sul PC. L'anteprima si
+  chiude con la × della sua tab o con Esc. Per modificare un SVG usa **Apri come testo** nel suo
+  menu.
 
   ![Anteprima di un'immagine](../docs/images/preview.png)
 - **Cartelle di sistema** (`.storage`, `.cloud`, `deps`, `tts`, `.git`): sono nascoste. Il
@@ -94,10 +100,10 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 
 - **Salva** con Ctrl+S (Cmd+S su Mac), **salva tutto** con Ctrl+Alt+S.
 - **Annulla e ripeti** annullano anche i rientri fatti con Tab.
-- **Trova e sostituisci** nel file aperto: Ctrl+F.
+- **Cerca e sostituisci** nel file aperto: Ctrl+F.
 - **A capo automatico** e **vista divisa** sono nella barra. La vista divisa mostra due file
   affiancati, oppure due punti dello stesso file: le modifiche fatte in una colonna compaiono
-  nell'altra.
+  nell'altra. **Apri a destra** nel menu di un file lo mette subito nella colonna destra.
 
   ![Vista divisa](../docs/images/split-view.png)
 
@@ -110,15 +116,18 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 
   ![Schema del file](../docs/images/outline.png)
 
-- **Linguaggi**: YAML, JSON, Python, JavaScript, CSS, Markdown e template Jinja sono colorati; gli
-  altri file si aprono come testo semplice. Immagini e PDF si aprono in anteprima; gli altri file
-  binari e quelli oltre 5 MB non si aprono nell'editor, ma si possono scaricare.
+- **Linguaggi**: YAML, JSON, Python, JavaScript, TypeScript, CSS, Markdown e template Jinja
+  (`.jinja`, `.jinja2`, `.j2`) sono colorati; gli altri file si aprono come testo semplice.
+  Immagini e PDF si aprono in anteprima; gli altri file binari e quelli oltre 5 MB non si aprono
+  nell'editor, ma si possono scaricare.
 
 ### Il lavoro non si perde
 
 - Chiudere una tab o la pagina con modifiche non salvate chiede conferma.
 - Se la pagina si chiude comunque (telefono bloccato, browser chiuso), EDITHA conserva le modifiche
-  non salvate come **bozza** e la volta dopo propone di recuperarle.
+  non salvate come **bozza** e la volta dopo propone di recuperarle. La bozza di un file che non
+  esiste più, o che non si può più salvare (per esempio è diventato di sola lettura), viene scartata
+  con un avviso.
 - Se un file aperto cambia su disco (per esempio lo ha riscritto Home Assistant), EDITHA avvisa
   prima di salvare: scegli tu se ricaricarlo o sovrascriverlo.
 
@@ -129,7 +138,9 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 EDITHA controlla lo YAML mentre scrivi. Conosce i tag di Home Assistant (`!include`,
 `!include_dir_*`, `!secret`, `!input`, `!env_var`) e, al posto del messaggio criptico della
 libreria, dice cosa non va e in quale riga: due punti mancanti, una riga al livello di rientro
-sbagliato, una tabulazione al posto degli spazi, una chiave ripetuta.
+sbagliato, una tabulazione al posto degli spazi, una chiave ripetuta, un template `{{ … }}` senza
+virgolette, un elenco o un blocco `{ }` usato come chiave, un alias `*nome` senza un'ancora `&nome`
+prima.
 
 ![Un errore YAML spiegato](../docs/images/problems.png)
 
@@ -145,7 +156,8 @@ Premi Ctrl+Spazio, oppure scrivi e basta:
 
 - **entità** con nome e stato attuale, dopo `entity_id:` o appena scrivi un dominio come `light.`;
 - **azioni** (`light.turn_on`, …) e i loro campi;
-- **chiavi `!secret`** da `secrets.yaml` (solo i nomi: i valori non lasciano mai il server);
+- **chiavi `!secret`** da `secrets.yaml` (solo i nomi: i valori non vengono mai inviati per i
+  suggerimenti);
 - **icone Material Design** dopo `mdi:`, con l'anteprima.
 
 ![Suggerimenti delle entità](../docs/images/autocomplete-entities.png)
@@ -181,43 +193,62 @@ Il pulsante di Home Assistant nella barra:
   errori il riavvio viene annullato, così un errore di battitura non ti lascia senza Home
   Assistant.
 
+Home Assistant legge i file su disco: se alcune tab hanno modifiche non salvate, EDITHA chiede prima
+se **Salva tutto e continua** o **Continua senza salvare**.
+
 ![Menu di Home Assistant](../docs/images/ha-menu.png)
 
 ## Cerca e sostituisci in tutti i file
 
-La lente sopra l'esplora file (Ctrl+Maiusc+F) cerca in tutti i file di `/config`, con
-maiuscole/minuscole, parola intera ed espressioni regolari. Clic su un risultato apre il file a
-quella riga. Cerca un `entity_id` con *parola intera* per trovare tutti i punti in cui è usato.
+La lente sopra l'esplora file (Ctrl+Maiusc+F) apre **Cerca nei file**: cerca in tutti i file di
+`/config`, con maiuscole/minuscole, parola intera ed espressioni regolari. Clic su un risultato apre
+il file a quella riga. Cerca un `entity_id` con *parola intera* per trovare tutti i punti in cui è
+usato.
 
 ![Cerca in tutti i file](../docs/images/search.png)
 
-Il pulsante con le frecce apre **Sostituisci**. *Sostituisci tutto* cambia tutte le occorrenze dopo
-una conferma; il pulsante accanto a un file sostituisce solo lì. Ogni file modificato conserva la
-versione precedente nella cronologia. I file con modifiche non salvate, `secrets.yaml` e le
-cartelle di sistema non vengono mai toccati.
+La ricerca salta le cartelle di sistema, i collegamenti, i file oltre 5 MB e i file binari
+(database, archivi, immagini e simili). Con troppi risultati (2000) o una ricerca troppo lunga
+mostra i primi trovati.
 
-`secrets.yaml` è escluso dalla ricerca: password e chiavi non compaiono mai nei risultati.
+Il pulsante con le frecce apre **Sostituisci nei file**. **Sostituisci tutto** cambia tutte le
+occorrenze dopo una conferma; **Sostituisci in *nome*** accanto a un file sostituisce solo lì. Ogni
+file modificato conserva la versione precedente nella cronologia. I file con modifiche non salvate,
+`secrets.yaml` con le sue copie e le cartelle di sistema non vengono mai toccati.
+
+`secrets.yaml` e le sue copie (come `secrets.yaml.bak` o `secrets_old.yaml`) sono esclusi dalla
+ricerca: password e chiavi non compaiono mai nei risultati.
 
 ## Cronologia e confronto
 
-Prima di ogni salvataggio, eliminazione, rinomina, spostamento o sostituzione, EDITHA conserva la
-versione precedente del file (le ultime **10 versioni** di ogni file). Il pulsante cronologia
-nella barra le mostra accanto al contenuto attuale, con le differenze evidenziate; **Ripristina
-questa versione** la riporta indietro (e si può annullare a sua volta, perché anche il contenuto
-attuale viene conservato).
+Prima di ogni salvataggio, sostituzione, ripristino o eliminazione, e prima che un file caricato ne
+sostituisca uno esistente, EDITHA conserva la versione precedente del file (le ultime **10
+versioni** di ogni file). Rinominando o spostando un file la cronologia lo segue, senza aggiungere
+versioni. Il pulsante cronologia nella barra (oppure **Cronologia…** nel menu del file) mostra le
+versioni accanto al contenuto attuale, con le differenze evidenziate; **Ripristina questa
+versione** la riporta indietro (e si può annullare a sua volta, perché anche il contenuto attuale
+viene conservato). La cronologia funziona sui file di testo fino a 5 MB.
 
 ![Cronologia del file](../docs/images/history.png)
 
+**Recuperare un file eliminato**: crea un nuovo file con lo stesso nome nella stessa cartella, poi
+apri **Cronologia…** su di lui: le sue versioni sono ancora lì, compresa quella conservata
+all'eliminazione. Le cartelle non si possono ripristinare così, e gli elementi oltre 50 MB vengono
+eliminati senza copia.
+
 Per confrontare due file qualsiasi: tasto destro sul primo → **Seleziona per il confronto**, poi
-tasto destro sul secondo → **Confronta con…**. Esc chiude il confronto.
+tasto destro sul secondo → **Confronta con *nome*** (il nome del primo file). Esc chiude il
+confronto.
 
 La cronologia sta nello spazio dell'add-on, che viene incluso quando fai il backup dell'add-on.
 
 ## Telefono e tablet
 
 EDITHA funziona nell'app di Home Assistant. Su uno schermo stretto l'esplora file diventa un
-pannello che si apre dal pulsante nella barra, la barra mostra solo i pulsanti principali e su
-iPhone un piccolo pulsante accanto al cursore chiude la tastiera.
+pannello che si apre dal pulsante nella barra, e la barra mostra solo i pulsanti principali:
+**Cronologia…** sta nel menu del file (pressione prolungata sul file) e **Informazioni** nel menu
+del pulsante della lingua. Vista divisa, **Apri a destra** e schema del file non sono disponibili
+sul telefono. Su telefono e tablet un piccolo pulsante accanto al cursore chiude la tastiera.
 
 | Editor | Esplora file |
 | --- | --- |
@@ -225,22 +256,24 @@ iPhone un piccolo pulsante accanto al cursore chiude la tastiera.
 
 ## Scorciatoie da tastiera
 
-Su Mac usa Cmd al posto di Ctrl.
+Su Mac usa Cmd al posto di Ctrl e Opzione al posto di Alt; due eccezioni: ripeti è
+Cmd+Maiusc+Z e i suggerimenti restano Ctrl+Spazio.
 
 | Tasti | Azione |
 | --- | --- |
 | Ctrl+S | Salva |
 | Ctrl+Alt+S | Salva tutto |
-| Alt+W | Chiudi la tab |
-| Ctrl+Z / Ctrl+Y | Annulla / ripeti |
-| Ctrl+F | Trova e sostituisci nel file |
+| Alt+W | Chiudi la tab (Opzione+W su Mac) |
+| Ctrl+Z / Ctrl+Y | Annulla / ripeti (Cmd+Z / Cmd+Maiusc+Z su Mac) |
+| Ctrl+F | Cerca e sostituisci nel file |
 | Ctrl+Maiusc+F | Cerca in tutti i file |
-| Ctrl+Spazio | Suggerimenti |
+| Ctrl+Spazio | Suggerimenti (Ctrl anche su Mac) |
 | Tab / Maiusc+Tab | Aumenta / riduci il rientro |
 | Ctrl+clic | Apri un `!include` o un `!secret` |
 | Ctrl+Maiusc+M | Elenco dei problemi |
 | F8 | Problema successivo |
 | F2 | Rinomina (nell'esplora file) |
+| Canc | Elimina (nell'esplora file) |
 | Esc | Chiudi la cronologia, il confronto o l'anteprima |
 
 ## Sicurezza e privacy
@@ -251,7 +284,8 @@ Su Mac usa Cmd al posto di Ctrl.
 - **Salvataggi sicuri**: il file viene scritto in una copia temporanea e poi sostituito, così un
   disco pieno o un crash non lo lasciano mai scritto a metà.
 - **Secret**: i valori di `secrets.yaml` si vedono solo aprendo quel file. Non arrivano mai al
-  browser per i suggerimenti, non vengono cercati e non finiscono nei log.
+  browser per i suggerimenti e non finiscono nei log; `secrets.yaml` e le sue copie non vengono
+  mai cercati né modificati da una sostituzione.
 - **Cartelle di sistema** in sola lettura.
 - **Nessun bisogno di internet**: tutto quello che serve a EDITHA è dentro l'add-on.
 
@@ -266,7 +300,7 @@ controlla che Home Assistant sia in funzione e premi il pulsante di aggiornament
 Inserisci.
 
 **Un file non si apre.** I file oltre 5 MB e i file binari (tranne immagini e PDF) non si possono
-aprire: scaricali.
+aprire: scaricali (fino a 50 MB).
 
 **Altro?** Apri una segnalazione su [GitHub](https://github.com/Trizompa/ha-addons/issues) con
 cosa hai fatto, cosa ti aspettavi e, se puoi, il log dell'add-on (pagina dell'add-on → *Registro*).

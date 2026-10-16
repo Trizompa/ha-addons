@@ -35,10 +35,10 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 | SEC-1 | Nessuna porta esposta: il server ascolta solo sulla porta Ingress e accetta richieste solo dal proxy Ingress del Supervisor (`172.30.32.2`). | P0 |
 | SEC-2 | Ogni percorso ricevuto è risolto (incluso `realpath` per i symlink) e rifiutato se esce da `/config`. Niente `..`, percorsi assoluti esterni, byte nulli. | P0 |
 | SEC-3 | Scrittura atomica: file temporaneo nella stessa cartella + `rename`, preservando permessi. Un salvataggio interrotto non lascia mai un file troncato. | P0 |
-| SEC-4 | Rilevamento conflitti: il client invia l'hash/mtime letto; se il file è cambiato su disco nel frattempo il backend risponde 409 e l'UI chiede cosa fare (sovrascrivi / ricarica / confronta). | P0 |
+| SEC-4 | Rilevamento conflitti: il client invia l'etag (SHA-256 del contenuto letto); se il file è cambiato su disco nel frattempo il backend risponde 409 e l'UI chiede cosa fare (annulla / ricarica dal disco / sovrascrivi; sovrascrivendo, la versione su disco finisce nella cronologia). | P0 |
 | SEC-5 | Limiti: dimensione massima apribile nell'editor (configurabile), rilevamento file binari (aperti in sola lettura o solo scaricabili). | P0 |
 | SEC-6 | Il token del Supervisor non arriva mai al browser; le chiamate a Core passano dal backend. | P0 |
-| SEC-7 | `secrets.yaml`: modificabile, ma i valori non finiscono nei log né nelle risposte dell'autocompletamento (solo le chiavi). | P0 |
+| SEC-7 | `secrets.yaml`: modificabile, ma i valori non finiscono nei log né nelle risposte dell'autocompletamento (solo le chiavi). `secrets.yaml` e le sue copie (nomi che corrispondono a `/^secrets.*\.ya?ml(\.bak)?$/i`, anche raggiunti da un collegamento) sono esclusi da ricerca e sostituzione. | P0 |
 | SEC-8 | Cartelle delicate (`.storage`, `.cloud`, `deps`, `tts`, `.git`) nascoste nell'albero per default, visibili con un pulsante (scelta memorizzata) e sempre in sola lettura; sblocco esplicito della scrittura da valutare. | P1 |
 | SEC-9 | Log del backend senza contenuto dei file. | P0 |
 
@@ -48,12 +48,12 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 | --- | --- | --- |
 | FS-1 | Albero di `/config` con caricamento pigro delle cartelle e ordinamento cartelle → file; l'albero scorre indipendentemente dall'editor anche con molti file, con mouse e tastiera (FEP #4). | P0 |
 | FS-2 | Crea file e cartella dai pulsanti sopra l'albero e dal menu contestuale (tasto destro). La destinazione è la cartella selezionata, anche se vuota (o la cartella del file selezionato); l'albero si aggiorna e il nuovo file si apre (FEP #11, #12). | P0 |
-| FS-3 | **Rinomina** file e cartelle, sia dalla barra superiore sia dal menu contestuale, aggiornando le tab aperte sul percorso vecchio (FEP #18). | P0 |
-| FS-4 | Elimina con conferma; il file eliminato finisce nei backup di Editha (BK-1), non sparisce. | P0 |
+| FS-3 | **Rinomina** file e cartelle dal menu contestuale e con F2 nell'albero, aggiornando le tab aperte sul percorso vecchio; la cronologia (BK-1) segue il file (FEP #18). | P0 |
+| FS-4 | Elimina con conferma (menu contestuale o Canc nell'albero); il file eliminato finisce nei backup di Editha (BK-1), non sparisce. Oltre 50 MB (limite di trasferimento) si elimina senza copia, con un avviso. | P0 |
 | FS-5 | Sposta con la voce "Sposta in…" del menu contestuale (niente trascinamento: troppo facile sbagliare), con aggiornamento delle tab aperte. | P1 |
-| FS-6 | Upload dal PC (anche trascinando i file) e download sul PC; download di una cartella come zip. | P1 |
+| FS-6 | Upload dal PC (anche trascinando i file) e download sul PC; download di una cartella come zip. Limite di 50 MB per trasferimento (`EDITHA_MAX_TRANSFER`). | P1 |
 | FS-7 | Filtro per nome nell'albero; aggiornamento dell'albero quando i file cambiano su disco. | P1 |
-| FS-8 | Duplica file e cartelle dal menu contestuale, con nome proposto da confermare. | P1 |
+| FS-8 | Duplica un file (solo file) dal menu contestuale, con nome proposto da confermare (`nome_copy.est`, `_copia` in italiano). Le copie YAML finiscono in `.bak`, così HA non le carica; un nome `.yaml` va confermato. | P1 |
 | FS-9 | Elenco di esclusioni configurabile (pattern glob). | P2 |
 | FS-10 | Anteprima di immagini (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG) e PDF al posto dell'editor, con dimensioni e grandezza reale; gli SVG non possono eseguire script. | P1 |
 
@@ -62,7 +62,7 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 | ID | Requisito | Pr. |
 | --- | --- | --- |
 | ED-1 | CodeMirror 6 con: undo/redo che annulla anche le indentazioni fatte con Tab, senza errori; Tab/Shift-Tab su una selezione indenta il blocco (mai lo cancella); indentazione automatica, guide di indentazione, numeri di riga, evidenziazione delle parentesi, folding (FEP #8, #9, #14). | P0 |
-| ED-2 | Modalità per YAML, JSON, Python, JavaScript, CSS, Markdown, Jinja; testo semplice per il resto. | P0 |
+| ED-2 | Modalità per YAML, JSON, Python, JavaScript, TypeScript, CSS, Markdown, Jinja; testo semplice per il resto. | P0 |
 | ED-3 | Più tab: indicatore di modifiche non salvate, stato (undo, cursore, scroll) conservato per tab, chiusura del file con pulsante e scorciatoia. La tab attiva e quella inattiva sono chiaramente distinguibili in entrambi i temi, con lo stesso linguaggio visivo della barra degli strumenti (FEP #15). | P0 |
 | ED-4 | **Chiudendo la tab attiva si attiva la tab adiacente e l'editor mostra il suo contenuto**; chiudendo l'ultima si mostra lo stato vuoto. "Salva" scrive sempre il contenuto della tab attiva nel suo file, mai quello di un'altra tab (FEP #19). Coperto da test e2e. | P0 |
 | ED-5 | Salvataggio con Ctrl/Cmd+S e pulsante; "salva tutto". | P0 |
@@ -92,7 +92,7 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 | HA-6 | Hover su un `entity_id`: stato e attributi correnti. | P2 |
 | HA-7 | Anteprima dei template Jinja tramite l'API di rendering di Core. | P2 |
 | HA-8 | Cache di entità/servizi aggiornata su richiesta e periodicamente (o via WebSocket `state_changed`). | P1 |
-| HA-9 | Controllo con spiegazioni concrete (righe coinvolte, rientro atteso) e avvisi per errori tipici di HA che restano YAML valido: `on`/`off`/`yes`/`no` senza virgolette, `chiave:valore` senza spazio, rientri dispari. Elenco dei problemi con riga e collegamento. | P1 |
+| HA-9 | Controllo con spiegazioni concrete (righe coinvolte, rientro atteso) e avvisi per errori tipici di HA che restano YAML valido: `on`/`off`/`yes`/`no` senza virgolette, `chiave:valore` senza spazio, rientri dispari. Spiegati anche: template `{{ }}` senza virgolette (letto come chiave), chiave che è un elenco o un blocco `{ }`, alias `*nome` senza ancora, chiavi ripetute, due punti mancanti tra chiave e valore. Elenco dei problemi con riga e collegamento. | P1 |
 | HA-10 | Autocompletamento delle icone Material Design dopo `mdi:`, con anteprima. | P1 |
 
 ## 5. Azioni su Home Assistant
@@ -100,7 +100,7 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 | ID | Requisito | Pr. |
 | --- | --- | --- |
 | ACT-1 | Verifica della configurazione con risultato leggibile (errori con file e riga quando HA li fornisce). | P0 |
-| ACT-2 | Ricarica mirata: menu con i domini ricaricabili (automazioni, script, scene, gruppi, template, `input_*`, core config, …) ricavati dai servizi `reload` disponibili. La ricarica deve avere effetto come l'equivalente in Strumenti per sviluppatori e l'esito mostrato è quello reale restituito da HA, non un "avviato" a prescindere (FEP #16). Utile solo per non interrompere le automazioni in corso quando si ricarica altro: "ricarica tutto lo YAML" basta nella maggior parte dei casi. | P2 |
+| ACT-2 | Ricarica di tutta la configurazione YAML (`homeassistant.reload_all`), preceduta da ACT-1: se la verifica fallisce non si ricarica. La ricarica ha effetto come l'equivalente in Strumenti per sviluppatori e l'esito mostrato è quello reale restituito da HA, non un "avviato" a prescindere (FEP #16). Una ricarica mirata per dominio non serve (tolta in 0.13.0). | P2 |
 | ACT-3 | Suggerimento della ricarica giusta in base al file salvato (es. `automations.yaml` → `automation.reload`). | P2 |
 | ACT-4 | Riavvio di HA con conferma, preceduto obbligatoriamente da ACT-1: se la verifica fallisce il riavvio è bloccato. | P1 |
 | ACT-5 | Visualizzazione del log di Core (ultime righe, filtro). | P2 |
@@ -109,7 +109,7 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 
 | ID | Requisito | Pr. |
 | --- | --- | --- |
-| BK-1 | Prima di ogni salvataggio, eliminazione o rinomina Editha conserva la versione precedente del file. | P0 |
+| BK-1 | Prima di ogni salvataggio, sostituzione (SR-3), ripristino, eliminazione e upload che sovrascrive Editha conserva la versione precedente del file (eliminazione e upload solo entro 50 MB). Rinomina e spostamento portano con sé la cronologia, senza creare una versione. Un file eliminato si recupera ricreandolo con lo stesso percorso e aprendo la sua cronologia; le cartelle eliminate non si ripristinano dall'interfaccia. | P0 |
 | BK-2 | Elenco delle versioni di un file (data, dimensione). | P1 |
 | BK-3 | Confronto affiancato versione ↔ attuale (merge view di CM6), anche per il conflitto di SEC-4. | P1 |
 | BK-4 | Ripristino di una versione (a sua volta crea una versione, quindi è annullabile). | P1 |
@@ -168,52 +168,49 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 
 ## Struttura del repository
 
-Attuale:
-
 ```
 repository.yaml          metadati della raccolta
-README.md
+README.md, CONTRIBUTING.md, SECURITY.md
 LICENSE                  MIT
-.github/workflows/       test, test nel browser e build per amd64/aarch64 (ENG-3, ENG-4)
+.github/
+  workflows/             test, test nel browser e build per amd64/aarch64 (ENG-3, ENG-4); release
+  ISSUE_TEMPLATE/        modelli per segnalazioni e proposte
 docs/
   REQUIREMENTS.md        questo documento
   DEVELOPMENT.md         come provare il codice, API del server
+  RELEASING.md           come pubblicare una versione
+  images/                immagini della documentazione
 editha/
   config.yaml            manifest dell'add-on (ingress, /config, homeassistant_api)
   build.yaml, Dockerfile immagine: compilazione di server e interfaccia + runtime Node.js
   icon.png, logo.png
-  README.md, DOCS.md, CHANGELOG.md
+  README.md, DOCS.md, DOCS.it.md, CHANGELOG.md
   server/
     src/
       main.ts, app.ts    avvio e composizione
       config.ts          variabili d'ambiente
       errors.ts          errori con codice stabile
       security/          filtro Ingress (SEC-1)
-      fs/                percorsi (SEC-2), scrittura atomica (SEC-3), file (FS-*)
+      fs/                percorsi (SEC-2), scrittura atomica (SEC-3), file (FS-*), ricerca (SR-*), zip, anteprima
       backups/           versioni dei file (BK-*)
-      state/             impostazioni (CFG-1) e sessione (ED-11) in /data
+      ha/                chiamate a Core via Supervisor (HA-2, ACT-*)
+      state/             impostazioni (CFG-1), sessione (ED-11), snippet e bozze (ED-14) in /data
       routes/            un file per gruppo di endpoint, interfaccia compilata
-    test/
+    test/                test del server (node:test)
   web/
     public/index.html    pagina e colori dei temi (variabili CSS)
     build.mjs            bundle con esbuild-wasm, senza binari nativi
+    playwright.config.ts
+    scripts/             immagini della documentazione
     src/
       api/               client e tipi condivisi con il server
-      state/             tab (ED-3, ED-4) e percorsi, logica senza DOM
-      editor/            setup CodeMirror, tema, linguaggi, validatore YAML
-      components/        app, barra strumenti, albero, tab, editor, barra di stato, dialoghi, menu, notifiche
+      state/             tab (ED-3, ED-4), percorsi, dati di HA, anteprima: logica senza DOM
+      editor/            setup CodeMirror, tema, linguaggi, validatore YAML, completamenti, collegamenti, schema
+      components/        app, barra strumenti, albero, tab, editor, pannelli, barra di stato, dialoghi, menu, notifiche
+      i18n/              interfaccia in italiano e inglese (UI-3)
       ui/                icone e stili comuni
     test/                test unitari
     e2e/                 test nel browser (Playwright), uno per ogni issue di FEP
-```
-
-Da aggiungere:
-
-```
-editha/
-  translations/{en,it}.yaml
-  server/src/ha/         chiamate a Core via Supervisor (HA-2, ACT-*)
-  web/src/i18n/          interfaccia in inglese (UI-3)
 ```
 
 ---
@@ -258,6 +255,7 @@ editha/
 | 0.20.0 | ED-18: schema del file. |
 | 0.20.1 | FS-1: niente freccia sulle cartelle vuote. |
 | 0.20.2 | BK-2: la cronologia aperta segue il cambio di file. |
+| 0.21.0 | Revisione del codice: SEC-7 (copie di secrets.yaml escluse da ricerca e sostituzione), HA-9 (template senza virgolette, chiavi complesse, alias senza ancora), scorciatoie per tasto fisico (anche su Mac), bozze non più salvabili scartate con un avviso. |
 
 ---
 
@@ -272,7 +270,7 @@ editha/
 | D5 | Il repository diventa **pubblico al primo rilascio**. | Il Supervisor deve poterlo clonare senza credenziali. |
 | D7 | Architetture **`amd64`** e **`aarch64`**. | HA ha deprecato le architetture a 32 bit. |
 | D9 | `.storage` e simili **nascoste per default** (proposta di Trizompa dopo la prima prova), visibili a richiesta e **in sola lettura** (SEC-8). | |
-| D10 | Nome definitivo **Editha** (Easy Developer IDE for The HA; acronimo E.D.I.T.H.A. abbandonato), slug `editha`. | Scelta di Trizompa dopo la prima installazione. |
+| D10 | Nome definitivo **EDITHA**, scritto in maiuscolo nell'interfaccia e nella documentazione, con il motto "Every Day I Tweak HA" (dalla 0.17.1, al posto di "Easy Developer IDE for The HA"); slug `editha`. | Scelta di Trizompa dopo la prima installazione. |
 | D6 | Licenza **MIT**. | Semplice e diffusa tra gli add-on di HA. |
 | D8 | Le issue di FEP #4–#19 sono coperte dai requisiti (vedi tabella sotto). | |
 

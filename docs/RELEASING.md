@@ -25,15 +25,8 @@ serve solo alla pagina delle release su GitHub.
 - ☐ **Prova sul campo** su PC e telefono; correzioni dei problemi trovati.
 - ☐ In `editha/config.yaml` togliere `stage: experimental` (senza la riga l'add-on è considerato
   stabile) e portare `version` a `1.0.0`.
-- ☐ **Storia dei commit e privacy.** Rendendo pubblico il repository diventa pubblica anche tutta
-  la storia: i commit vecchi contengono ancora il nome e cognome (nei file di allora) e un commit
-  ha come autore il tuo indirizzo email. Due possibilità:
-  - pubblicare così com'è (la storia racconta lo sviluppo, ma nome ed email restano visibili);
-  - **consigliato**: pubblicare una storia pulita, cioè un `main` con un solo commit iniziale
-    "EDITHA 1.0.0" che contiene lo stato finale. Il repository privato attuale può restare come
-    archivio. Da fare con calma insieme, prima di cambiare la visibilità.
-  - In ogni caso, su GitHub: **Settings → Emails → Keep my email addresses private**, così i
-    commit futuri fatti dal sito usano l'indirizzo `noreply`.
+- ☐ Su GitHub: **Settings → Emails → Keep my email addresses private**, così i commit futuri
+  fatti dal sito usano l'indirizzo `noreply`. (La storia dei commit è già stata ripulita.)
 - ☐ **Rendere pubblico**: Settings → General → Danger Zone → *Change repository visibility*.
 - ☐ **Sicurezza**: Settings → Code security → attivare *Private vulnerability reporting* (serve
   per SECURITY.md) e *Dependabot alerts*.
@@ -49,11 +42,6 @@ serve solo alla pagina delle release su GitHub.
   "Build amd64", "Build aarch64").
 - ☐ **Etichette** per le segnalazioni: `bug` ed `enhancement` esistono già di default.
 - ☐ Tag `v1.0.0` e release (vedi sopra).
-- ☐ **Il tuo Home Assistant.** Oggi l'add-on arriva dal mirror Forgejo, branch di sviluppo. Per
-  Home Assistant un repository (o branch) diverso è un add-on diverso: passando all'indirizzo
-  GitHub pubblico si installa un EDITHA "nuovo", e cronologia dei file, snippet personali e
-  impostazioni del vecchio non vengono trasferiti. I file di `/config` naturalmente restano.
-  Prima di disinstallare il vecchio, copia a mano gli snippet personali che vuoi tenere.
 - ☐ **Annuncio** (facoltativo): forum di Home Assistant, categoria *Share your Projects*, e
   r/homeassistant, con l'immagine `docs/images/cover.png` e il link al repository.
 

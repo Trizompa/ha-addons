@@ -44,9 +44,9 @@ through Home Assistant (Ingress), with your Home Assistant login.
 
 ![Main window](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-dark.png)
 
-- **Toolbar** (top): file explorer, save and save all, undo and redo, find,
+- **Toolbar** (top): file explorer, save and save all, undo and redo, find and replace,
   file history, word wrap, split view, outline, insert panel and the Home Assistant menu. On the right:
-  language (Italian or English), theme (automatic, light, dark) and About.
+  language (Automatic (browser), Italiano, English), theme (automatic, light, dark) and About.
 - **File explorer** (left): the content of `/config`. Above it: search in all files, new file,
   new folder, system folders, upload, refresh and collapse all.
 - **Tabs and editor** (centre): one tab per open file. A dot on a tab means unsaved changes.
@@ -64,22 +64,26 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 | Action | Notes |
 | --- | --- |
 | New file / New folder | Created inside the selected folder. |
-| Rename (F2) | Open tabs follow the new name. |
-| Duplicate… | Files only. EDITHA proposes a free name that you confirm. |
-| Move to… | Pick the destination folder from a list. There is no drag-and-drop on purpose: too easy to drop in the wrong place. |
-| Delete | Asks first. The deleted file stays in EDITHA's history and can be restored. |
-| Download / Download as zip | A file, or a whole folder as a zip archive. |
+| Open on the right | Shows the file in the right column of the split view. Not for images and PDFs (an SVG opens there as text), and not on phones. |
+| Open as text | SVG files only: they open in the preview, this opens their code in the editor. |
+| Rename (F2) | Open tabs follow the new name, and the file's history goes with it. |
+| Duplicate… | Files only. EDITHA proposes `name_copy.ext`, which you can change. A YAML copy also gets `.bak` at the end (`automations_copy.yaml.bak`), so Home Assistant does not load it twice; a name ending in `.yaml` asks for confirmation. |
+| Move to… | Pick the destination folder from a list. There is no drag-and-drop on purpose: too easy to drop in the wrong place. The history goes with the file. |
+| Delete (Del) | Asks first. A copy is kept in EDITHA's history (see [History](#history-and-comparison)); items larger than 50 MB are deleted without a copy. |
+| Download to your PC / Download as zip | A file, or a whole folder as a zip archive, up to 50 MB. |
 | Copy path | The full `/config/...` path. |
 | History… | The saved versions of the file (see [History](#history-and-comparison)). |
-| Select for compare / Compare with… | Compare two files side by side. |
+| Select for compare / Compare with *name* | Compare two files side by side. |
 
-- **Upload**: use the upload button, or drag files from your PC onto a folder.
+- **Upload**: use the upload button, or drag files from your PC onto a folder. Up to 50 MB per
+  file; replacing an existing file asks first, and its previous version goes to the history.
 - **Filter by name**: the field above the tree.
 - **Images and PDFs** open in a preview tab instead of the editor: PNG, JPEG, GIF, WebP, AVIF,
   BMP, ICO, SVG and PDF. There is one preview tab, reused by the next image you open. The header
   shows the size in pixels and the current zoom; click an image to see it at actual size (100%),
-  click again to fit it. Transparent parts show a checkerboard. Close the preview with its tab's ×
-  or Esc.
+  click again to fit it. Transparent parts show a checkerboard. The download button in the header
+  saves the file to your PC. Close the preview with its tab's × or Esc. To edit an SVG, use
+  **Open as text** in its menu.
 
   ![Image preview](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/preview.png)
 - **System folders** (`.storage`, `.cloud`, `deps`, `tts`, `.git`) are hidden. The eye button shows
@@ -91,7 +95,8 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 - **Undo and redo** also undo indentation made with Tab.
 - **Find and replace** in the open file: Ctrl+F.
 - **Word wrap** and **split view** are in the toolbar. Split view shows two files side by side, or
-  two places of the same file: changes made in one column appear in the other.
+  two places of the same file: changes made in one column appear in the other. **Open on the
+  right** in a file's menu puts it straight into the right column.
 
   ![Split view](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/split-view.png)
 
@@ -104,15 +109,17 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 
   ![Outline](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/outline.png)
 
-- **Languages**: YAML, JSON, Python, JavaScript, CSS, Markdown and Jinja templates are
-  highlighted; other files open as plain text. Images and PDFs open in a preview; other binary
-  files and files over 5 MB do not open in the editor, but you can still download them.
+- **Languages**: YAML, JSON, Python, JavaScript, TypeScript, CSS, Markdown and Jinja templates
+  (`.jinja`, `.jinja2`, `.j2`) are highlighted; other files open as plain text. Images and PDFs
+  open in a preview; other binary files and files over 5 MB do not open in the editor, but you can
+  still download them.
 
 ### Your work is not lost
 
 - Closing a tab or the page with unsaved changes asks first.
 - If the page closes anyway (phone locked, browser closed), EDITHA keeps the unsaved changes as a
-  **draft**. Next time it offers to recover them.
+  **draft**. Next time it offers to recover them. A draft of a file that no longer exists, or that
+  can no longer be saved (for example it became read-only), is discarded with a notice.
 - If a file changes on disk while it is open (for example Home Assistant rewrote it), EDITHA warns
   you before saving: you choose whether to reload it or overwrite it.
 
@@ -123,7 +130,8 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 EDITHA checks the YAML while you type. It knows the Home Assistant tags (`!include`,
 `!include_dir_*`, `!secret`, `!input`, `!env_var`) and, instead of the parser's cryptic message,
 tells you what is wrong and on which line: a missing colon, a line indented to the wrong level, a
-tab instead of spaces, a duplicate key.
+tab instead of spaces, a duplicate key, a `{{ … }}` template without quotes, a list or `{ }` block
+used as a key, an alias `*name` with no anchor `&name` before it.
 
 ![A YAML error explained](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/problems.png)
 
@@ -140,7 +148,8 @@ Press Ctrl+Space, or just type:
 - **entities** with their name and current state, after `entity_id:` or as soon as you type a
   domain such as `light.`;
 - **actions** (`light.turn_on`, …) and their fields;
-- **`!secret` keys** from `secrets.yaml` (only the names: the values never leave the server);
+- **`!secret` keys** from `secrets.yaml` (only the names: the values are never sent for
+  suggestions);
 - **Material Design icons** after `mdi:`, with a preview.
 
 ![Entity suggestions](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/autocomplete-entities.png)
@@ -176,41 +185,58 @@ The Home Assistant button in the toolbar:
   configuration has errors the restart is cancelled, so a typo cannot leave you without Home
   Assistant.
 
+Home Assistant reads the files on disk: if some tabs have unsaved changes, EDITHA first asks
+whether to **Save all and continue** or **Continue without saving**.
+
 ![Home Assistant menu](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/ha-menu.png)
 
 ## Search and replace in all files
 
-The magnifier above the file explorer (Ctrl+Shift+F) searches every file in `/config`, with match
-case, whole word and regular expressions. Click a result to open the file at that line. Search for
-an `entity_id` with *whole word* to find everywhere it is used.
+The magnifier above the file explorer (Ctrl+Shift+F) opens **Search in files**: it searches every
+file in `/config`, with match case, whole word and regular expressions. Click a result to open the
+file at that line. Search for an `entity_id` with *whole word* to find everywhere it is used.
 
 ![Search in all files](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/search.png)
 
-The arrows button opens **Replace**. *Replace all* changes every match after a confirmation; the
-button next to a file replaces only there. Every changed file keeps its previous version in the
-history. Files with unsaved changes, `secrets.yaml` and system folders are never touched.
+The search skips system folders, links, files over 5 MB and binary files (databases, archives,
+images and the like). With too many results (2000) or a search that takes too long, it shows the
+first ones.
 
-`secrets.yaml` is not searched, so passwords and keys never appear in the results.
+The arrows button opens **Replace in files**. **Replace all** changes every match after a
+confirmation; **Replace in *name*** next to a file replaces only there. Every changed file keeps
+its previous version in the history. Files with unsaved changes, `secrets.yaml` and its copies,
+and system folders are never touched.
+
+`secrets.yaml` and its copies (such as `secrets.yaml.bak` or `secrets_old.yaml`) are not searched,
+so passwords and keys never appear in the results.
 
 ## History and comparison
 
-Before every save, delete, rename, move or replace, EDITHA keeps the previous version of the file
-(the last **10 versions** of each file). The history button in the toolbar shows them next to the
-current content, with the differences highlighted; **Restore this version** brings one back (and
-can itself be undone, because the current content is kept too).
+Before every save, replace, restore or delete, and before an upload replaces a file, EDITHA keeps
+the previous version of the file (the last **10 versions** of each file). Renaming or moving a file
+takes its history along, without adding a version. The history button in the toolbar (or
+**History…** in the file's menu) shows the versions next to the current content, with the
+differences highlighted; **Restore this version** brings one back (and can itself be undone,
+because the current content is kept too). History works on text files up to 5 MB.
 
 ![File history](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/history.png)
 
+**Bring back a deleted file**: create a new file with the same name in the same folder, then open
+**History…** on it: its versions are still there, including the one kept when it was deleted.
+Folders cannot be restored this way, and items larger than 50 MB are deleted without a copy.
+
 To compare any two files: right-click the first → **Select for compare**, then right-click the
-second → **Compare with…**. Esc closes the comparison.
+second → **Compare with *name*** (the name of the first file). Esc closes the comparison.
 
 The history lives in the add-on's own storage, which is included when you back up the add-on.
 
 ## Phone and tablet
 
 EDITHA works in the Home Assistant app. On a narrow screen the file explorer becomes a panel that
-slides in from the toolbar button, the toolbar keeps only the main buttons, and on iPhone a small
-button next to the cursor hides the keyboard.
+slides in from the toolbar button, and the toolbar keeps only the main buttons: **History…** is in
+the file's menu (long press on the file) and **About** is in the menu of the language button. Split
+view, **Open on the right** and the file outline are not available on phones. On phones and
+tablets a small button next to the cursor hides the keyboard.
 
 | Editor | File explorer |
 | --- | --- |
@@ -218,22 +244,24 @@ button next to the cursor hides the keyboard.
 
 ## Keyboard shortcuts
 
-On a Mac use Cmd instead of Ctrl.
+On a Mac use Cmd instead of Ctrl and Option instead of Alt; two exceptions: redo is Cmd+Shift+Z
+and suggestions stay Ctrl+Space.
 
 | Keys | Action |
 | --- | --- |
 | Ctrl+S | Save |
 | Ctrl+Alt+S | Save all |
-| Alt+W | Close the tab |
-| Ctrl+Z / Ctrl+Y | Undo / redo |
+| Alt+W | Close the tab (Option+W on a Mac) |
+| Ctrl+Z / Ctrl+Y | Undo / redo (Cmd+Z / Cmd+Shift+Z on a Mac) |
 | Ctrl+F | Find and replace in the file |
 | Ctrl+Shift+F | Search in all files |
-| Ctrl+Space | Suggestions |
+| Ctrl+Space | Suggestions (Ctrl also on a Mac) |
 | Tab / Shift+Tab | Indent / outdent |
 | Ctrl+click | Open an `!include` or `!secret` |
 | Ctrl+Shift+M | List of problems |
 | F8 | Next problem |
 | F2 | Rename (in the file explorer) |
+| Del | Delete (in the file explorer) |
 | Esc | Close the history, the comparison or the image preview |
 
 ## Safety and privacy
@@ -243,7 +271,8 @@ On a Mac use Cmd instead of Ctrl.
 - **Safe saves**: a file is written to a temporary copy and then swapped in, so a full disk or a
   crash never leaves it half written.
 - **Secrets**: the values in `secrets.yaml` are shown only when you open that file. They are never
-  sent to the browser for suggestions, never searched and never logged.
+  sent to the browser for suggestions and never logged; `secrets.yaml` and its copies are never
+  searched or replaced.
 - **System folders** are read-only.
 - **No internet needed**: everything EDITHA uses is inside the add-on.
 
@@ -256,7 +285,7 @@ On a Mac use Cmd instead of Ctrl.
 check that Home Assistant is running and press the refresh button in the insert panel.
 
 **A file does not open.** Files over 5 MB and binary files (other than images and PDFs) cannot be
-opened; download them instead.
+opened; download them instead (up to 50 MB).
 
 **Something else?** Open an issue on
 [GitHub](https://github.com/Trizompa/ha-addons/issues) with what you did, what you expected and,
