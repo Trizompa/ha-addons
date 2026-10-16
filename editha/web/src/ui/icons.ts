@@ -34,6 +34,7 @@ import {
   mdiFilePdfBox,
   mdiFilePlusOutline,
   mdiFolder,
+  mdiFormatListBulleted,
   mdiFolderOpen,
   mdiFolderPlusOutline,
   mdiInformationOutline,
@@ -111,6 +112,7 @@ export const icons = {
   split: mdiViewSplitVertical,
   about: mdiInformationVariantCircleOutline,
   keyboardClose: mdiKeyboardClose,
+  outline: mdiFormatListBulleted,
 };
 
 export function icon(path: string, size = 18): SVGTemplateResult {

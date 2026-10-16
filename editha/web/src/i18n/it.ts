@@ -336,6 +336,12 @@ export const it = {
   'drafts.cannotOpen': 'Impossibile recuperare le modifiche di {name}: il file non si apre più. La bozza resta per la prossima volta.',
   'drafts.changedOnDisk': '{name} è stato modificato fuori da Editha dopo queste modifiche: al salvataggio Editha chiederà cosa fare.',
   // Vista divisa
+  'toolbar.outline': 'Schema del file: automazioni, script e sezioni',
+  'outline.title': 'Schema',
+  'outline.filter': 'Filtra',
+  'outline.noYaml': 'Apri un file YAML per vederne lo schema: automazioni, script, sezioni.',
+  'outline.empty': 'Niente da mostrare in questo file.',
+  'outline.noMatch': 'Nessuna voce corrisponde al filtro.',
   'toolbar.split': 'Vista divisa in due colonne',
   'split.choose': 'File nella colonna destra',
   'split.close': 'Chiudi la vista divisa',

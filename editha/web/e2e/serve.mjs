@@ -53,6 +53,8 @@ const files = {
   'drop/.keep': '',
   '.storage/core.config': '{}\n',
   'anteprima/foto.png': Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAIAAAASFvFNAAAAEElEQVR4nGP8zwAFTDAGAwATKQED8NgHhAAAAABJRU5ErkJggg==', 'base64'),
+  'schema/automazioni.yaml': '- id: "1"\n  alias: Luci al tramonto\n  triggers: []\n\n- id: "2"\n  alias: Buonanotte\n  triggers: []\n\n- id: "3"\n  alias: Porta aperta\n  triggers: []\n',
+  'schema/note.txt': 'testo\n',
   'anteprima/manuale.pdf': '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[]/Count 0>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n',
 };
 for (let i = 1; i <= 60; i++) files[`many/file_${String(i).padStart(2, '0')}.yaml`] = `n: ${i}\n`;

@@ -78,6 +78,7 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 | ED-12 | Palette dei comandi e scorciatoie elencate in un aiuto. | P2 |
 | ED-13 | Minimappa. | P2 |
 | ED-17 | Vista divisa in due colonne: due file (o due punti dello stesso file) affiancati. | P1 |
+| ED-18 | Schema del file YAML a fianco dell'editor (voci per alias: automazioni, script, sezioni, helper), con salto alla riga e voce attiva; si accende e spegne e la scelta resta. | P1 |
 
 ## 4. YAML e Home Assistant
 
@@ -254,6 +255,7 @@ editha/
 | 0.18.2 | Descrizione nel negozio: "Smart file editor for Home Assistant". |
 | 0.19.0 | FS-10: anteprima di immagini e PDF. |
 | 0.19.1 | FS-10: tab di anteprima propria (una, riusata), zoom indicato, immagine centrata a grandezza reale. |
+| 0.20.0 | ED-18: schema del file. |
 
 ---
 

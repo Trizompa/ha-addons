@@ -15,6 +15,8 @@ export interface Settings {
   showSystem: boolean;
   /** Lingua dell'interfaccia; "auto" segue il browser. */
   language: LanguageSetting;
+  /** Schema del file aperto a fianco dell'editor (ED-18). */
+  outlineVisible: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -25,6 +27,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fontSize: 14,
   showSystem: false,
   language: 'auto',
+  outlineVisible: false,
 };
 
 /** Schema JSON condiviso da validazione delle richieste e lettura da disco. */
@@ -38,6 +41,7 @@ export const settingsSchema = {
     fontSize: { type: 'integer', minimum: 10, maximum: 24 },
     showSystem: { type: 'boolean' },
     language: { type: 'string', enum: ['auto', 'it', 'en'] },
+    outlineVisible: { type: 'boolean' },
   },
   additionalProperties: false,
 } as const;
@@ -57,6 +61,7 @@ function sanitize(raw: unknown): Partial<Settings> {
   }
   if (typeof r.showSystem === 'boolean') out.showSystem = r.showSystem;
   if (r.language === 'auto' || r.language === 'it' || r.language === 'en') out.language = r.language;
+  if (typeof r.outlineVisible === 'boolean') out.outlineVisible = r.outlineVisible;
   return out;
 }
 

@@ -279,13 +279,13 @@ for (let i = 0; ; i++) {
 const browser = await chromium.launch();
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function session(theme, { width = 1440, height = 860, scale = 2, tabs = [], active = null, mobile = false } = {}) {
+async function session(theme, { width = 1440, height = 860, scale = 2, tabs = [], active = null, mobile = false, outline = false } = {}) {
   // The previous page may still be saving its settings while it closes.
   await wait(800);
   await fetch(BASE + 'api/settings', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ theme, language: 'en', sidebarVisible: !mobile, wordWrap: false, showSystem: false }),
+    body: JSON.stringify({ theme, language: 'en', sidebarVisible: !mobile, wordWrap: false, showSystem: false, outlineVisible: outline }),
   });
   await fetch(BASE + 'api/session', {
     method: 'PUT',
@@ -469,7 +469,15 @@ try {
     await page.context().close();
   }
 
-  // 13. Cover image: desktop window and phone side by side.
+  // 13. File outline.
+  {
+    const page = await session('dark', { tabs: ['configuration.yaml', 'automations.yaml'], active: 'automations.yaml', outline: true });
+    await page.locator('editha-outline-panel button.item', { hasText: 'Door left open' }).click();
+    await shot(page, 'outline');
+    await page.context().close();
+  }
+
+  // 14. Cover image: desktop window and phone side by side.
   {
     const img = async (name) => `data:image/png;base64,${(await readFile(path.join(out, `${name}.png`))).toString('base64')}`;
     const page = await (await browser.newContext({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1.5 })).newPage();

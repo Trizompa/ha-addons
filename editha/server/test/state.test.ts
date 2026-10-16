@@ -48,6 +48,13 @@ describe('impostazioni e sessione', () => {
     assert.equal((await call('POST', '/api/settings', { altro: 1 })).statusCode, 400);
     assert.equal((await call('POST', '/api/settings', { showSystem: 'si' })).statusCode, 400);
     assert.equal((await call('POST', '/api/settings', { language: 'fr' })).statusCode, 400);
+    assert.equal((await call('POST', '/api/settings', { outlineVisible: 'si' })).statusCode, 400);
+  });
+
+  it('ricorda se lo schema del file è aperto (ED-18)', async () => {
+    assert.equal((await call('POST', '/api/settings', { outlineVisible: true })).json().outlineVisible, true);
+    assert.equal((await call('GET', '/api/settings')).json().outlineVisible, true);
+    await call('POST', '/api/settings', { outlineVisible: false });
   });
 
   it('ignora un file di impostazioni rovinato', async () => {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.0
+
+- **Schema del file**: nuovo pulsante nella barra (elenco puntato) che apre, a fianco dell'editor, lo schema del file YAML. In `automations.yaml` c'è una voce per ogni automazione, indicata con il suo alias; in `scripts.yaml` una per script; in `configuration.yaml` e nei package le sezioni, con dentro automazioni, script e helper. Un clic porta alla voce; quella in cui si trova il cursore resta evidenziata e lo schema si aggiorna mentre scrivi. Con molte voci compare un filtro. Il pulsante accende e spegne lo schema, ed EDITHA ricorda la scelta. Non disponibile sul telefono.
+
 ## 0.19.1
 
 - L'anteprima di immagini e PDF ha la **sua tab** nella barra delle tab: si passa dall'anteprima ai file di testo e ritorno come tra tab normali, e la si chiude con la sua ×. La tab è una sola: la prossima immagine aperta la riusa. Chiudendo tutti i file di testo resta in primo piano l'anteprima.

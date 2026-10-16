@@ -323,6 +323,12 @@ export const en: Record<keyof Dictionary, string> = {
   'drafts.changedOnDisk': '{name} was changed outside Editha after these changes: Editha will ask what to do when you save.',
   // Vista divisa
   'toolbar.split': 'Split view in two columns',
+  'toolbar.outline': 'File outline: automations, scripts and sections',
+  'outline.title': 'Outline',
+  'outline.filter': 'Filter',
+  'outline.noYaml': 'Open a YAML file to see its outline: automations, scripts, sections.',
+  'outline.empty': 'Nothing to show in this file.',
+  'outline.noMatch': 'Nothing matches the filter.',
   'split.choose': 'File in the right column',
   'split.close': 'Close split view',
   'split.empty': 'Choose above which file to show in this column.',

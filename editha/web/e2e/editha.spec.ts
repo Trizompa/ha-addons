@@ -31,7 +31,7 @@ test.beforeEach(async ({ page, request }) => {
   for (const d of (await (await request.get('api/drafts')).json()).drafts) {
     await request.delete(`api/draft?path=${encodeURIComponent(d.path)}`);
   }
-  await request.post('api/settings', { data: { theme: 'auto', sidebarVisible: true, wordWrap: false, showSystem: false, language: 'it' } });
+  await request.post('api/settings', { data: { theme: 'auto', sidebarVisible: true, wordWrap: false, showSystem: false, language: 'it', outlineVisible: false } });
   await page.goto('./');
   // Su telefono l'albero parte chiuso: basta che sia caricato.
   await expect(row(page, 'configuration.yaml')).toBeAttached();
@@ -867,4 +867,33 @@ test('FS-10 – immagini e PDF si aprono in una tab di anteprima', async ({ page
   await expect(preview).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(preview).toHaveCount(0);
+});
+
+test('ED-18 – schema del file: voci, salto alla riga, voce attiva, scelta ricordata', async ({ page, request }) => {
+  await openFile(page, 'schema/automazioni.yaml');
+  const button = page.locator('editha-toolbar button[title^="Schema del file"]');
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+  await button.click();
+  const panel = page.locator('editha-outline-panel');
+  await expect(panel.locator('button.item')).toHaveText([/Luci al tramonto/, /Buonanotte/, /Porta aperta/]);
+  // Un clic porta il cursore alla voce, che diventa quella attiva.
+  await panel.locator('button.item', { hasText: 'Porta aperta' }).click();
+  await expect(page.locator('editha-status-bar')).toContainText('Riga 9, col 1');
+  await expect(panel.locator('button.item[aria-current="true"]')).toContainText('Porta aperta');
+  // Lo schema segue il testo mentre si scrive.
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('\n- alias: Nuova\n');
+  await expect(panel.locator('button.item')).toHaveCount(4);
+  await page.keyboard.press('Control+s');
+  await expect(activeTab(page)).not.toHaveClass(/dirty/);
+  // Un file non YAML non ha schema.
+  await openFile(page, 'schema/note.txt');
+  await expect(panel).toContainText('Apri un file YAML');
+  // La scelta resta dopo il rientro.
+  await expect.poll(async () => (await (await request.get('api/settings')).json()).outlineVisible).toBe(true);
+  await page.reload();
+  await expect(page.locator('editha-outline-panel')).toBeVisible();
+  await page.locator('editha-outline-panel button[title="Chiudi"]').click();
+  await expect(page.locator('editha-outline-panel')).toHaveCount(0);
+  await expect.poll(async () => (await (await request.get('api/settings')).json()).outlineVisible).toBe(false);
 });

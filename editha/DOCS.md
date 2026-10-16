@@ -45,7 +45,7 @@ through Home Assistant (Ingress), with your Home Assistant login.
 ![Main window](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-dark.png)
 
 - **Toolbar** (top): file explorer, save and save all, undo and redo, find,
-  file history, word wrap, split view, insert panel and the Home Assistant menu. On the right:
+  file history, word wrap, split view, outline, insert panel and the Home Assistant menu. On the right:
   language (Italian or English), theme (automatic, light, dark) and About.
 - **File explorer** (left): the content of `/config`. Above it: search in all files, new file,
   new folder, system folders, upload, refresh and collapse all.
@@ -94,6 +94,15 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
   two places of the same file: changes made in one column appear in the other.
 
   ![Split view](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/split-view.png)
+
+- **Outline**: the list button in the toolbar opens, next to the editor, the outline of the YAML
+  file: in `automations.yaml` one entry per automation, by alias; in `scripts.yaml` one per script;
+  in `configuration.yaml` and packages the sections, with the automations, scripts and helpers
+  inside. Click an entry to jump to it; the entry where the cursor is stays highlighted, and the
+  outline follows your edits. With many entries a filter appears on top. The button turns the
+  outline on and off, and EDITHA remembers your choice. It is not available on phones.
+
+  ![Outline](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/outline.png)
 
 - **Languages**: YAML, JSON, Python, JavaScript, CSS, Markdown and Jinja templates are
   highlighted; other files open as plain text. Images and PDFs open in a preview; other binary

@@ -46,7 +46,7 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
 ![Finestra principale](../docs/images/main-dark.png)
 
 - **Barra degli strumenti** (in alto): esplora file, salva e salva tutto,
-  annulla e ripeti, cerca, cronologia del file, a capo automatico, vista divisa, pannello Inserisci
+  annulla e ripeti, cerca, cronologia del file, a capo automatico, vista divisa, schema, pannello Inserisci
   e menu di Home Assistant. A destra: lingua (italiano o inglese), tema (automatico, chiaro, scuro)
   e Informazioni.
 - **Esplora file** (a sinistra): il contenuto di `/config`. Sopra: cerca in tutti i file, nuovo
@@ -100,6 +100,15 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
   nell'altra.
 
   ![Vista divisa](../docs/images/split-view.png)
+
+- **Schema del file**: il pulsante con l'elenco puntato apre, a fianco dell'editor, lo schema del
+  file YAML: in `automations.yaml` una voce per automazione, con il suo alias; in `scripts.yaml`
+  una per script; in `configuration.yaml` e nei package le sezioni, con dentro automazioni, script
+  e helper. Un clic porta alla voce; la voce in cui si trova il cursore resta evidenziata, e lo
+  schema segue le modifiche mentre scrivi. Con molte voci compare in alto un filtro. Il pulsante
+  accende e spegne lo schema, e EDITHA ricorda la scelta. Sul telefono non è disponibile.
+
+  ![Schema del file](../docs/images/outline.png)
 
 - **Linguaggi**: YAML, JSON, Python, JavaScript, CSS, Markdown e template Jinja sono colorati; gli
   altri file si aprono come testo semplice. Immagini e PDF si aprono in anteprima; gli altri file

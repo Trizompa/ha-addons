@@ -260,13 +260,13 @@ export class EdithaEditorPane extends LitElement {
     return (before + after).replace(/^\.+|\.+$/g, '');
   }
 
-  /** Porta il cursore all'inizio di una riga (da 1) e la mostra al centro. */
-  goToLine(line: number): void {
+  /** Porta il cursore all'inizio di una riga (da 1) e la mostra al centro (o in alto). */
+  goToLine(line: number, at: 'center' | 'start' = 'center'): void {
     const view = this.view;
     if (!view || !this.current) return;
     const n = Math.max(1, Math.min(line, view.state.doc.lines));
     const pos = view.state.doc.line(n).from;
-    view.dispatch({ selection: { anchor: pos }, effects: EditorView.scrollIntoView(pos, { y: 'center' }) });
+    view.dispatch({ selection: { anchor: pos }, effects: EditorView.scrollIntoView(pos, { y: at, yMargin: 8 }) });
     view.focus();
   }
 
