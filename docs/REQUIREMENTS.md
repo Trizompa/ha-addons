@@ -257,6 +257,7 @@ editha/
 | 0.19.1 | FS-10: tab di anteprima propria (una, riusata), zoom indicato, immagine centrata a grandezza reale. |
 | 0.20.0 | ED-18: schema del file. |
 | 0.20.1 | FS-1: niente freccia sulle cartelle vuote. |
+| 0.20.2 | BK-2: la cronologia aperta segue il cambio di file. |
 
 ---
 

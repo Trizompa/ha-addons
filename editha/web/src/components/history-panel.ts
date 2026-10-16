@@ -52,6 +52,7 @@ export class EdithaHistoryPanel extends LitElement {
 
   private merge: MergeView | EditorView | null = null;
   private loadToken = 0;
+  private listToken = 0;
   private readonly narrowQuery = window.matchMedia(NARROW);
 
   constructor() {
@@ -244,6 +245,17 @@ export class EdithaHistoryPanel extends LitElement {
 
   private readonly onNarrowChange = () => void this.showVersion(this.selectedId);
 
+  /** Con il pannello già aperto su un altro file si ricarica l'elenco di quel file. */
+  override willUpdate(changed: Map<string, unknown>): void {
+    if (this.hasUpdated && changed.has('path')) {
+      this.destroyMerge();
+      this.versions = null;
+      this.selectedId = null;
+      this.error = null;
+      void this.loadVersions();
+    }
+  }
+
   /** Ricarica l'elenco (dopo un ripristino) mantenendo il pannello aperto. */
   async reload(current: string): Promise<void> {
     this.current = current;
@@ -251,13 +263,20 @@ export class EdithaHistoryPanel extends LitElement {
   }
 
   private async loadVersions(): Promise<void> {
+    // Una risposta arrivata tardi per un file precedente non deve sostituire quella attuale.
+    const token = ++this.listToken;
+    const path = this.path;
+    let versions: Version[];
+    let error: string | null = null;
     try {
-      this.versions = (await api.versions(this.path)).versions.filter((v) => v.kind === 'file');
-      this.error = null;
+      versions = (await api.versions(path)).versions.filter((v) => v.kind === 'file');
     } catch (err) {
-      this.versions = [];
-      this.error = err instanceof Error ? err.message : String(err);
+      versions = [];
+      error = err instanceof Error ? err.message : String(err);
     }
+    if (token !== this.listToken) return;
+    this.versions = versions;
+    this.error = error;
     await this.showVersion(this.versions[0]?.id ?? null);
   }
 

@@ -435,6 +435,12 @@ test.describe('Cronologia e duplicazione', () => {
     // Il contenuto sostituito è finito nella cronologia.
     await page.locator('editha-toolbar button[title="Cronologia del file"]').click();
     await expect(versions.first()).toContainText('Prima di un ripristino');
+    // Se il pannello aperto passa a un altro file, l'elenco è quello del nuovo file.
+    await panel.evaluate((el: HTMLElement & { path: string }) => (el.path = 'tabs/a.yaml'));
+    await expect(panel).toContainText('Nessuna versione precedente');
+    await expect(versions).toHaveCount(0);
+    await panel.evaluate((el: HTMLElement & { path: string }) => (el.path = 'history/luci.yaml'));
+    await expect(versions).toHaveCount(3);
     await page.keyboard.press('Escape');
     await expect(panel).toHaveCount(0);
   });

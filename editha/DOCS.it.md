@@ -241,7 +241,7 @@ Su Mac usa Cmd al posto di Ctrl.
 | Ctrl+Maiusc+M | Elenco dei problemi |
 | F8 | Problema successivo |
 | F2 | Rinomina (nell'esplora file) |
-| Esc | Chiudi la cronologia o il confronto |
+| Esc | Chiudi la cronologia, il confronto o l'anteprima |
 
 ## Sicurezza e privacy
 

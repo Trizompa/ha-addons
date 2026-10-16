@@ -10,8 +10,9 @@ A file editor for your Home Assistant configuration, from the sidebar, on PC, ta
   actions, `!secret` keys and `mdi:` icons, Ctrl+click on `!include`.
 - **Safe**: the configuration is always checked before a restart, every save keeps the previous
   version (last 10 per file), unsaved changes survive a closed page.
-- **Comfortable**: tabs, split view, search and replace in all files, file history and comparison,
-  ready-made and personal snippets.
+- **Comfortable**: tabs, split view, file outline (automations and scripts by alias), search and
+  replace in all files, file history and comparison, image and PDF preview, ready-made and
+  personal snippets.
 - **Private**: Ingress only, no exposed ports, secret values never leave the server, works without
   internet.
 - **Italian and English**, light and dark theme.

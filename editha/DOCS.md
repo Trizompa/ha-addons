@@ -234,7 +234,7 @@ On a Mac use Cmd instead of Ctrl.
 | Ctrl+Shift+M | List of problems |
 | F8 | Next problem |
 | F2 | Rename (in the file explorer) |
-| Esc | Close the history or the comparison |
+| Esc | Close the history, the comparison or the image preview |
 
 ## Safety and privacy
 

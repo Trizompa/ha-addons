@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.2
+
+- Cronologia: se la finestra è già aperta e le si chiede un altro file, ora mostra le versioni di quel file (prima restavano quelle del file precedente). Una risposta lenta per il file di prima non può più sovrascrivere quella giusta.
+- Documentazione: anteprima e schema del file anche nella presentazione dell'add-on e nel README; Esc chiude anche l'anteprima.
+
 ## 0.20.1
 
 - Nell'albero le cartelle vuote non hanno più la freccia per espanderle: si vede subito che non contengono niente.
