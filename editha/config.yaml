@@ -1,7 +1,7 @@
 name: Editha
-version: "0.18.1"
+version: "0.18.2"
 slug: editha
-description: "Every Day I Tweak HA – the Home Assistant configuration editor"
+description: "Smart file editor for Home Assistant"
 url: https://github.com/Trizompa/ha-addons/tree/main/editha
 stage: experimental
 arch:

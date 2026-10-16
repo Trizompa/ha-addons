@@ -483,7 +483,7 @@ try {
       .phone img { display: block; width: 100%; border-radius: 36px; }
     </style></head><body>
       <div class="title"><div class="row"><div class="logo">E</div><h1>EDITHA</h1></div>
-        <p>Every Day I Tweak HA · the Home Assistant configuration editor</p></div>
+        <p>Every Day I Tweak HA · smart file editor for Home Assistant</p></div>
       <div class="window"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
         <img src="${await img('main-dark')}"></div>
       <div class="phone"><img src="${await img('phone-editor')}"></div>

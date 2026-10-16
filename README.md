@@ -7,7 +7,7 @@
 
 | Add-on | Description |
 | --- | --- |
-| [EDITHA](editha/) | Every Day I Tweak HA – the Home Assistant configuration editor |
+| [EDITHA](editha/) | Smart file editor for Home Assistant |
 
 ## EDITHA
 

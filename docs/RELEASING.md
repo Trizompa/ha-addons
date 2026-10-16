@@ -38,7 +38,7 @@ serve solo alla pagina delle release su GitHub.
 - ☐ **Sicurezza**: Settings → Code security → attivare *Private vulnerability reporting* (serve
   per SECURITY.md) e *Dependabot alerts*.
 - ☐ **Presentazione del repository** (rotella accanto ad *About* nella pagina principale):
-  - descrizione: `EDITHA – Every Day I Tweak HA. The Home Assistant configuration editor add-on.`
+  - descrizione: `EDITHA – Every Day I Tweak HA. Smart file editor add-on for Home Assistant.`
   - topics: `home-assistant`, `home-assistant-addon`, `hassio-addon`, `yaml`, `editor`,
     `codemirror`
   - Settings → General → *Social preview*: caricare `docs/images/cover.png` (è l'immagine che

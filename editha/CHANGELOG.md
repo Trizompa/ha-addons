@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.2
+
+- Descrizione dell'add-on nel negozio: "Smart file editor for Home Assistant". Il motto "Every Day I Tweak HA" resta nell'interfaccia, nel logo e nella documentazione.
+
 ## 0.18.1
 
 - Nuovo file e nuova cartella restano solo nei pulsanti sopra l'albero dei file (e nel menu del tasto destro): tolto il doppione dalla barra in alto.

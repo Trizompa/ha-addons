@@ -250,6 +250,7 @@ editha/
 | 0.17.2 | Su telefono nella barra solo il nome EDITHA, senza logo. |
 | 0.18.0 | Documentazione utente (DOCS.md, DOCS.it.md) con immagini; file per GitHub (CONTRIBUTING, SECURITY, modelli, release); HA-9: «chiave valore» senza due punti spiegato. |
 | 0.18.1 | Nuovo file/cartella solo sopra l'albero (tolti dalla barra in alto). |
+| 0.18.2 | Descrizione nel negozio: "Smart file editor for Home Assistant". |
 
 ---
 

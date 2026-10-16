@@ -39,7 +39,7 @@ CMD ["node", "/app/dist/main.js"]
 ARG BUILD_VERSION
 LABEL \
     io.hass.name="Editha" \
-    io.hass.description="Every Day I Tweak HA – the Home Assistant configuration editor" \
+    io.hass.description="Smart file editor for Home Assistant" \
     io.hass.type="addon" \
     io.hass.version="${BUILD_VERSION}" \
     org.opencontainers.image.licenses="MIT"
