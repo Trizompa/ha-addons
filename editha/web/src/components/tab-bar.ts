@@ -19,15 +19,19 @@ export class EdithaTabBar extends LitElement {
   static override properties = {
     tabs: { attribute: false },
     active: { type: String },
+    preview: { type: String },
   };
 
   declare tabs: TabView[];
   declare active: string | null;
+  /** FS-10: immagine o PDF nella tab di anteprima (una sola, riusata). */
+  declare preview: string | null;
 
   constructor() {
     super();
     this.tabs = [];
     this.active = null;
+    this.preview = null;
   }
 
   static override styles = [
@@ -212,6 +216,43 @@ export class EdithaTabBar extends LitElement {
           </div>`;
         },
       )}
+      ${this.preview ? this.renderPreview(this.preview) : nothing}
+    </div>`;
+  }
+
+  private renderPreview(path: string) {
+    const name = path.split('/').pop() ?? path;
+    const fi = fileIcon(name);
+    const active = path === this.active;
+    return html`<div
+      class="tab preview ${active ? 'active' : ''}"
+      role="tab"
+      aria-selected=${active}
+      title=${path}
+      data-path=${path}
+      @click=${() => this.emit('preview-activate', path)}
+      @auxclick=${(e: MouseEvent) => {
+        if (e.button === 1) this.emit('preview-close', path);
+      }}
+      @mousedown=${(e: MouseEvent) => {
+        if (e.button === 1) e.preventDefault();
+      }}
+    >
+      <span class="tab-icon" style="color:${fi.color}">${icon(fi.path, 16)}</span>
+      <span class="name">${name}</span>
+      <span class="end">
+        <button
+          class="icon-btn small close"
+          title=${t('tabs.close')}
+          aria-label=${t('tabs.closeName', { name })}
+          @click=${(e: Event) => {
+            e.stopPropagation();
+            this.emit('preview-close', path);
+          }}
+        >
+          ${icon(icons.close, 15)}
+        </button>
+      </span>
     </div>`;
   }
 }

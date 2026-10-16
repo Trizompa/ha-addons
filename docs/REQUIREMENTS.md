@@ -253,6 +253,7 @@ editha/
 | 0.18.1 | Nuovo file/cartella solo sopra l'albero (tolti dalla barra in alto). |
 | 0.18.2 | Descrizione nel negozio: "Smart file editor for Home Assistant". |
 | 0.19.0 | FS-10: anteprima di immagini e PDF. |
+| 0.19.1 | FS-10: tab di anteprima propria (una, riusata), zoom indicato, immagine centrata a grandezza reale. |
 
 ---
 

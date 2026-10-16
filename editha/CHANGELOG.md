@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.19.1
+
+- L'anteprima di immagini e PDF ha la **sua tab** nella barra delle tab: si passa dall'anteprima ai file di testo e ritorno come tra tab normali, e la si chiude con la sua ×. La tab è una sola: la prossima immagine aperta la riusa. Chiudendo tutti i file di testo resta in primo piano l'anteprima.
+- Accanto alle dimensioni compare lo **zoom** (es. "588 × 900 px · 82%"): si vede subito se l'immagine è adattata alla finestra o a grandezza reale.
+- A grandezza reale l'immagine resta centrata invece di spostarsi a sinistra; se è più grande della finestra si scorre.
+- Con l'anteprima in primo piano, salva, annulla e le altre azioni dell'editor non agiscono più sul file di testo nascosto sotto; albero e barra in basso indicano l'immagine.
+
 ## 0.19.0
 
 - **Anteprima di immagini e PDF**: cliccando nell'albero un'immagine (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG) o un PDF, EDITHA la mostra al posto dell'editor invece di dire che il file non è testo. In alto nome, dimensioni in pixel e pulsante per scaricarla; un clic sull'immagine passa alla grandezza reale e ritorno; le parti trasparenti si vedono su una scacchiera. Esc, la X o un clic su una tab riportano all'editor.

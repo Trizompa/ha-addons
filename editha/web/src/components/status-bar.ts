@@ -20,15 +20,19 @@ export class EdithaStatusBar extends LitElement {
   static override properties = {
     info: { attribute: false },
     message: { type: String },
+    preview: { type: String },
   };
 
   declare info: StatusInfo | null;
   declare message: string;
+  /** FS-10: percorso dell'immagine o del PDF in anteprima. */
+  declare preview: string | null;
 
   constructor() {
     super();
     this.info = null;
     this.message = '';
+    this.preview = null;
   }
 
   static override styles = [
@@ -113,6 +117,7 @@ export class EdithaStatusBar extends LitElement {
 
   override render() {
     const i = this.info;
+    if (this.preview) return html`<span class="path" title=${'/config/' + this.preview}>/config/${this.preview}</span>`;
     if (!i) return html`<span class="path">${this.message || t('status.noFile')}</span>`;
     return html`
       <span class="path" title=${'/config/' + i.path}>/config/${i.path}</span>

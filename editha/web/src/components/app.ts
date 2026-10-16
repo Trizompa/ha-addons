@@ -88,6 +88,7 @@ export class EdithaApp extends LitElement {
     searchOpen: { state: true },
     compare: { state: true },
     preview: { state: true },
+    previewShown: { state: true },
   };
 
   declare settings: Settings;
@@ -118,6 +119,8 @@ export class EdithaApp extends LitElement {
   declare compare: { left: CompareSide; right: CompareSide } | null;
   /** FS-10: immagine o PDF mostrato al posto dell'editor. */
   declare preview: string | null;
+  /** La tab di anteprima è quella in primo piano (l'editor sotto non riceve comandi). */
+  declare previewShown: boolean;
   /** Primo file scelto per un confronto (menu "Seleziona per il confronto"). */
   private compareBase: string | null = null;
   private build: string | null = null;
@@ -158,6 +161,7 @@ export class EdithaApp extends LitElement {
     this.searchOpen = false;
     this.compare = null;
     this.preview = null;
+    this.previewShown = false;
     this.toolbar = this.computeToolbar();
   }
 
@@ -393,6 +397,7 @@ export class EdithaApp extends LitElement {
 
   /** Tab della colonna in uso. */
   private focusedTab(): EditorTab | null {
+    if (this.previewShown) return null;
     const side = this.side;
     return this.split && this.sideFocused && side?.shown ? side.shown : this.tabs.active;
   }
@@ -678,8 +683,8 @@ export class EdithaApp extends LitElement {
   private activate(path: string): void {
     const tab = this.tabs.activate(path);
     if (!tab) return;
-    // Scegliendo una tab si torna all'editor.
-    this.preview = null;
+    // Scegliendo una tab si torna all'editor; la tab di anteprima resta.
+    this.previewShown = false;
     this.pane.show(tab);
     this.refreshTabs();
     this.refreshStatus();
@@ -720,6 +725,8 @@ export class EdithaApp extends LitElement {
     if (before && before !== tab && this.tabs.find(before.path) === before) next = this.tabs.activate(before.path);
     if (next) this.pane.show(next);
     else this.pane.showEmpty();
+    // Chiuse tutte le tab di testo, resta in primo piano l'anteprima, se c'è.
+    if (!next && this.preview) this.showPreview();
     this.refreshTabs();
     this.refreshStatus();
     this.scheduleSession();
@@ -849,17 +856,32 @@ export class EdithaApp extends LitElement {
     if (!left || !right) return;
     if (this.narrow) this.drawerOpen = false;
     this.history = null;
-    this.preview = null;
+    this.previewShown = false;
     this.compare = { left, right };
   }
 
   // ——— anteprima di immagini e PDF (FS-10) ———
 
+  /** Apre un'immagine o un PDF nella tab di anteprima, che è una sola e viene riusata. */
   private openPreview(path: string): void {
     if (this.narrow) this.drawerOpen = false;
+    this.preview = path;
+    this.showPreview();
+  }
+
+  private showPreview(): void {
     this.history = null;
     this.compare = null;
-    this.preview = path;
+    this.previewShown = true;
+    this.refreshToolbar();
+    this.refreshStatus();
+  }
+
+  private closePreview(): void {
+    this.preview = null;
+    this.previewShown = false;
+    this.refreshToolbar();
+    this.refreshStatus();
   }
 
   // ——— collegamenti: !include e !secret (HA-4, HA-5) ———
@@ -1345,7 +1367,7 @@ export class EdithaApp extends LitElement {
       this.history = null;
     }
     if (this.preview && (this.preview === entry.path || this.preview.startsWith(entry.path + '/'))) {
-      this.preview = null;
+      this.closePreview();
     }
     this.tree.forget(entry.path);
     await this.tree.refresh(dirname(entry.path));
@@ -1418,7 +1440,7 @@ export class EdithaApp extends LitElement {
       }
     }
     if (this.narrow) this.drawerOpen = false;
-    this.preview = null;
+    this.previewShown = false;
     this.history = { path, current, readOnly };
   }
 
@@ -1900,14 +1922,17 @@ export class EdithaApp extends LitElement {
       this.compare = null;
     } else if (
       key === 'escape' &&
-      this.preview &&
+      this.previewShown &&
       !e.defaultPrevented &&
       !this.dialog.busy &&
       !this.menu.items &&
       !e.composedPath().some((n) => n instanceof HTMLDialogElement && n.open)
     ) {
       e.preventDefault();
-      this.preview = null;
+      this.closePreview();
+    } else if (e.altKey && !mod && key === 'w' && this.previewShown) {
+      e.preventDefault();
+      this.closePreview();
     } else if (e.altKey && !mod && key === 'w') {
       e.preventDefault();
       const active = this.tabs.active;
@@ -2048,7 +2073,7 @@ export class EdithaApp extends LitElement {
           ></editha-search-panel>
           <editha-file-tree
             ?hidden=${this.searchOpen}
-            .activePath=${this.activePath}
+            .activePath=${this.previewShown ? this.preview : this.activePath}
             .showSystem=${this.settings.showSystem}
             @file-open=${(e: CustomEvent<{ path: string }>) => void this.openFile(e.detail.path)}
             @tree-context=${this.onTreeContext}
@@ -2082,11 +2107,14 @@ export class EdithaApp extends LitElement {
           : null}
         <main>
           <editha-tab-bar
-            ?hidden=${this.tabViews.length === 0}
+            ?hidden=${this.tabViews.length === 0 && !this.preview}
             .tabs=${this.tabViews}
-            .active=${this.activePath}
+            .active=${this.previewShown ? this.preview : this.activePath}
+            .preview=${this.preview}
             @tab-activate=${(e: CustomEvent<{ path: string }>) => this.activate(e.detail.path)}
             @tab-close=${(e: CustomEvent<{ path: string }>) => void this.closeTab(e.detail.path)}
+            @preview-activate=${() => this.showPreview()}
+            @preview-close=${() => this.closePreview()}
           ></editha-tab-bar>
           <div class="editors" @editha-link=${(e: CustomEvent<{ kind: LinkKind; target: string; file: string }>) => void this.followLink(e)}>
           <editha-editor-pane>
@@ -2106,11 +2134,11 @@ export class EdithaApp extends LitElement {
             </div>
           </editha-editor-pane>
           ${this.renderSide()}
-          ${this.preview
+          ${this.preview && this.previewShown
             ? html`<editha-preview-panel
                 .path=${this.preview}
                 @preview-download=${(e: CustomEvent<{ path: string }>) => this.download(e.detail.path)}
-                @preview-close=${() => (this.preview = null)}
+                @preview-close=${() => this.closePreview()}
               ></editha-preview-panel>`
             : null}
           </div>
@@ -2133,7 +2161,10 @@ export class EdithaApp extends LitElement {
             : null}
         </main>
       </div>
-      <editha-status-bar .info=${this.status} @open-problems=${() => this.editor.openProblems()}></editha-status-bar>
+      <editha-status-bar
+        .info=${this.status}
+        .preview=${this.previewShown ? this.preview : null}
+        @open-problems=${() => this.editor.openProblems()}></editha-status-bar>
       <input
         id="upload-input"
         type="file"

@@ -79,10 +79,11 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 
 - **Caricare file**: pulsante di caricamento, oppure trascina i file dal PC su una cartella.
 - **Filtra per nome**: il campo sopra l'albero.
-- **Immagini e PDF** si aprono in anteprima invece che nell'editor: PNG, JPEG, GIF, WebP, AVIF,
-  BMP, ICO, SVG e PDF. In alto compaiono le dimensioni in pixel; un clic sull'immagine la mostra a
-  grandezza reale, un altro clic la riadatta. Le parti trasparenti mostrano una scacchiera. Esc, il
-  pulsante di chiusura o un clic su una tab riportano all'editor.
+- **Immagini e PDF** si aprono in una tab di anteprima invece che nell'editor: PNG, JPEG, GIF,
+  WebP, AVIF, BMP, ICO, SVG e PDF. La tab di anteprima è una sola e viene riusata dalla prossima
+  immagine che apri. In alto compaiono le dimensioni in pixel e lo zoom attuale; un clic
+  sull'immagine la mostra a grandezza reale (100%), un altro clic la riadatta. Le parti trasparenti
+  mostrano una scacchiera. L'anteprima si chiude con la × della sua tab o con Esc.
 
   ![Anteprima di un'immagine](../docs/images/preview.png)
 - **Cartelle di sistema** (`.storage`, `.cloud`, `deps`, `tts`, `.git`): sono nascoste. Il

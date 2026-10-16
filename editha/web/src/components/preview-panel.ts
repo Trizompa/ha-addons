@@ -15,12 +15,16 @@ export class EdithaPreviewPanel extends LitElement {
     path: { type: String },
     actual: { state: true },
     size: { state: true },
+    zoom: { state: true },
     failed: { state: true },
   };
 
   declare path: string;
   declare actual: boolean;
   declare size: { w: number; h: number } | null;
+  /** Percentuale a cui l'immagine è mostrata rispetto ai suoi pixel. */
+  declare zoom: number | null;
+  private resizeObserver: ResizeObserver | null = null;
   declare failed: boolean;
 
   constructor() {
@@ -28,6 +32,7 @@ export class EdithaPreviewPanel extends LitElement {
     this.path = '';
     this.actual = false;
     this.size = null;
+    this.zoom = null;
     this.failed = false;
   }
 
@@ -70,8 +75,6 @@ export class EdithaPreviewPanel extends LitElement {
         min-height: 0;
         overflow: auto;
         display: flex;
-        align-items: center;
-        justify-content: center;
         padding: 16px;
         /* Scacchiera: si vedono le parti trasparenti delle immagini. */
         background-color: var(--editor-bg);
@@ -84,6 +87,9 @@ export class EdithaPreviewPanel extends LitElement {
       }
       .stage img {
         display: block;
+        /* Centrata finché ci sta; se è più grande si scorre dal bordo, senza tagli. */
+        margin: auto;
+        flex: none;
         cursor: zoom-in;
         image-rendering: auto;
       }
@@ -91,13 +97,6 @@ export class EdithaPreviewPanel extends LitElement {
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
-      }
-      .stage.actual {
-        align-items: flex-start;
-        justify-content: flex-start;
-      }
-      .stage.actual img {
-        flex: none;
       }
       .stage.actual img {
         cursor: zoom-out;
@@ -121,8 +120,30 @@ export class EdithaPreviewPanel extends LitElement {
     if (changed.has('path')) {
       this.actual = false;
       this.size = null;
+      this.zoom = null;
       this.failed = false;
     }
+  }
+
+  override updated(): void {
+    const img = this.renderRoot.querySelector('img');
+    if (!img) return;
+    if (!this.resizeObserver) this.resizeObserver = new ResizeObserver(() => this.measure());
+    this.resizeObserver.disconnect();
+    this.resizeObserver.observe(img);
+  }
+
+  override disconnectedCallback(): void {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    super.disconnectedCallback();
+  }
+
+  private measure(): void {
+    const img = this.renderRoot.querySelector('img');
+    if (!img || !img.naturalWidth) return;
+    const zoom = Math.round((img.clientWidth / img.naturalWidth) * 100);
+    if (zoom !== this.zoom) this.zoom = zoom;
   }
 
   private emit(name: string): void {
@@ -132,6 +153,7 @@ export class EdithaPreviewPanel extends LitElement {
   private onLoad(e: Event): void {
     const img = e.target as HTMLImageElement;
     this.size = { w: img.naturalWidth, h: img.naturalHeight };
+    this.measure();
   }
 
   private renderBody() {
@@ -155,7 +177,7 @@ export class EdithaPreviewPanel extends LitElement {
       <header>
         <span style="color:${fileIcon(this.path).color}">${icon(fileIcon(this.path).path, 18)}</span>
         <h2 title=${this.path}>
-          /config/${this.path}${this.size ? html`<small>${this.size.w} × ${this.size.h} px</small>` : nothing}
+          /config/${this.path}${this.size ? html`<small>${this.size.w} × ${this.size.h} px${this.zoom ? ` · ${this.zoom}%` : ''}</small>` : nothing}
         </h2>
         <button class="icon-btn small" data-action="download" title=${t('tree.download')} @click=${() => this.emit('preview-download')}>
           ${icon(icons.download, 18)}

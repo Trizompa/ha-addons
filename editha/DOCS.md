@@ -75,10 +75,11 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 
 - **Upload**: use the upload button, or drag files from your PC onto a folder.
 - **Filter by name**: the field above the tree.
-- **Images and PDFs** open in a preview instead of the editor: PNG, JPEG, GIF, WebP, AVIF, BMP,
-  ICO, SVG and PDF. The header shows the size in pixels; click an image to see it at actual size,
-  click again to fit it. Transparent parts show a checkerboard. Esc, the close button or a click on
-  a tab brings back the editor.
+- **Images and PDFs** open in a preview tab instead of the editor: PNG, JPEG, GIF, WebP, AVIF,
+  BMP, ICO, SVG and PDF. There is one preview tab, reused by the next image you open. The header
+  shows the size in pixels and the current zoom; click an image to see it at actual size (100%),
+  click again to fit it. Transparent parts show a checkerboard. Close the preview with its tab's ×
+  or Esc.
 
   ![Image preview](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/preview.png)
 - **System folders** (`.storage`, `.cloud`, `deps`, `tts`, `.git`) are hidden. The eye button shows

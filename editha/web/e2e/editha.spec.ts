@@ -827,31 +827,44 @@ test.describe('telefono', () => {
   });
 });
 
-test('FS-10 – immagini e PDF si aprono in anteprima, non nell\'editor', async ({ page }) => {
+test('FS-10 – immagini e PDF si aprono in una tab di anteprima', async ({ page }) => {
   await openFile(page, 'configuration.yaml');
   await row(page, 'anteprima').click();
   await row(page, 'anteprima/foto.png').click();
   const preview = page.locator('editha-preview-panel');
   await expect(preview).toBeVisible();
-  await expect(preview.locator('header')).toContainText('3 × 2 px');
+  // Piccola: mostrata a grandezza reale, centrata.
+  await expect(preview.locator('header')).toContainText('3 × 2 px · 100%');
   const img = preview.locator('img');
   expect(await img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(3);
-  // Nessuna tab per l'immagine: l'editor resta sul file di prima.
-  await expect(tab(page, 'anteprima/foto.png')).toHaveCount(0);
-  await expect(activeTab(page)).toHaveAttribute('data-path', 'configuration.yaml');
-  // Un clic passa alla grandezza reale e ritorno.
-  await img.click();
-  await expect(preview.locator('.stage')).toHaveClass(/actual/);
-  await img.click();
-  await expect(preview.locator('.stage')).not.toHaveClass(/actual/);
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'anteprima/foto.png');
+  await expect(activeTab(page)).toHaveClass(/preview/);
+  // Salva e annulla non agiscono sul file di testo nascosto.
+  await expect(page.locator('editha-toolbar button[title^="Salva (Ctrl+S)"]')).toBeDisabled();
 
+  // Il PDF riusa la stessa tab.
   await row(page, 'anteprima/manuale.pdf').click();
   await expect(preview.locator('iframe')).toHaveAttribute('src', /api\/preview\?path=anteprima%2Fmanuale\.pdf/);
-  await page.keyboard.press('Escape');
+  await expect(page.locator('editha-tab-bar .tab.preview')).toHaveCount(1);
+  await expect(tab(page, 'anteprima/foto.png')).toHaveCount(0);
+
+  // Si passa da una tab all'altra; l'anteprima resta tra le tab.
+  await tab(page, 'configuration.yaml').click();
   await expect(preview).toHaveCount(0);
-  // Scegliendo una tab si torna all'editor.
+  await expect(tab(page, 'anteprima/manuale.pdf')).toBeVisible();
+  await tab(page, 'anteprima/manuale.pdf').click();
+  await expect(preview).toBeVisible();
+
+  // Chiuse le tab di testo, resta l'anteprima; la sua X la chiude.
+  await tab(page, 'configuration.yaml').locator('button.close').click();
+  await expect(preview).toBeVisible();
+  await tab(page, 'anteprima/manuale.pdf').locator('button.close').click();
+  await expect(preview).toHaveCount(0);
+  await expect(page.locator('editha-tab-bar .tab')).toHaveCount(0);
+
+  // Esc chiude l'anteprima.
   await row(page, 'anteprima/foto.png').click();
   await expect(preview).toBeVisible();
-  await tab(page, 'configuration.yaml').click();
+  await page.keyboard.press('Escape');
   await expect(preview).toHaveCount(0);
 });
