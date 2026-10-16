@@ -1,4 +1,6 @@
-# EDITHA – Every Day I Tweak HA
+# EDITHA
+
+*Every Day I Tweak HA*
 
 ![EDITHA su computer e telefono](../docs/images/cover.png)
 

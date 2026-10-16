@@ -1,4 +1,6 @@
-# EDITHA – Every Day I Tweak HA
+# EDITHA
+
+*Every Day I Tweak HA*
 
 ![EDITHA on desktop and phone](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/cover.png)
 
