@@ -264,6 +264,12 @@ export class EdithaFileTree extends LitElement {
     this.expanded = expanded;
   }
 
+  /** Se il contenuto della cartella è già stato letto vale quello (più recente), altrimenti l'indicazione del server. */
+  private hasChildren(entry: Entry): boolean {
+    const loaded = this.dirs.get(entry.path);
+    return loaded ? loaded.length > 0 : !entry.empty;
+  }
+
   private onRowClick(entry: Entry): void {
     if (Date.now() - this.longPressAt < 800) return;
     this.selected = { path: entry.path, type: entry.type, readOnly: entry.readOnly };
@@ -437,7 +443,7 @@ export class EdithaFileTree extends LitElement {
       @click=${() => entry.type !== 'other' && this.onRowClick(entry)}
       @contextmenu=${(e: MouseEvent) => this.onRowContext(e, entry)}
     >
-      <span class="chevron">${isDir && (!entry.empty || open) ? icon(open ? icons.chevronDown : icons.chevronRight, 16) : nothing}</span>
+      <span class="chevron">${isDir && (open || this.hasChildren(entry)) ? icon(open ? icons.chevronDown : icons.chevronRight, 16) : nothing}</span>
       <span class="type-icon ${isDir ? 'folder' : ''}" style=${isDir ? '' : `color:${fi.color}`}>
         ${icon(isDir ? (open ? icons.folderOpen : icons.folder) : fi.path, 17)}
       </span>

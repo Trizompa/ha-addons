@@ -239,6 +239,9 @@ export class EdithaHistoryPanel extends LitElement {
 
   override disconnectedCallback(): void {
     this.narrowQuery.removeEventListener('change', this.onNarrowChange);
+    // Un caricamento ancora in corso non deve creare viste dopo la chiusura del pannello.
+    this.loadToken++;
+    this.listToken++;
     this.destroyMerge();
     super.disconnectedCallback();
   }
@@ -310,7 +313,7 @@ export class EdithaHistoryPanel extends LitElement {
     this.same = content === this.current;
     await this.updateComplete;
     const parent = this.renderRoot.querySelector('.merge') as HTMLElement | null;
-    if (!parent || token !== this.loadToken) return;
+    if (!parent || token !== this.loadToken || !this.isConnected) return;
     const extensions = viewerExtensions(this.path, this.prefs);
     const collapse = { margin: 3, minSize: 6 };
     if (this.narrowQuery.matches) {

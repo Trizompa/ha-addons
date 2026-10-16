@@ -461,6 +461,19 @@ describe('FileService', () => {
     });
   });
 
+  describe('operazioni su cartelle e file insieme', () => {
+    it('un salvataggio dentro una cartella che si sta eliminando non risulta riuscito', async () => {
+      const f = await files.read('packages/lights.yaml');
+      const [removed, saved] = await Promise.allSettled([
+        files.remove('packages'),
+        files.write('packages/lights.yaml', 'light: [1]\n', f.etag),
+      ]);
+      assert.equal(removed.status, 'fulfilled');
+      // Il salvataggio aspetta l'eliminazione e poi fallisce: niente "salvato" su un file sparito.
+      assert.equal(saved.status, 'rejected');
+    });
+  });
+
   describe('replace (SR-3)', () => {
     it('sostituisce nei file indicati, conservando la versione precedente', async () => {
       await writeTree(sb.configDir, {
@@ -483,6 +496,38 @@ describe('FileService', () => {
       assert.equal(await readFile(abs('c.yaml'), 'utf8'), 'sensore_1: a\nsensore_2: b\n');
       await files.replace(['c.yaml'], { query: 'sensore_1' }, 'costo_$1');
       assert.equal(await readFile(abs('c.yaml'), 'utf8'), 'costo_$1: a\nsensore_2: b\n');
+    });
+
+    it('con lookahead, lookbehind e $<nome> sostituisce esattamente la corrispondenza', async () => {
+      await writeTree(sb.configDir, { 'd.yaml': 'abc\nentity_id: light.x\nfoobar foobaz\n' });
+      const res = await files.replace(['d.yaml'], { query: '(?<=a)bc|c', regex: true }, 'X');
+      assert.equal(res.files[0]?.count, 1);
+      assert.equal(await readFile(abs('d.yaml'), 'utf8'), 'aX\nentity_id: light.x\nfoobar foobaz\n');
+      await files.replace(['d.yaml'], { query: '(?<=entity_id: )light\\.x', regex: true }, 'light.y');
+      await files.replace(['d.yaml'], { query: 'foo(?=bar)', regex: true }, 'FOO');
+      await files.replace(['d.yaml'], { query: '(?<p>fo)o(?<s>baz)', regex: true }, '$<s>-$<p>-$&-$$');
+      assert.equal(await readFile(abs('d.yaml'), 'utf8'), 'aX\nentity_id: light.y\nFOObar baz-fo-foobaz-$\n');
+    });
+
+    it('secrets.yaml non si tocca nemmeno da un link o da una copia', async () => {
+      await writeTree(sb.configDir, { 'secrets.yaml': 'pw: vecchia\n', 'secrets_copia.yaml.bak': 'pw: vecchia\n' });
+      await symlink(abs('secrets.yaml'), abs('s.yaml'));
+      const res = await files.replace(['s.yaml', 'secrets_copia.yaml.bak'], { query: 'vecchia' }, 'nuova');
+      assert.equal(res.files.length, 0);
+      assert.equal(await readFile(abs('secrets.yaml'), 'utf8'), 'pw: vecchia\n');
+      assert.equal(await readFile(abs('secrets_copia.yaml.bak'), 'utf8'), 'pw: vecchia\n');
+      // Nemmeno la ricerca le mostra.
+      assert.equal((await files.search({ query: 'vecchia' })).results.length, 0);
+    });
+
+    it('non scrive un risultato oltre il limite dei file e conta una volta lo stesso file', async () => {
+      await writeTree(sb.configDir, { 'big.txt': 'a\n'.repeat(200), 'e.yaml': 'x: 1\n' });
+      const big = await files.replace(['big.txt'], { query: 'a' }, 'b'.repeat(20));
+      assert.deepEqual(big.skipped, [{ path: 'big.txt', reason: 'too_large' }]);
+      assert.equal(await readFile(abs('big.txt'), 'utf8'), 'a\n'.repeat(200));
+      const twice = await files.replace(['e.yaml', './e.yaml'], { query: 'x' }, 'y');
+      assert.deepEqual(twice.files.map((f) => f.path), ['e.yaml']);
+      assert.deepEqual(twice.skipped, []);
     });
 
     it('un\'espressione lentissima non modifica nessun file', async () => {

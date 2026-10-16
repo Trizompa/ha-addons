@@ -218,6 +218,10 @@ export const it = {
   'error.ha_unavailable': 'Home Assistant non è raggiungibile',
   'error.ha_error': 'Home Assistant ha risposto con un errore',
   'error.invalid_request': 'richiesta non valida',
+  'error.not_a_file': 'non è un file',
+  'error.not_a_directory': 'non è una cartella',
+  'error.not_previewable': 'anteprima non disponibile per questo tipo di file',
+  'error.internal': 'errore interno, vedi il registro dell\'add-on',
 
   // Validatore YAML
   'yaml.DUPLICATE_KEY': 'Chiave duplicata',
@@ -334,6 +338,7 @@ export const it = {
   'drafts.discard': 'Scarta',
   'drafts.recovered': 'Modifiche recuperate: salva per tenerle',
   'drafts.cannotOpen': 'Impossibile recuperare le modifiche di {name}: il file non si apre più. La bozza resta per la prossima volta.',
+  'drafts.dropped': 'Le modifiche a {name} sono state scartate: il file non esiste più o non si può più salvare.',
   'drafts.changedOnDisk': '{name} è stato modificato fuori da Editha dopo queste modifiche: al salvataggio Editha chiederà cosa fare.',
   // Vista divisa
   'toolbar.outline': 'Schema del file: automazioni, script e sezioni',
@@ -360,6 +365,9 @@ export const it = {
   'yaml.explain.deeper': 'La riga {line} è più rientrata della riga {prev}, ma la riga {prev} non apre un blocco (non finisce con «:»). Togli gli spazi in più alla riga {line}, oppure aggiungi «:» alla fine della riga {prev}.',
   'yaml.explain.noLevel': 'La riga {line} rientra di {spaces} spazi: nessun blocco sopra parte da lì (livelli possibili: {levels}). Allineala al blocco a cui appartiene.',
   'yaml.explain.duplicate': 'Chiave «{key}» ripetuta nello stesso blocco: Home Assistant tiene solo l\'ultima.',
+  'yaml.explain.template': 'Un template va tra virgolette: scrivi "{{ … }}" (oppure usa > sulla riga sopra per un template su più righe).',
+  'yaml.explain.complexKey': 'Un elenco o un blocco { } non può fare da chiave: Home Assistant non lo accetta.',
+  'yaml.explain.alias': '«*{name}» rimanda a un\'ancora «&{name}» che non è definita prima nel file.',
   'yaml.explain.boolean': '«{value}» senza virgolette: Home Assistant lo legge come vero/falso. Se intendi il testo (per esempio lo stato di un\'entità), scrivi "{value}".',
   'yaml.explain.oddIndent': 'Rientro di {spaces} spazi, mentre il resto del file va di 2 in 2: controlla che la riga sia al livello giusto.',
   'status.openProblems': 'Elenco dei problemi (Ctrl+Maiusc+M); F8 va al successivo',
@@ -425,6 +433,7 @@ export const it = {
   'compare.title': 'Confronto: {a} ↔ {b}',
   'compare.legend': 'Rosso: solo in {a} · Verde: solo in {b}',
   'compare.same': 'I due file sono identici.',
+  'preview.openAsText': 'Apri come testo',
   'preview.actual': 'Clic per la grandezza reale',
   'preview.fit': 'Clic per adattare alla finestra',
   'preview.failed': "L'immagine non si può mostrare: il file potrebbe essere danneggiato o in un formato che il browser non supporta.",

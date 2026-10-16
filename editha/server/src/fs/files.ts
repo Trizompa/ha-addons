@@ -11,6 +11,7 @@ import { KeyedLock } from './lock.js';
 import { createZip, type ZipEntry } from './zip.js';
 import {
   SEARCH_BUDGET_MS,
+  isSecretsFile,
   searchPattern,
   type ReplaceMessage,
   type SearchMessage,
@@ -143,6 +144,20 @@ export class FileService {
     private readonly maxDownload = 50 * 1024 * 1024,
   ) {}
 
+  /**
+   * Blocco a livelli: un'operazione su un percorso aspetta quelle sulle cartelle che lo
+   * contengono (e viceversa), così un file non si salva dentro una cartella che si sta
+   * eliminando o spostando. Le chiavi sono sempre prese nello stesso ordine (niente stalli).
+   */
+  private locked<T>(paths: string[], task: () => Promise<T>): Promise<T> {
+    const keys = new Set<string>();
+    for (const abs of paths) {
+      keys.add(abs);
+      for (let dir = path.dirname(abs); dir.startsWith(this.guard.root + path.sep); dir = path.dirname(dir)) keys.add(dir);
+    }
+    return this.lock.runAll([...keys], task);
+  }
+
   /** FS-1: contenuto di una cartella, cartelle prima e poi file. */
   async list(input: string): Promise<Entry[]> {
     const dir = await this.guard.resolveExisting(input);
@@ -228,8 +243,10 @@ export class FileService {
         limit: this.maxFileSize,
       });
     }
-    return this.lock.run(file.abs, async () => {
+    return this.locked([file.abs], async () => {
       const st = await this.statFile(file);
+      // Un file enorme (un database) non si apre nell'editor: non lo si legge nemmeno qui.
+      if (st.size > this.maxFileSize) throw new EdithaError('too_large', `File troppo grande (${st.size} byte)`, { size: st.size, limit: this.maxFileSize });
       const current = await readFile(file.abs);
       const currentEtag = etagOf(current);
       if (currentEtag !== etag) {
@@ -251,6 +268,10 @@ export class FileService {
   async create(input: string, type: 'file' | 'directory', content = ''): Promise<Entry> {
     const target = await this.guard.resolveEntry(input);
     this.guard.assertWritable(target);
+    const size = Buffer.byteLength(content, 'utf8');
+    if (size > this.maxFileSize) {
+      throw new EdithaError('too_large', `Contenuto troppo grande (${size} byte)`, { size, limit: this.maxFileSize });
+    }
     try {
       if (type === 'directory') {
         await mkdir(target.abs);
@@ -258,9 +279,13 @@ export class FileService {
         const handle = await open(target.abs, 'wx', 0o644);
         try {
           await handle.writeFile(content, 'utf8');
-        } finally {
-          await handle.close();
+        } catch (err) {
+          // Disco pieno a metà: niente file mozzato che poi impedisce di riprovare.
+          await handle.close().catch(() => {});
+          await rm(target.abs, { force: true }).catch(() => {});
+          throw err;
         }
+        await handle.close();
       }
     } catch (err) {
       throw fromFsError(err, target.rel);
@@ -279,7 +304,7 @@ export class FileService {
       throw new EdithaError('invalid_request', 'Una cartella non può essere spostata dentro sé stessa');
     }
     // Origine e destinazione insieme: due spostamenti verso lo stesso nome non si sovrascrivono.
-    return this.lock.runAll([from.abs, to.abs], async () => {
+    return this.locked([from.abs, to.abs], async () => {
       const st = await this.lstatEntry(from);
       if (await this.exists(to.abs)) throw new EdithaError('already_exists', `Esiste già: ${to.rel}`, { path: to.rel });
       try {
@@ -289,8 +314,14 @@ export class FileService {
       }
       const fromKey = this.guard.relativeOf(from.abs);
       const toKey = this.guard.relativeOf(to.abs);
-      if (st.isFile()) await this.backups.move(fromKey, toKey);
-      else if (st.isDirectory()) await this.backups.moveTree(fromKey, toKey);
+      // Lo spostamento è avvenuto: se la cronologia non si riesce a spostare (es. /data pieno)
+      // resta sotto il vecchio nome, ma l'operazione non va segnalata come fallita.
+      try {
+        if (st.isFile()) await this.backups.move(fromKey, toKey);
+        else if (st.isDirectory()) await this.backups.moveTree(fromKey, toKey);
+      } catch {
+        // cronologia non spostata
+      }
       return this.entryOf(to);
     });
   }
@@ -299,7 +330,7 @@ export class FileService {
   async remove(input: string): Promise<{ path: string; backup: string | null }> {
     const target = await this.guard.resolveEntry(input);
     this.guard.assertWritable(target);
-    return this.lock.run(target.abs, async () => {
+    return this.locked([target.abs], async () => {
       const st = await this.lstatEntry(target);
       const key = this.guard.relativeOf(target.abs);
       let backup: string | null = null;
@@ -353,6 +384,8 @@ export class FileService {
           const st = await stat(childAbs);
           total += st.size;
           if (total > this.maxDownload) throw new TransferTooLarge(total, this.maxDownload);
+          // Il formato ZIP semplice non va oltre 65535 file: meglio un errore chiaro.
+          if (entries.length >= 65535) throw new TransferTooLarge(total, this.maxDownload);
           entries.push({ name, data: await readFile(childAbs), mtime: st.mtime });
         }
       }
@@ -376,7 +409,7 @@ export class FileService {
     }
     const target = await this.guard.resolveEntry(dir.rel ? `${dir.rel}/${name}` : name);
     this.guard.assertWritable(target);
-    return this.lock.run(target.abs, async () => {
+    return this.locked([target.abs], async () => {
       let existing: Stats | null = null;
       try {
         existing = await lstat(target.abs);
@@ -386,7 +419,10 @@ export class FileService {
       if (existing) {
         if (!existing.isFile()) throw new EdithaError('not_a_file', `Non è un file: ${target.rel}`);
         if (!overwrite) throw new EdithaError('already_exists', `Esiste già: ${target.rel}`, { path: target.rel });
-        await this.backups.saveFile(this.guard.relativeOf(target.abs), await readFile(target.abs), 'save');
+        // Come per l'eliminazione: copia di sicurezza solo entro il limite, senza caricarla in memoria.
+        if (existing.size <= this.maxDownload) {
+          await this.backups.saveFileFrom(this.guard.relativeOf(target.abs), target.abs, 'save');
+        }
       }
       await writeFileAtomic(target.abs, data, existing ?? undefined);
       return (await this.describe(target.abs, target.rel, name, false))!;
@@ -399,25 +435,32 @@ export class FileService {
    * (es. "(a+)+$") non può bloccare il server, il worker viene fermato e i risultati
    * trovati fino a quel momento restano validi (troncati).
    */
+  /** Ferma la ricerca in corso: chi scrive ne fa partire una nuova a ogni pausa. */
+  private stopSearch: (() => void) | null = null;
+
   async search(opts: SearchOptions): Promise<SearchResult> {
     searchPattern(opts);
+    this.stopSearch?.();
     return new Promise((resolve) => {
       const out: SearchResult = { results: [], files: 0, matches: 0, truncated: false };
       const worker = new Worker(new URL('./search-worker.js', import.meta.url), {
         workerData: { mode: 'search', root: this.guard.root, opts, maxFileSize: this.maxFileSize },
       });
       let finished = false;
+      const stop = () => {
+        out.truncated = true;
+        finish();
+      };
       const finish = () => {
         if (finished) return;
         finished = true;
         clearTimeout(timer);
+        if (this.stopSearch === stop) this.stopSearch = null;
         void worker.terminate();
         resolve(out);
       };
-      const timer = setTimeout(() => {
-        out.truncated = true;
-        finish();
-      }, SEARCH_BUDGET_MS);
+      this.stopSearch = stop;
+      const timer = setTimeout(stop, SEARCH_BUDGET_MS);
       worker.on('message', (msg: SearchMessage) => {
         if (msg.type === 'file') {
           out.results.push({ path: msg.path, matches: msg.matches });
@@ -454,10 +497,15 @@ export class FileService {
       try {
         const file = await this.guard.resolveExisting(input);
         this.guard.assertWritable(file);
-        // secrets.yaml non si tocca mai da una sostituzione di massa (come per la ricerca).
-        if (path.posix.basename(file.rel) === 'secrets.yaml') throw new EdithaError('read_only', 'secrets.yaml');
+        // secrets.yaml e copie non si toccano mai da una sostituzione di massa (come per la
+        // ricerca), nemmeno passando da un link: conta anche il nome del file vero.
+        if (isSecretsFile(path.posix.basename(file.rel)) || isSecretsFile(path.basename(file.abs))) {
+          throw new EdithaError('read_only', 'secrets.yaml');
+        }
         const st = await this.statFile(file);
         if (st.size > this.maxFileSize) throw new EdithaError('too_large', file.rel);
+        // Due percorsi verso lo stesso file (./a.yaml, un link) si sostituiscono una volta sola.
+        if (targets.some((t) => t.abs === file.abs)) continue;
         targets.push({ rel: file.rel, abs: file.abs });
       } catch (err) {
         skipped.push({ path: input, reason: err instanceof EdithaError ? err.code : 'error' });
@@ -466,7 +514,7 @@ export class FileService {
     const computed = await new Promise<Extract<ReplaceMessage, { type: 'file' }>[]>((resolve, reject) => {
       const out: Extract<ReplaceMessage, { type: 'file' }>[] = [];
       const worker = new Worker(new URL('./search-worker.js', import.meta.url), {
-        workerData: { mode: 'replace', files: targets, opts, replacement },
+        workerData: { mode: 'replace', files: targets, opts, replacement, maxFileSize: this.maxFileSize },
       });
       let finished = false;
       const end = (err?: Error) => {
@@ -483,6 +531,7 @@ export class FileService {
       );
       worker.on('message', (msg: ReplaceMessage) => {
         if (msg.type === 'file') out.push(msg);
+        else if (msg.type === 'skip') skipped.push({ path: msg.rel, reason: msg.reason });
         else end();
       });
       worker.on('error', (err) => end(err));
@@ -491,18 +540,29 @@ export class FileService {
     const files: { path: string; count: number; etag: string }[] = [];
     for (const change of computed) {
       const abs = targets.find((t) => t.rel === change.rel)!.abs;
-      await this.lock.run(abs, async () => {
-        const st = await stat(abs);
-        const current = await readFile(abs);
-        if (etagOf(current) !== change.etag) {
-          skipped.push({ path: change.rel, reason: 'conflict' });
-          return;
-        }
-        const data = Buffer.from(change.content, 'utf8');
-        await this.backups.saveFile(this.guard.relativeOf(abs), current, 'save');
-        await writeFileAtomic(abs, data, st);
-        files.push({ path: change.rel, count: change.count, etag: etagOf(data) });
-      });
+      // Un file che non si riesce a scrivere viene segnalato e si prosegue con gli altri:
+      // chi chiama deve sapere esattamente quali file sono cambiati.
+      try {
+        await this.locked([abs], async () => {
+          const st = await stat(abs);
+          const current = await readFile(abs);
+          if (etagOf(current) !== change.etag) {
+            skipped.push({ path: change.rel, reason: 'conflict' });
+            return;
+          }
+          const data = Buffer.from(change.content, 'utf8');
+          if (data.length > this.maxFileSize) {
+            skipped.push({ path: change.rel, reason: 'too_large' });
+            return;
+          }
+          await this.backups.saveFile(this.guard.relativeOf(abs), current, 'save');
+          await writeFileAtomic(abs, data, st);
+          files.push({ path: change.rel, count: change.count, etag: etagOf(data) });
+        });
+      } catch (err) {
+        const mapped = fromFsError(err, change.rel);
+        skipped.push({ path: change.rel, reason: mapped instanceof EdithaError ? mapped.code : 'error' });
+      }
     }
     return { files, skipped };
   }
@@ -596,7 +656,7 @@ export class FileService {
         limit: this.maxFileSize,
       });
     }
-    return this.lock.run(target.abs, async () => {
+    return this.locked([target.abs], async () => {
       let existing: Stats | null = null;
       try {
         existing = await lstat(target.abs);
@@ -605,6 +665,7 @@ export class FileService {
       }
       if (existing) {
         if (!existing.isFile()) throw new EdithaError('not_a_file', `Non è un file: ${target.rel}`);
+        if (existing.size > this.maxDownload) throw new EdithaError('too_large', `File troppo grande: ${target.rel}`);
         const current = await readFile(target.abs);
         if (!current.equals(data)) {
           await this.backups.saveFile(this.guard.relativeOf(target.abs), current, 'restore');
@@ -652,7 +713,7 @@ export class FileService {
       throw new EdithaError('invalid_request', 'Una cartella non può essere copiata dentro sé stessa');
     }
     const st = await stat(from.abs);
-    return this.lock.run(to.abs, async () => {
+    return this.locked([to.abs], async () => {
       if (await this.exists(to.abs)) throw new EdithaError('already_exists', `Esiste già: ${to.rel}`, { path: to.rel });
       try {
         if (st.isDirectory()) {

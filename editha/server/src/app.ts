@@ -39,8 +39,9 @@ export async function buildApp(config: Config, options: AppOptions = {}): Promis
     logger: options.logger === false ? false : { level: config.logLevel },
     // Margine per JSON ed escape oltre al contenuto del file.
     bodyLimit: Math.max(config.maxFileSize * 2 + 64 * 1024, config.maxTransfer + 64 * 1024),
-    // Campi sconosciuti rifiutati, non scartati in silenzio.
-    ajv: { customOptions: { removeAdditional: false } },
+    // Campi sconosciuti rifiutati, non scartati in silenzio; niente conversioni di tipo
+    // (con quelle un `content: null` diventerebbe un file vuoto).
+    ajv: { customOptions: { removeAdditional: false, coerceTypes: false } },
   });
 
   registerIngressGuard(app, config.allowedIps);

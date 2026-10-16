@@ -39,6 +39,23 @@ class RawBody {
   constructor(readonly blob: Blob) {}
 }
 
+/**
+ * Richieste partite mentre la pagina si chiude (bozze, sessione): solo queste usano keepalive,
+ * che il browser concede a corpi piccoli (64 KB in tutto). Un salvataggio normale non deve
+ * passare di lì, altrimenti un file grande fallirebbe come se Editha non rispondesse.
+ */
+let leaving = false;
+
+/** Esegue `send` (sincrono fino alla fetch) segnando le richieste come "in uscita". */
+export function whileLeaving(send: () => void): void {
+  leaving = true;
+  try {
+    send();
+  } finally {
+    leaving = false;
+  }
+}
+
 async function send(method: Method, url: string, body: unknown): Promise<{ res: Response; data: unknown }> {
   const raw = body instanceof RawBody;
   const json = body === undefined || raw ? null : JSON.stringify(body);
@@ -47,9 +64,7 @@ async function send(method: Method, url: string, body: unknown): Promise<{ res: 
     headers: body === undefined ? {} : { 'content-type': raw ? 'application/octet-stream' : 'application/json' },
     body: body === undefined ? null : raw ? (body as RawBody).blob : json,
     cache: 'no-store',
-    // Bozze e sessione inviate mentre la pagina si chiude: keepalive le porta a termine
-    // (il browser lo consente solo per corpi piccoli).
-    keepalive: json !== null && json.length < 60_000,
+    keepalive: leaving && json !== null && new TextEncoder().encode(json).length < 60_000,
   });
   const data: unknown = await res.json().catch(() => null);
   return { res, data };

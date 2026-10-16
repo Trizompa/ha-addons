@@ -12,18 +12,22 @@ export class EdithaOutlinePanel extends LitElement {
   static override properties = {
     items: { attribute: false },
     active: { type: Number },
+    file: { type: String },
     filter: { state: true },
   };
 
   /** null: nessun file YAML aperto. */
   declare items: OutlineItem[] | null;
   declare active: number;
+  /** File a cui si riferisce lo schema. */
+  declare file: string | null;
   declare filter: string;
 
   constructor() {
     super();
     this.items = null;
     this.active = -1;
+    this.file = null;
     this.filter = '';
   }
 
@@ -123,6 +127,11 @@ export class EdithaOutlinePanel extends LitElement {
     `,
   ];
 
+  /** Il filtro vale per il file su cui è stato scritto: cambiando file si riparte da zero. */
+  override willUpdate(changed: Map<string, unknown>): void {
+    if (this.hasUpdated && changed.has('file')) this.filter = '';
+  }
+
   override updated(changed: Map<string, unknown>): void {
     // La voce attiva resta visibile mentre ci si sposta nel file.
     if (changed.has('active') && !this.filter) {
@@ -169,7 +178,7 @@ export class EdithaOutlinePanel extends LitElement {
           ${icon(icons.close, 16)}
         </button>
       </header>
-      ${this.items && this.items.length > 8
+      ${(this.items && this.items.length > 8) || this.filter
         ? html`<div class="filter">
             <input
               class="input"

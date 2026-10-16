@@ -1,4 +1,4 @@
-import { parseAllDocuments, visit, type ScalarTag, type CollectionTag, type YAMLError } from 'yaml';
+import { isCollection, parseAllDocuments, visit, type ScalarTag, type CollectionTag, type YAMLError } from 'yaml';
 import { t, type MessageKey } from '../i18n/index.js';
 
 export interface YamlProblem {
@@ -133,7 +133,8 @@ function explainStructure(lines: Lines, index: number): string | null {
   const n = index + 1;
   if (/^ *\t/.test(line)) return t('yaml.explain.tab', { line: n });
   const missing = MISSING_SPACE.exec(line);
-  if (missing) return t('yaml.explain.missingSpace', { key: missing[3]!, value: missing[4]!.trim() });
+  // In un elenco «- mdi:home» è un testo voluto: vale solo per le chiavi tipiche di HA.
+  if (missing && (!missing[2] || HA_KEYS.has(missing[3]!))) return t('yaml.explain.missingSpace', { key: missing[3]!, value: missing[4]!.trim() });
   const prev = previousContent(lines, index);
   if (prev === -1 || !isContent(line)) return null;
   const here = indentOf(line);
@@ -260,6 +261,8 @@ const HA_KEYS = new Set([
   'value_template', 'target', 'data', 'mode', 'unique_id', 'icon', 'friendly_name', 'id',
 ]);
 
+const MAX_PROBLEMS = 200;
+
 /** Valori che Home Assistant (YAML 1.1) legge come vero/falso se non sono tra virgolette. */
 const YAML11_BOOLEANS = new Set(['on', 'off', 'yes', 'no']);
 
@@ -288,6 +291,8 @@ export function lintYaml(text: string): YamlProblem[] {
   const reported = new Set<number>();
   for (const doc of list) {
     for (const err of [...doc.errors, ...doc.warnings]) {
+      // Un file pieno di errori (es. incollato male): bastano i primi, e il controllo resta veloce.
+      if (problems.length >= MAX_PROBLEMS) break;
       // Più «<<: *ancora» nello stesso blocco: Home Assistant le unisce tutte, va bene.
       if (err.code === 'DUPLICATE_KEY' && keyAt(text, err.pos[0]) === '<<') continue;
       const [from, to] = visibleRange(text, err.pos[0], err.pos[1]);
@@ -299,12 +304,41 @@ export function lintYaml(text: string): YamlProblem[] {
         reported.add(block);
       }
       const message = translate(err, lines, text);
-      // Più errori della libreria per lo stesso sbaglio: una sola spiegazione.
-      if (seen.has(message)) continue;
-      seen.add(message);
+      // Più errori della libreria per lo stesso sbaglio: una sola spiegazione. Le spiegazioni
+      // citano le righe coinvolte, quindi bastano da sole; i messaggi senza riga (chiave ripetuta,
+      // carattere riservato…) contano una volta per riga, perché lo stesso errore in due punti
+      // sono due errori.
+      const key = /\d/.test(message) ? message : `${message}@${lines.indexAt(from)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
       problems.push({ from, to, severity: severityOf(err), message });
     }
     visit(doc, {
+      // «value_template: {{ … }}» senza virgolette è YAML valido (una mappa usata come chiave),
+      // ma Home Assistant lo rifiuta: va scritto tra virgolette.
+      Pair: (_key, pair) => {
+        const k = pair.key;
+        if (!isCollection(k) || !k.range) return;
+        // «{{ x }}» si legge come { {x} }: la chiave interna è preceduta da un'altra «{».
+        const template = text[k.range[0] - 1] === '{' && text[k.range[0]] === '{';
+        problems.push({
+          from: template ? k.range[0] - 1 : k.range[0],
+          to: template ? Math.min(text.length, k.range[1] + 1) : k.range[1],
+          severity: 'error',
+          message: template ? t('yaml.explain.template') : t('yaml.explain.complexKey'),
+        });
+        return visit.SKIP;
+      },
+      // «*nome» senza un'ancora «&nome» definita prima: Home Assistant non carica il file.
+      Alias: (_key, node) => {
+        if (node.resolve(doc) || !node.range) return;
+        problems.push({
+          from: node.range[0],
+          to: node.range[1],
+          severity: 'error',
+          message: t('yaml.explain.alias', { name: node.source }),
+        });
+      },
       // Collezioni [ ] e { } su più righe: le righe interne possono rientrare come si vuole.
       Map: (_key, node) => markFlow(node),
       Seq: (_key, node) => markFlow(node),

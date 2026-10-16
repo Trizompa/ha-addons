@@ -139,6 +139,8 @@ export class EdithaComparePanel extends LitElement {
   }
 
   private readonly build = (): void => {
+    // Passando tra schermo stretto e largo cambiano anche le etichette sopra il confronto.
+    this.requestUpdate();
     this.merge?.destroy();
     this.merge = null;
     const parent = this.renderRoot.querySelector('.merge') as HTMLElement | null;

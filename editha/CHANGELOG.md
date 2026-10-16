@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.21.0
+
+Revisione completa del codice: tante piccole correzioni, nessuna funzione nuova di rilievo.
+
+**Ricerca e sostituzione**
+- Sostituisci con espressioni regolari: `$1`, `$&`, `$<nome>` e le condizioni prima/dopo (lookaround) ora danno lo stesso risultato dell'anteprima.
+- Anche le copie di `secrets.yaml` (es. `secrets.yaml.bak`, `secrets_old.yaml`) e i collegamenti a `secrets.yaml` sono esclusi da ricerca e sostituzione.
+- Un file troppo grande viene saltato invece di bloccare tutto; un errore su un file non ferma gli altri; lo stesso file raggiunto da due percorsi viene modificato una volta sola.
+- Una nuova ricerca ferma quella ancora in corso.
+
+**File e cronologia**
+- Un salvataggio dentro una cartella che si sta eliminando o spostando aspetta la fine dell'operazione, invece di incrociarsi con essa.
+- Rinominare un file non fallisce più se non si riesce a spostare la sua cronologia.
+- Con il disco pieno la creazione di un file non lascia un file vuoto a metà.
+- Limiti di dimensione controllati anche alla creazione, alla sostituzione di un file caricato e al ripristino di una versione.
+- Lo scaricamento di una cartella con troppi elementi per uno ZIP dà un errore chiaro.
+- **Apri come testo** (menu del tasto destro) per i file SVG, che altrimenti si aprono in anteprima. "Apri a destra" non compare più per immagini e PDF.
+
+**Editor e controllo YAML**
+- Nuove spiegazioni: un modello `{{ … }}` usato senza virgolette all'inizio di un valore, una chiave che è una lista o un elenco, un alias `*nome` che non esiste.
+- Due chiavi doppie in punti diversi del file sono segnalate entrambe; al massimo 200 problemi per file.
+- Ctrl+clic: niente più collegamenti finti dentro le virgolette; `!include` in una lista `[a, b]` e percorsi che iniziano con `/config` funzionano.
+- Scorciatoie (Ctrl+S, Ctrl+F, Alt+W…) indipendenti dalla tastiera e dal Mac; Esc chiude, in quest'ordine, cronologia, confronto e anteprima, ma non mentre si scrive in un campo.
+
+**Bozze e interfaccia**
+- Le modifiche non salvate vengono conservate in modo più affidabile chiudendo la pagina, anche nei file grandi.
+- La bozza di un file che nel frattempo è stato cancellato o non si può più salvare viene scartata con un avviso, invece di essere riproposta a ogni apertura.
+- Vista divisa: la barra in basso segue la colonna destra; aprendo un file a destra l'anteprima non la copre più.
+- Lo schema del file azzera il filtro quando cambi file; la cronologia ignora le risposte arrivate dopo la chiusura; il confronto si aggiorna subito.
+- Messaggi di errore più chiari ("non è un file", "anteprima non disponibile"…).
+
 ## 0.20.2
 
 - Cronologia: se la finestra è già aperta e le si chiede un altro file, ora mostra le versioni di quel file (prima restavano quelle del file precedente). Una risposta lenta per il file di prima non può più sovrascrivere quella giusta.

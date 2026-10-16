@@ -2,6 +2,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
 import { writeFileAtomic } from '../fs/atomic.js';
+import { KeyedLock } from '../fs/lock.js';
 
 /** ED-14: modifiche non ancora salvate di un file, da recuperare alla riapertura. */
 export interface Draft {
@@ -33,6 +34,9 @@ function isDraft(d: unknown): d is Draft {
 
 /** Una bozza per file in /data/drafts: il nome è l'hash del percorso. */
 export class DraftStore {
+  /** Scrittura e cancellazione della stessa bozza in ordine di arrivo: una DELETE non viene superata da una PUT più lenta. */
+  private readonly lock = new KeyedLock();
+
   constructor(
     readonly dir: string,
     private readonly now: () => Date = () => new Date(),
@@ -63,9 +67,11 @@ export class DraftStore {
   }
 
   async put(rel: string, content: string, etag: string): Promise<Draft> {
-    await mkdir(this.dir, { recursive: true });
     const draft: Draft = { path: rel, content, etag, savedAt: this.now().toISOString() };
-    await writeFileAtomic(this.fileOf(rel), Buffer.from(JSON.stringify(draft)));
+    await this.lock.run(rel, async () => {
+      await mkdir(this.dir, { recursive: true });
+      await writeFileAtomic(this.fileOf(rel), Buffer.from(JSON.stringify(draft)));
+    });
     await this.prune();
     return draft;
   }
@@ -82,6 +88,6 @@ export class DraftStore {
   }
 
   async remove(rel: string): Promise<void> {
-    await rm(this.fileOf(rel), { force: true });
+    await this.lock.run(rel, () => rm(this.fileOf(rel), { force: true }));
   }
 }

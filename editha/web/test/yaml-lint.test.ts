@@ -6,6 +6,23 @@ import { validateName, rebase, isWithin, dirname, basename, resolvePath } from '
 import { linksIn } from '../src/editor/links.js';
 
 describe('lintYaml (HA-1)', () => {
+  it('lo stesso errore in due punti sono due errori', () => {
+    const dup = lintYaml('automation:\n  - alias: a\n    mode: single\n    mode: queued\n  - alias: b\n    mode: single\n    mode: restart\n');
+    assert.equal(dup.length, 2, JSON.stringify(dup));
+    assert.equal(lintYaml('a: @x\nb: 1\nc: @y\n').filter((p) => p.severity === 'error').length, 2);
+  });
+
+  it('template Jinja senza virgolette e alias senza ancora', () => {
+    const tpl = lintYaml('value_template: {{ states("x") }}\n');
+    assert.equal(tpl.length, 1);
+    assert.match(tpl[0]!.message, /template va tra virgolette/);
+    assert.equal(lintYaml('a:\n  - {{ x }}\n')[0]?.severity, 'error');
+    assert.deepEqual(lintYaml('value_template: "{{ states(\'x\') }}"\n'), []);
+    assert.match(lintYaml('a: *nope\n')[0]?.message ?? '', /«\*nope» rimanda/);
+    assert.equal(lintYaml('a: *x\nb: &x 1\n').length, 1);
+    assert.deepEqual(lintYaml('base: &b\n  x: 1\nuso:\n  <<: *b\n  y: 2\n'), []);
+  });
+
   it('accetta una configurazione corretta con i tag di HA', () => {
     const text = [
       'homeassistant:',
@@ -158,6 +175,13 @@ describe('collegamenti !include / !secret (HA-4, HA-5)', () => {
       [['include', 'automations.yaml']],
     );
     assert.deepEqual(linksIn('sensor: !include_dir_merge_list "sensori"').map((l) => [l.kind, l.target]), [['dir', 'sensori']]);
+    // Elenchi e mappe { } su una riga, testi tra virgolette e # dentro le virgolette.
+    assert.deepEqual(linksIn('a: [!include a.yaml, !include b.yaml]').map((l) => l.target), ['a.yaml', 'b.yaml']);
+    assert.deepEqual(linksIn('a: {x: !include a.yaml}').map((l) => l.target), ['a.yaml']);
+    assert.deepEqual(linksIn('c: "!include non_e_un_tag.yaml"'), []);
+    assert.deepEqual(linksIn('a: "x #y" !include x.yaml').map((l) => l.target), ['x.yaml']);
+    assert.equal(resolvePath('a', '/config'), '');
+    assert.equal(resolvePath('a/b', '../..'), '');
     const line = '  password: !secret wifi_pw';
     const [secret] = linksIn(line);
     assert.equal(secret?.kind, 'secret');

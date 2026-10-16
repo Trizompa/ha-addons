@@ -22,11 +22,12 @@ export function join(dir: string, name: string): string {
  */
 export function resolvePath(dir: string, relative: string): string | null {
   // Percorso assoluto: vale solo se è dentro /config.
-  if (relative.startsWith('/')) {
+  const absolute = relative.startsWith('/');
+  if (absolute) {
     if (relative !== '/config' && !relative.startsWith('/config/')) return null;
     relative = relative.slice('/config'.length);
   }
-  const parts = relative.startsWith('/') ? [] : dir.split('/').filter(Boolean);
+  const parts = absolute ? [] : dir.split('/').filter(Boolean);
   for (const part of relative.split('/')) {
     if (part === '' || part === '.') continue;
     if (part === '..') {

@@ -16,16 +16,38 @@ export interface EditorLink {
   to: number;
 }
 
-const LINK = /!(include(?:_dir_(?:list|named|merge_list|merge_named))?|secret)[ \t]+("[^"\n]*"|'[^'\n]*'|[^\s#]+)/g;
+// Senza virgolette il bersaglio finisce prima di spazi, commenti e separatori di [ ] e { }.
+const LINK = /!(include(?:_dir_(?:list|named|merge_list|merge_named))?|secret)[ \t]+("[^"\n]*"|'[^'\n]*'|[^\s#,\]}]+)/g;
+
+/** Testi tra virgolette e inizio del commento di una riga (un # tra virgolette non è un commento). */
+function scanLine(line: string): { quoted: [number, number][]; end: number } {
+  const quoted: [number, number][] = [];
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i]!;
+    if (c === '#' && (i === 0 || /\s/.test(line[i - 1]!))) return { quoted, end: i };
+    if (c !== '"' && c !== "'") continue;
+    let j = i + 1;
+    for (; j < line.length; j++) {
+      if (c === '"' && line[j] === '\\') j++;
+      else if (line[j] === c) {
+        if (c === "'" && line[j + 1] === "'") j++;
+        else break;
+      }
+    }
+    quoted.push([i, j]);
+    i = j;
+  }
+  return { quoted, end: line.length };
+}
 
 /** Collegamenti (HA-5) presenti in una riga: `!include file`, `!include_dir_… cartella`, `!secret chiave`. */
 export function linksIn(line: string): EditorLink[] {
   const links: EditorLink[] = [];
-  // Niente collegamenti dentro i commenti.
-  const comment = /(^|\s)#/.exec(line);
-  const end = comment ? comment.index : line.length;
+  // Niente collegamenti dentro i commenti né dentro un testo tra virgolette ("!include x" è un testo).
+  const { quoted: strings, end } = scanLine(line);
   for (const m of line.matchAll(LINK)) {
     if (m.index! >= end) break;
+    if (strings.some(([a, b]) => m.index! > a && m.index! < b)) continue;
     const raw = m[2]!;
     const quoted = raw.startsWith('"') || raw.startsWith("'");
     const target = quoted ? raw.slice(1, -1) : raw;

@@ -73,6 +73,18 @@ describe('upload e download (FS-6)', () => {
   const preview = (p: string) =>
     app.inject({ method: 'GET', url: `/api/preview?path=${encodeURIComponent(p)}`, remoteAddress: INGRESS });
 
+  it('non converte i tipi: un contenuto null non svuota il file', async () => {
+    const read = await app.inject({ method: 'GET', url: '/api/file?path=configuration.yaml', remoteAddress: INGRESS });
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/file',
+      payload: { path: 'configuration.yaml', content: null, etag: read.json().etag },
+      remoteAddress: INGRESS,
+    });
+    assert.equal(res.statusCode, 400);
+    assert.equal(await readFile(path.join(sb.configDir, 'configuration.yaml'), 'utf8'), 'a: 1\n');
+  });
+
   it('FS-10: anteprima di immagini e PDF con il tipo giusto, mostrata e non scaricata', async () => {
     const png = await preview('www/logo.png');
     assert.equal(png.statusCode, 200);

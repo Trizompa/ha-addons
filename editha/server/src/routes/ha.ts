@@ -26,19 +26,20 @@ async function requireValidConfig(ha: HaClient): Promise<CheckResult> {
 export function registerHaRoutes(app: FastifyInstance, ha: HaClient): void {
   const entities = cached<EntityInfo[]>(20_000, () => ha.entities());
   const services = cached<ServiceInfo[]>(300_000, () => ha.services());
+  // Nell'URL i valori sono testo: "true" o "false".
   const freshQuery = {
     type: 'object',
-    properties: { fresh: { type: 'boolean', default: false } },
+    properties: { fresh: { type: 'string', enum: ['true', 'false'], default: 'false' } },
   } as const;
 
   app.get('/api/ha/status', async () => ({ available: ha.available }));
 
-  app.get<{ Querystring: { fresh: boolean } }>('/api/ha/entities', { schema: { querystring: freshQuery } }, async (req) => ({
-    entities: await entities(req.query.fresh),
+  app.get<{ Querystring: { fresh: string } }>('/api/ha/entities', { schema: { querystring: freshQuery } }, async (req) => ({
+    entities: await entities(req.query.fresh === 'true'),
   }));
 
-  app.get<{ Querystring: { fresh: boolean } }>('/api/ha/services', { schema: { querystring: freshQuery } }, async (req) => ({
-    services: await services(req.query.fresh),
+  app.get<{ Querystring: { fresh: string } }>('/api/ha/services', { schema: { querystring: freshQuery } }, async (req) => ({
+    services: await services(req.query.fresh === 'true'),
   }));
 
   // ACT-1

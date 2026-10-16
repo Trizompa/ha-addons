@@ -16,6 +16,7 @@ interface ReplaceJob {
   files: { rel: string; abs: string }[];
   opts: SearchOptions;
   replacement: string;
+  maxFileSize: number;
 }
 
 const job = workerData as SearchJob | ReplaceJob;
@@ -31,8 +32,9 @@ if (job.mode === 'replace') {
     }
     const text = decodeText(data);
     if (text === null) continue;
-    const { content, count } = replaceInText(text, job.opts, job.replacement);
-    if (count > 0) post({ type: 'file', rel, content, count, etag: etagOf(data) });
+    const result = replaceInText(text, job.opts, job.replacement, job.maxFileSize);
+    if (result === null) post({ type: 'skip', rel, reason: 'too_large' });
+    else if (result.count > 0) post({ type: 'file', rel, ...result, etag: etagOf(data) });
   }
   post({ type: 'done' });
 } else {

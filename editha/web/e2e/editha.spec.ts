@@ -470,7 +470,12 @@ test.describe('Cronologia e duplicazione', () => {
 });
 
 test.describe('Bozze (ED-14)', () => {
-  async function typeAndLeave(page: Page, request: import('@playwright/test').APIRequestContext, p: string) {
+  async function typeAndLeave(
+    page: Page,
+    request: import('@playwright/test').APIRequestContext,
+    p: string,
+    meanwhile?: () => Promise<unknown>,
+  ) {
     await openFile(page, p);
     await editor(page).click();
     await page.keyboard.press('Control+End');
@@ -480,6 +485,7 @@ test.describe('Bozze (ED-14)', () => {
       .toEqual([p]);
     const context = page.context();
     await page.close();
+    await meanwhile?.();
     const again = await context.newPage();
     await again.goto('./');
     await expect(again.locator('editha-dialog dialog[open]')).toContainText('Modifiche non salvate');
@@ -508,6 +514,16 @@ test.describe('Bozze (ED-14)', () => {
     await expect.poll(async () => (await (await request.get('api/drafts')).json()).drafts.length).toBe(0);
     expect(await disk('drafts/scarta.yaml')).toBe('stato: salvato\n');
     await expect(again.locator('editha-tab-bar .tab.dirty')).toHaveCount(0);
+  });
+
+  test('la bozza di un file cancellato nel frattempo si scarta, senza richiederla ogni volta', async ({ page, request }) => {
+    // Cancellato da fuori mentre la pagina è chiusa.
+    const again = await typeAndLeave(page, request, 'drafts/sparisce.yaml', () =>
+      rm(path.join(configDir, 'drafts/sparisce.yaml')),
+    );
+    await dialogButton(again, 'Recupera').click();
+    await expect(again.locator('editha-toasts')).toContainText('sono state scartate');
+    await expect.poll(async () => (await (await request.get('api/drafts')).json()).drafts.length).toBe(0);
   });
 });
 
@@ -873,6 +889,18 @@ test('FS-10 – immagini e PDF si aprono in una tab di anteprima', async ({ page
   await expect(preview).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(preview).toHaveCount(0);
+
+  // Un SVG si vede in anteprima, ma dal menu si apre anche come testo.
+  await row(page, 'anteprima/icona.svg').click({ button: 'right' });
+  await expect(menuItem(page, 'Apri a destra')).toHaveCount(1);
+  await menuItem(page, 'Apri come testo').click();
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'anteprima/icona.svg');
+  await expect(activeTab(page)).not.toHaveClass(/preview/);
+  await expect(editor(page)).toContainText('<svg');
+  // Immagini e PDF non si aprono a destra.
+  await row(page, 'anteprima/foto.png').click({ button: 'right' });
+  await expect(menuItem(page, 'Apri a destra')).toHaveCount(0);
+  await page.keyboard.press('Escape');
 });
 
 test('ED-18 – schema del file: voci, salto alla riga, voce attiva, scelta ricordata', async ({ page, request }) => {

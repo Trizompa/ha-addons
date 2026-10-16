@@ -41,6 +41,14 @@ export const SEARCH_BUDGET_MS = 8000;
 /** File che non vale la pena leggere: database, archivi, immagini. */
 const SKIP_EXT = /\.(db|db-shm|db-wal|sqlite|sqlite3|zip|gz|tar|tgz|png|jpe?g|gif|webp|ico|bmp|mp3|mp4|wav|pdf|woff2?|ttf|so|pyc)$/i;
 
+/**
+ * SEC-7: secrets.yaml e le sue copie (secrets_copia.yaml.bak, secrets.old.yaml…) non entrano mai
+ * nella ricerca né nella sostituzione.
+ */
+export function isSecretsFile(name: string): boolean {
+  return /^secrets.*\.ya?ml(\.bak)?$/i.test(name);
+}
+
 /** Espressione regolare per la ricerca; un errore di sintassi diventa invalid_request. */
 export function searchPattern(opts: SearchOptions): RegExp {
   let source = opts.regex ? opts.query : opts.query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -89,8 +97,8 @@ export async function searchTree(
         if (!(rel === '' && READ_ONLY_DIRS.includes(d.name))) await walk(childAbs, childRel);
         continue;
       }
-      // secrets.yaml (SEC-7): password e chiavi non devono comparire nei risultati.
-      if (!d.isFile() || SKIP_EXT.test(d.name) || d.name === 'secrets.yaml') continue;
+      // secrets.yaml e copie (SEC-7): password e chiavi non devono comparire nei risultati.
+      if (!d.isFile() || SKIP_EXT.test(d.name) || isSecretsFile(d.name)) continue;
       let data: Buffer;
       try {
         if ((await stat(childAbs)).size > maxFileSize) continue;
@@ -140,25 +148,57 @@ export function replaceInText(
   text: string,
   opts: SearchOptions,
   replacement: string,
-): { content: string; count: number } {
+  maxLength = Infinity,
+): { content: string; count: number } | null {
   const pattern = searchPattern(opts);
   let count = 0;
-  const lines = text.split('\n').map((line) => {
+  let length = 0;
+  const lines: string[] = [];
+  for (const line of text.split('\n')) {
     const cr = line.endsWith('\r');
     const body = cr ? line.slice(0, -1) : line;
     const replaced = body.replace(pattern, (...args: unknown[]) => {
       const match = args[0] as string;
       if (match.length === 0) return match;
       count++;
-      if (!opts.regex) return replacement;
-      // Con le espressioni regolari valgono $1, $2, $& come nella sostituzione di JavaScript.
-      return match.replace(new RegExp(pattern.source, pattern.flags.replace('g', '')), replacement);
+      return opts.regex ? expandReplacement(replacement, args) : replacement;
     });
-    return cr ? replaced + '\r' : replaced;
-  });
+    lines.push(cr ? replaced + '\r' : replaced);
+    // Un risultato oltre il limite dei file non si costruisce nemmeno (memoria del server).
+    length += replaced.length + 1;
+    if (length > maxLength) return null;
+  }
   return { content: lines.join('\n'), count };
+}
+
+/**
+ * Con le espressioni regolari valgono $1…$99, $<nome>, $&, $`, $' e $$ come in JavaScript.
+ * Il testo si costruisce dai dati della corrispondenza trovata nella riga intera: rieseguire
+ * l'espressione sul solo pezzo trovato sbaglierebbe con lookahead, lookbehind e \b.
+ */
+export function expandReplacement(template: string, args: unknown[]): string {
+  const last = args[args.length - 1];
+  const named = typeof last === 'object' && last !== null ? (last as Record<string, string | undefined>) : null;
+  const tail = named ? 3 : 2;
+  const groups = args.slice(1, args.length - tail) as (string | undefined)[];
+  const offset = args[args.length - tail] as number;
+  const whole = args[args.length - tail + 1] as string;
+  const match = args[0] as string;
+  return template.replace(/\$(\$|&|`|'|\d{1,2}|<([^>]*)>)/g, (token: string, what: string, name?: string) => {
+    if (what === '$') return '$';
+    if (what === '&') return match;
+    if (what === '`') return whole.slice(0, offset);
+    if (what === "'") return whole.slice(offset + match.length);
+    if (name !== undefined) return named ? (named[name] ?? '') : token;
+    const two = Number(what);
+    if (two >= 1 && two <= groups.length) return groups[two - 1] ?? '';
+    const one = Number(what[0]);
+    if (what.length === 2 && one >= 1 && one <= groups.length) return (groups[one - 1] ?? '') + what[1];
+    return token;
+  });
 }
 
 export type ReplaceMessage =
   | { type: 'file'; rel: string; content: string; count: number; etag: string }
+  | { type: 'skip'; rel: string; reason: 'too_large' }
   | { type: 'done' };

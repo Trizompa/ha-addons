@@ -230,7 +230,7 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
 
   // FS-6: upload dal PC; il corpo è il contenuto grezzo del file.
   app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
-  app.post<{ Querystring: { dir: string; name: string; overwrite: boolean }; Body: Buffer }>(
+  app.post<{ Querystring: { dir: string; name: string; overwrite: string }; Body: Buffer }>(
     '/api/upload',
     {
       schema: {
@@ -240,7 +240,7 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
           properties: {
             dir: { type: 'string' },
             name: { type: 'string', minLength: 1, maxLength: 255 },
-            overwrite: { type: 'boolean', default: false },
+            overwrite: { type: 'string', enum: ['true', 'false'], default: 'false' },
           },
         },
       },
@@ -249,7 +249,7 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
       if (!Buffer.isBuffer(req.body)) {
         return reply.code(400).send({ error: { code: 'invalid_request', message: 'Contenuto del file mancante' } });
       }
-      const entry = await files.upload(req.query.dir, req.query.name, req.body, req.query.overwrite);
+      const entry = await files.upload(req.query.dir, req.query.name, req.body, req.query.overwrite === 'true');
       return reply.code(201).send(entry);
     },
   );

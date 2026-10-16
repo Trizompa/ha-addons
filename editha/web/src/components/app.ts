@@ -3,13 +3,13 @@ import type { ChangeSet, EditorState, StateEffect, Text } from '@codemirror/stat
 import type { ViewUpdate } from '@codemirror/view';
 import { redoDepth, undoDepth } from '@codemirror/commands';
 import { forEachDiagnostic } from '@codemirror/lint';
-import { api, ApiError } from '../api/client.js';
+import { api, ApiError, whileLeaving } from '../api/client.js';
 import { getLang, onLangChange, resolveLang, setLang, t, type LanguageSetting, type MessageKey } from '../i18n/index.js';
 import { connection } from '../api/connection.js';
 import type { Draft, Entry, Session, Settings, ThemeMode } from '../api/types.js';
 import { createEditorState, reconfigureEffects } from '../editor/setup.js';
 import { languageOf } from '../editor/languages.js';
-import { basename, dirname, join, resolvePath, validateName } from '../state/paths.js';
+import { basename, dirname, extension, join, resolvePath, validateName } from '../state/paths.js';
 import { previewKind } from '../state/preview.js';
 import { forgetSecrets, secretKeys } from '../state/secrets.js';
 import type { LinkKind } from '../editor/links.js';
@@ -68,6 +68,9 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 const NARROW = '(max-width: 760px)';
+
+/** Errori di apertura che non passano da soli: una bozza di quel file non si potrà mai salvare. */
+const PERMANENT_OPEN_ERRORS = new Set(['not_found', 'not_a_file', 'forbidden_path', 'binary', 'too_large']);
 
 /** Componente principale: tiene insieme albero, tab, editor e barre. */
 export class EdithaApp extends LitElement {
@@ -286,7 +289,8 @@ export class EdithaApp extends LitElement {
         top: 0;
         right: 0;
         bottom: 0;
-        z-index: 3;
+        /* Sopra anche ad anteprima, cronologia e confronto (z-index 20). */
+        z-index: 25;
       }
       :host([narrow]) editha-insert-panel {
         left: 0;
@@ -427,6 +431,7 @@ export class EdithaApp extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     window.addEventListener('keydown', this.onKeyDown, true);
+    window.addEventListener('keydown', this.onEscape);
     window.addEventListener('beforeunload', this.onBeforeUnload);
     document.addEventListener('visibilitychange', this.onVisibility);
     connection.addEventListener('change', this.onConnection);
@@ -437,6 +442,7 @@ export class EdithaApp extends LitElement {
 
   override disconnectedCallback(): void {
     window.removeEventListener('keydown', this.onKeyDown, true);
+    window.removeEventListener('keydown', this.onEscape);
     window.removeEventListener('beforeunload', this.onBeforeUnload);
     document.removeEventListener('visibilitychange', this.onVisibility);
     connection.removeEventListener('change', this.onConnection);
@@ -545,6 +551,9 @@ export class EdithaApp extends LitElement {
     this.drawerOpen = false;
     if (this.narrow) this.closeSplit();
     this.toggleAttribute('narrow', this.narrow);
+    // Lo schema non si aggiorna su schermo stretto: tornando larghi si ricalcola.
+    this.outlineDoc = null;
+    this.refreshStatus();
   };
 
   // ——— impostazioni ———
@@ -647,6 +656,7 @@ export class EdithaApp extends LitElement {
     path: string,
     selection?: { anchor: number; head: number },
     background = false,
+    onError?: (err: unknown) => void,
   ): Promise<EditorTab | null> {
     const existing = this.tabs.find(path);
     if (existing) return existing;
@@ -655,6 +665,7 @@ export class EdithaApp extends LitElement {
       file = await api.read(path);
     } catch (err) {
       if (!background) this.toasts.show(this.openErrorText(path, err), 'error');
+      onError?.(err);
       return null;
     }
     const tab: EditorTab = {
@@ -680,8 +691,8 @@ export class EdithaApp extends LitElement {
     return listed;
   }
 
-  async openFile(path: string): Promise<void> {
-    if (previewKind(path)) {
+  async openFile(path: string, asText = false): Promise<void> {
+    if (!asText && previewKind(path) && !this.tabs.find(path)) {
       this.openPreview(path);
       return;
     }
@@ -913,7 +924,8 @@ export class EdithaApp extends LitElement {
     }
     // Come in HA, il percorso è relativo alla cartella del file che contiene l'include.
     const path = resolvePath(dirname(file), target);
-    if (path === null || path === '') {
+    // '' è /config stessa: va bene solo per una cartella (!include_dir_… ..), non per un file.
+    if (path === null || (path === '' && kind === 'include')) {
       this.toasts.show(t('link.outside', { path: target }), 'warning');
       return;
     }
@@ -925,6 +937,7 @@ export class EdithaApp extends LitElement {
     if (this.narrow) this.drawerOpen = true;
     else if (!this.settings.sidebarVisible) await this.updateSettings({ sidebarVisible: true });
     await this.updateComplete;
+    if (path === '') return;
     if (!(await this.tree.reveal(path, 'directory', true))) this.toasts.show(t('link.dirMissing', { path }), 'warning');
   }
 
@@ -946,7 +959,8 @@ export class EdithaApp extends LitElement {
 
   private onSideUpdate(update: ViewUpdate): void {
     if (update.focusChanged && update.view.hasFocus) this.sideFocused = true;
-    if (this.sideFocused && (update.focusChanged || update.selectionSet || update.docChanged)) {
+    // Ogni aggiornamento conta: anche i risultati del controllo YAML arrivano così, dopo una pausa.
+    if (this.sideFocused) {
       this.refreshStatus();
       this.refreshToolbar();
     }
@@ -970,6 +984,8 @@ export class EdithaApp extends LitElement {
   private async showInSide(tab: EditorTab): Promise<void> {
     if (this.narrow) return;
     this.split = true;
+    // L'anteprima coprirebbe la colonna appena aperta.
+    this.previewShown = false;
     await this.updateComplete;
     this.side?.show(tab);
     this.sideFocused = true;
@@ -1133,7 +1149,7 @@ export class EdithaApp extends LitElement {
   }
 
   private readonly onVisibility = () => {
-    if (document.visibilityState === 'hidden') this.flushDrafts();
+    if (document.visibilityState === 'hidden') whileLeaving(() => this.flushDrafts());
   };
 
   /** Alla riapertura: modifiche rimaste in sospeso, da recuperare o scartare. */
@@ -1164,8 +1180,19 @@ export class EdithaApp extends LitElement {
     if (choice !== 'recover') return;
     let first: EditorTab | null = null;
     for (const draft of drafts) {
-      const tab = await this.loadTab(draft.path, undefined, true);
-      if (!tab || tab.readOnly) {
+      let failure: unknown = null;
+      const tab = await this.loadTab(draft.path, undefined, true, (err) => (failure = err));
+      // File sparito, diventato di sola lettura o non più apribile: la bozza non si potrà mai
+      // salvare, e tenerla farebbe tornare la domanda a ogni apertura.
+      const permanent =
+        (tab !== null && tab.readOnly) ||
+        (failure instanceof ApiError && PERMANENT_OPEN_ERRORS.has(failure.code));
+      if (permanent) {
+        await api.deleteDraft(draft.path).catch(() => undefined);
+        this.toasts.show(t('drafts.dropped', { name: draft.path }), 'warning');
+        continue;
+      }
+      if (!tab) {
         this.toasts.show(t('drafts.cannotOpen', { name: draft.path }), 'warning');
         continue;
       }
@@ -1600,7 +1627,12 @@ export class EdithaApp extends LitElement {
     } else {
       items = [
         { id: 'open', label: t('common.open'), icon: icons.file, disabled: entry.type !== 'file' },
-        ...(this.narrow
+        // Un SVG si apre in anteprima, ma è testo: si può anche modificare.
+        ...(entry.type === 'file' && extension(entry.path) === 'svg'
+          ? [{ id: 'open-text', label: t('preview.openAsText'), icon: icons.file }]
+          : []),
+        // L'anteprima è una sola e occupa tutta l'area: a destra vanno solo i file di testo.
+        ...(this.narrow || (entry.type === 'file' && previewKind(entry.path) && extension(entry.path) !== 'svg')
           ? []
           : [{ id: 'open-side', label: t('split.openRight'), icon: icons.split, disabled: entry.type !== 'file' }]),
         { id: 'download', label: t('tree.download'), icon: icons.download, disabled: entry.type !== 'file' },
@@ -1628,6 +1660,8 @@ export class EdithaApp extends LitElement {
         return this.tree.refreshAll();
       case 'open':
         return entry ? this.openFile(entry.path) : undefined;
+      case 'open-text':
+        return entry ? this.openFile(entry.path, true) : undefined;
       case 'open-side':
         return entry ? this.openInSide(entry.path) : undefined;
       case 'rename':
@@ -1907,58 +1941,49 @@ export class EdithaApp extends LitElement {
 
   private readonly onKeyDown = (e: KeyboardEvent) => {
     const mod = e.ctrlKey || e.metaKey;
-    const key = e.key.toLowerCase();
-    if (mod && e.shiftKey && key === 'f') {
+    // e.code e non e.key: su Mac Opzione+W scrive «∑» e Opzione+S «ß».
+    const code = e.code;
+    if (mod && e.shiftKey && code === 'KeyF') {
       e.preventDefault();
       void this.openSearch();
-    } else if (mod && e.altKey && key === 's') {
+    } else if (mod && (code === 'KeyS' || e.key.toLowerCase() === 's')) {
       e.preventDefault();
-      void this.saveAll();
-    } else if (mod && !e.altKey && key === 's') {
+      // Con una finestra di dialogo aperta non si salva sotto di lei.
+      if (this.dialog.busy) return;
+      if (e.altKey) void this.saveAll();
+      else void this.save();
+    } else if (e.altKey && !mod && code === 'KeyW') {
       e.preventDefault();
-      void this.save();
-    } else if (key === 'escape' &&
-      this.history &&
-      !e.defaultPrevented &&
-      !this.dialog.busy &&
-      !this.menu.items &&
-      !e.composedPath().some((n) => n instanceof HTMLDialogElement && n.open)) {
-      e.preventDefault();
-      this.closeHistory();
-    } else if (
-      key === 'escape' &&
-      this.compare &&
-      !e.defaultPrevented &&
-      !this.dialog.busy &&
-      !this.menu.items &&
-      !e.composedPath().some((n) => n instanceof HTMLDialogElement && n.open)
-    ) {
-      e.preventDefault();
-      this.compare = null;
-    } else if (
-      key === 'escape' &&
-      this.previewShown &&
-      !e.defaultPrevented &&
-      !this.dialog.busy &&
-      !this.menu.items &&
-      !e.composedPath().some((n) => n instanceof HTMLDialogElement && n.open)
-    ) {
-      e.preventDefault();
-      this.closePreview();
-    } else if (e.altKey && !mod && key === 'w' && this.previewShown) {
-      e.preventDefault();
-      this.closePreview();
-    } else if (e.altKey && !mod && key === 'w') {
-      e.preventDefault();
-      const active = this.tabs.active;
-      if (active) void this.closeTab(active.path);
+      if (this.dialog.busy) return;
+      if (this.previewShown) this.closePreview();
+      else if (this.tabs.active) void this.closeTab(this.tabs.active.path);
     }
+  };
+
+  /**
+   * Esc chiude cronologia, confronto o anteprima. Ascoltato dopo i pannelli: un Esc dato in un
+   * campo (ricerca, filtro, pannello Inserisci) vale per quel campo e basta.
+   */
+  private readonly onEscape = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape' || e.defaultPrevented || this.dialog.busy || this.menu.items) return;
+    const path = e.composedPath();
+    if (path.some((n) => n instanceof HTMLDialogElement && n.open)) return;
+    const target = path[0];
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+    if (this.history) this.closeHistory();
+    else if (this.compare) this.compare = null;
+    else if (this.previewShown) this.closePreview();
+    else return;
+    e.preventDefault();
   };
 
   private readonly onBeforeUnload = (e: BeforeUnloadEvent) => {
     if (this.tabs.tabs.some((t) => t.dirty)) e.preventDefault();
-    this.flushDrafts();
-    void this.saveSession();
+    whileLeaving(() => {
+      this.flushDrafts();
+      // Durante l'avvio la sessione non è ancora ripristinata: salvarla ora la cancellerebbe.
+      if (this.sessionReady) void this.saveSession();
+    });
   };
 
   // ——— stato visualizzato ———
@@ -1988,12 +2013,15 @@ export class EdithaApp extends LitElement {
       this.outlineDoc = s.doc;
       this.outlineTab = tab;
       clearTimeout(this.outlineTimer);
-      const compute = () => {
+      if (fresh) {
         this.outline = buildOutline(s.doc.toString());
-        this.outlineActive = activeOutlineIndex(this.outline, line);
-      };
-      if (fresh) compute();
-      else this.outlineTimer = setTimeout(compute, 300);
+      } else {
+        this.outlineTimer = setTimeout(() => {
+          this.outline = buildOutline(s.doc.toString());
+          // Il cursore può essersi spostato nel frattempo: la voce attiva si rilegge adesso.
+          this.refreshStatus();
+        }, 300);
+      }
     }
     if (this.outline) this.outlineActive = activeOutlineIndex(this.outline, line);
   }
@@ -2192,6 +2220,7 @@ export class EdithaApp extends LitElement {
             ? html`<editha-outline-panel
                 .items=${this.outline}
                 .active=${this.outlineActive}
+                .file=${this.outline ? (this.outlineTab?.path ?? null) : null}
                 @outline-go=${(e: CustomEvent<{ line: number }>) => this.editor.goToLine(e.detail.line, 'start')}
                 @outline-close=${() => void this.toggleOutline()}
               ></editha-outline-panel>`

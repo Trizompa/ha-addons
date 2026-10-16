@@ -40,6 +40,7 @@ const files = {
   'links/secrets.yaml': 'chiave_uno: valore_segreto_1\nchiave_due: valore_segreto_2\n',
   'lint/problemi.yaml': 'trigger:\n  - platform: state\n    to: on\naction:\n  - service:light.turn_on\n',
   'drafts/scarta.yaml': 'stato: salvato\n',
+  'drafts/sparisce.yaml': 'stato: salvato\n',
   'dup/originale.yaml': 'copia: no\n',
   'dup/telefono.yaml': 't: 1\n',
   'unsaved/file.yaml': 'originale: true\n',
@@ -55,6 +56,7 @@ const files = {
   'anteprima/foto.png': Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAIAAAASFvFNAAAAEElEQVR4nGP8zwAFTDAGAwATKQED8NgHhAAAAABJRU5ErkJggg==', 'base64'),
   'schema/automazioni.yaml': '- id: "1"\n  alias: Luci al tramonto\n  triggers: []\n\n- id: "2"\n  alias: Buonanotte\n  triggers: []\n\n- id: "3"\n  alias: Porta aperta\n  triggers: []\n',
   'schema/note.txt': 'testo\n',
+  'anteprima/icona.svg': '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"/>\n',
   'anteprima/manuale.pdf': '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[]/Count 0>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n',
 };
 for (let i = 1; i <= 60; i++) files[`many/file_${String(i).padStart(2, '0')}.yaml`] = `n: ${i}\n`;
