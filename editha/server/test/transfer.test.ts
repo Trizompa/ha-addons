@@ -44,6 +44,8 @@ describe('upload e download (FS-6)', () => {
     await writeTree(sb.configDir, {
       'configuration.yaml': 'a: 1\n',
       'www/logo.png': Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2, 3]),
+      'www/icona.SVG': '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+      'www/manuale.pdf': '%PDF-1.4\n',
       'packages/luci.yaml': 'light: []\n',
       'packages/sub/città.yaml': 'x: è\n',
       '.storage/core.config': '{}',
@@ -67,6 +69,36 @@ describe('upload e download (FS-6)', () => {
     });
   const download = (p: string) =>
     app.inject({ method: 'GET', url: `/api/download?path=${encodeURIComponent(p)}`, remoteAddress: INGRESS });
+
+  const preview = (p: string) =>
+    app.inject({ method: 'GET', url: `/api/preview?path=${encodeURIComponent(p)}`, remoteAddress: INGRESS });
+
+  it('FS-10: anteprima di immagini e PDF con il tipo giusto, mostrata e non scaricata', async () => {
+    const png = await preview('www/logo.png');
+    assert.equal(png.statusCode, 200);
+    assert.equal(png.headers['content-type'], 'image/png');
+    assert.equal(png.headers['content-disposition'], 'inline');
+    assert.equal(png.headers['x-content-type-options'], 'nosniff');
+    assert.deepEqual(png.rawPayload, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2, 3]));
+    const pdf = await preview('www/manuale.pdf');
+    assert.equal(pdf.headers['content-type'], 'application/pdf');
+  });
+
+  it('FS-10: un SVG in anteprima non può eseguire script', async () => {
+    const res = await preview('www/icona.SVG');
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.headers['content-type'], 'image/svg+xml');
+    assert.match(res.headers['content-security-policy'] as string, /sandbox/);
+    assert.match(res.headers['content-security-policy'] as string, /default-src 'none'/);
+  });
+
+  it('FS-10: niente anteprima per gli altri file né fuori da /config', async () => {
+    const yaml = await preview('configuration.yaml');
+    assert.equal(yaml.statusCode, 415);
+    assert.equal(yaml.json().error.code, 'not_previewable');
+    assert.equal((await preview('../fuori.png')).statusCode, 403);
+    assert.equal((await preview('www/manca.png')).statusCode, 404);
+  });
 
   it('scarica un file binario così com\'è, con il nome giusto', async () => {
     const res = await download('www/logo.png');

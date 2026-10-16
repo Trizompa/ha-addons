@@ -106,6 +106,8 @@ export const api = {
   saveSession: (session: Session) => request<Session>('PUT', 'api/session', session),
   /** URL di download (file, o cartella come ZIP): il browser lo scarica sul PC. */
   downloadUrl: (path: string) => `api/download${q(path)}`,
+  /** FS-10: URL dell'anteprima di un'immagine o di un PDF. */
+  previewUrl: (path: string) => `api/preview${q(path)}`,
   upload: (dir: string, name: string, file: Blob, overwrite = false) =>
     request<Entry>(
       'POST',

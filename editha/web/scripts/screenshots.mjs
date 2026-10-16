@@ -4,7 +4,7 @@
 import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import http from 'node:http';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -239,6 +239,7 @@ for (const [rel, content] of Object.entries(files)) {
   await writeFile(abs, content);
 }
 await mkdir(dataDir, { recursive: true });
+await copyFile(path.resolve(here, '../../logo.png'), path.join(configDir, 'www/editha-logo.png'));
 await mkdir(out, { recursive: true });
 
 const HA_TOKEN = 'docs-token';
@@ -458,7 +459,17 @@ try {
     await page.context().close();
   }
 
-  // 12. Cover image: desktop window and phone side by side.
+  // 12. Image preview.
+  {
+    const page = await session('dark', { tabs: ['configuration.yaml'], active: 'configuration.yaml' });
+    await row(page, 'www').click();
+    await row(page, 'www/editha-logo.png').click();
+    await page.locator('editha-preview-panel img').waitFor();
+    await shot(page, 'preview');
+    await page.context().close();
+  }
+
+  // 13. Cover image: desktop window and phone side by side.
   {
     const img = async (name) => `data:image/png;base64,${(await readFile(path.join(out, `${name}.png`))).toString('base64')}`;
     const page = await (await browser.newContext({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1.5 })).newPage();

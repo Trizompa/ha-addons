@@ -826,3 +826,32 @@ test.describe('telefono', () => {
     expect(await editor(page).evaluate((el) => el.matches(':focus'))).toBe(false);
   });
 });
+
+test('FS-10 – immagini e PDF si aprono in anteprima, non nell\'editor', async ({ page }) => {
+  await openFile(page, 'configuration.yaml');
+  await row(page, 'anteprima').click();
+  await row(page, 'anteprima/foto.png').click();
+  const preview = page.locator('editha-preview-panel');
+  await expect(preview).toBeVisible();
+  await expect(preview.locator('header')).toContainText('3 × 2 px');
+  const img = preview.locator('img');
+  expect(await img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(3);
+  // Nessuna tab per l'immagine: l'editor resta sul file di prima.
+  await expect(tab(page, 'anteprima/foto.png')).toHaveCount(0);
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'configuration.yaml');
+  // Un clic passa alla grandezza reale e ritorno.
+  await img.click();
+  await expect(preview.locator('.stage')).toHaveClass(/actual/);
+  await img.click();
+  await expect(preview.locator('.stage')).not.toHaveClass(/actual/);
+
+  await row(page, 'anteprima/manuale.pdf').click();
+  await expect(preview.locator('iframe')).toHaveAttribute('src', /api\/preview\?path=anteprima%2Fmanuale\.pdf/);
+  await page.keyboard.press('Escape');
+  await expect(preview).toHaveCount(0);
+  // Scegliendo una tab si torna all'editor.
+  await row(page, 'anteprima/foto.png').click();
+  await expect(preview).toBeVisible();
+  await tab(page, 'configuration.yaml').click();
+  await expect(preview).toHaveCount(0);
+});

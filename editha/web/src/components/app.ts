@@ -10,6 +10,7 @@ import type { Draft, Entry, Session, Settings, ThemeMode } from '../api/types.js
 import { createEditorState, reconfigureEffects } from '../editor/setup.js';
 import { languageOf } from '../editor/languages.js';
 import { basename, dirname, join, resolvePath, validateName } from '../state/paths.js';
+import { previewKind } from '../state/preview.js';
 import { forgetSecrets, secretKeys } from '../state/secrets.js';
 import type { LinkKind } from '../editor/links.js';
 import { TabsModel } from '../state/tabs.js';
@@ -42,6 +43,7 @@ import './about-dialog.js';
 import './folder-picker.js';
 import './search-panel.js';
 import './compare-panel.js';
+import './preview-panel.js';
 import './snippet-editor.js';
 import type { EdithaSnippetEditor } from './snippet-editor.js';
 import type { CompareSide } from './compare-panel.js';
@@ -85,6 +87,7 @@ export class EdithaApp extends LitElement {
     sideFocused: { state: true },
     searchOpen: { state: true },
     compare: { state: true },
+    preview: { state: true },
   };
 
   declare settings: Settings;
@@ -113,6 +116,8 @@ export class EdithaApp extends LitElement {
   declare searchOpen: boolean;
   /** BK-6: confronto tra due file aperto. */
   declare compare: { left: CompareSide; right: CompareSide } | null;
+  /** FS-10: immagine o PDF mostrato al posto dell'editor. */
+  declare preview: string | null;
   /** Primo file scelto per un confronto (menu "Seleziona per il confronto"). */
   private compareBase: string | null = null;
   private build: string | null = null;
@@ -152,6 +157,7 @@ export class EdithaApp extends LitElement {
     this.sideFocused = false;
     this.searchOpen = false;
     this.compare = null;
+    this.preview = null;
     this.toolbar = this.computeToolbar();
   }
 
@@ -198,6 +204,7 @@ export class EdithaApp extends LitElement {
         background: var(--editor-bg);
       }
       .editors {
+        position: relative;
         display: flex;
         flex: 1;
         min-height: 0;
@@ -656,6 +663,10 @@ export class EdithaApp extends LitElement {
   }
 
   async openFile(path: string): Promise<void> {
+    if (previewKind(path)) {
+      this.openPreview(path);
+      return;
+    }
     const tab = await this.loadTab(path);
     if (!tab) return;
     this.activate(tab.path);
@@ -667,6 +678,8 @@ export class EdithaApp extends LitElement {
   private activate(path: string): void {
     const tab = this.tabs.activate(path);
     if (!tab) return;
+    // Scegliendo una tab si torna all'editor.
+    this.preview = null;
     this.pane.show(tab);
     this.refreshTabs();
     this.refreshStatus();
@@ -836,7 +849,17 @@ export class EdithaApp extends LitElement {
     if (!left || !right) return;
     if (this.narrow) this.drawerOpen = false;
     this.history = null;
+    this.preview = null;
     this.compare = { left, right };
+  }
+
+  // ——— anteprima di immagini e PDF (FS-10) ———
+
+  private openPreview(path: string): void {
+    if (this.narrow) this.drawerOpen = false;
+    this.history = null;
+    this.compare = null;
+    this.preview = path;
   }
 
   // ——— collegamenti: !include e !secret (HA-4, HA-5) ———
@@ -1282,6 +1305,10 @@ export class EdithaApp extends LitElement {
     if (this.history && (this.history.path === entry.path || this.history.path.startsWith(entry.path + '/'))) {
       this.history = null;
     }
+    // L'anteprima segue il file.
+    if (this.preview && (this.preview === entry.path || this.preview.startsWith(entry.path + '/'))) {
+      this.preview = to + this.preview.slice(entry.path.length);
+    }
     this.tree.forget(entry.path);
     await this.tree.refresh(dirname(entry.path));
     await this.tree.reveal(to, entry.type as 'file' | 'directory');
@@ -1316,6 +1343,9 @@ export class EdithaApp extends LitElement {
     for (const tab of affected) await this.closeTab(tab.path, { force: true });
     if (this.history && (this.history.path === entry.path || this.history.path.startsWith(entry.path + '/'))) {
       this.history = null;
+    }
+    if (this.preview && (this.preview === entry.path || this.preview.startsWith(entry.path + '/'))) {
+      this.preview = null;
     }
     this.tree.forget(entry.path);
     await this.tree.refresh(dirname(entry.path));
@@ -1388,6 +1418,7 @@ export class EdithaApp extends LitElement {
       }
     }
     if (this.narrow) this.drawerOpen = false;
+    this.preview = null;
     this.history = { path, current, readOnly };
   }
 
@@ -1867,6 +1898,16 @@ export class EdithaApp extends LitElement {
     ) {
       e.preventDefault();
       this.compare = null;
+    } else if (
+      key === 'escape' &&
+      this.preview &&
+      !e.defaultPrevented &&
+      !this.dialog.busy &&
+      !this.menu.items &&
+      !e.composedPath().some((n) => n instanceof HTMLDialogElement && n.open)
+    ) {
+      e.preventDefault();
+      this.preview = null;
     } else if (e.altKey && !mod && key === 'w') {
       e.preventDefault();
       const active = this.tabs.active;
@@ -2065,6 +2106,13 @@ export class EdithaApp extends LitElement {
             </div>
           </editha-editor-pane>
           ${this.renderSide()}
+          ${this.preview
+            ? html`<editha-preview-panel
+                .path=${this.preview}
+                @preview-download=${(e: CustomEvent<{ path: string }>) => this.download(e.detail.path)}
+                @preview-close=${() => (this.preview = null)}
+              ></editha-preview-panel>`
+            : null}
           </div>
           ${this.insertOpen
             ? html`<editha-insert-panel

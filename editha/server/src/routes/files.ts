@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { FileService } from '../fs/files.js';
+import { previewType } from '../fs/preview.js';
+import { EdithaError } from '../errors.js';
 
 const pathQuery = {
   type: 'object',
@@ -209,6 +211,21 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
       .header('Content-Disposition', contentDisposition(name))
       .header('Cache-Control', 'no-store')
       .send(data);
+  });
+
+  // FS-10: anteprima di immagini e PDF, mostrati dal browser invece che scaricati.
+  app.get<{ Querystring: PathQuery }>('/api/preview', { schema: { querystring: pathQuery } }, async (req, reply) => {
+    const type = previewType(req.query.path);
+    if (!type) throw new EdithaError('not_previewable', `Anteprima non disponibile: ${req.query.path}`);
+    const { data } = await files.download(req.query.path);
+    reply
+      .header('Content-Type', type)
+      .header('Content-Disposition', 'inline')
+      .header('Cache-Control', 'no-store')
+      .header('X-Content-Type-Options', 'nosniff');
+    // Un SVG aperto da solo potrebbe eseguire script con l'origine di Home Assistant: si isola.
+    if (type === 'image/svg+xml') reply.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+    return reply.send(data);
   });
 
   // FS-6: upload dal PC; il corpo è il contenuto grezzo del file.

@@ -55,6 +55,7 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 | FS-7 | Filtro per nome nell'albero; aggiornamento dell'albero quando i file cambiano su disco. | P1 |
 | FS-8 | Duplica file e cartelle dal menu contestuale, con nome proposto da confermare. | P1 |
 | FS-9 | Elenco di esclusioni configurabile (pattern glob). | P2 |
+| FS-10 | Anteprima di immagini (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG) e PDF al posto dell'editor, con dimensioni e grandezza reale; gli SVG non possono eseguire script. | P1 |
 
 ## 3. Editor
 
@@ -251,6 +252,7 @@ editha/
 | 0.18.0 | Documentazione utente (DOCS.md, DOCS.it.md) con immagini; file per GitHub (CONTRIBUTING, SECURITY, modelli, release); HA-9: «chiave valore» senza due punti spiegato. |
 | 0.18.1 | Nuovo file/cartella solo sopra l'albero (tolti dalla barra in alto). |
 | 0.18.2 | Descrizione nel negozio: "Smart file editor for Home Assistant". |
+| 0.19.0 | FS-10: anteprima di immagini e PDF. |
 
 ---
 

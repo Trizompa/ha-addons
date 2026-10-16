@@ -419,6 +419,9 @@ export const it = {
   'compare.title': 'Confronto: {a} ↔ {b}',
   'compare.legend': 'Rosso: solo in {a} · Verde: solo in {b}',
   'compare.same': 'I due file sono identici.',
+  'preview.actual': 'Clic per la grandezza reale',
+  'preview.fit': 'Clic per adattare alla finestra',
+  'preview.failed': "L'immagine non si può mostrare: il file potrebbe essere danneggiato o in un formato che il browser non supporta.",
   // Modifica snippet
   'insert.editSnippet': 'Modifica snippet',
   'snippet.editTitle': 'Modifica snippet',

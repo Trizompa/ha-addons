@@ -55,6 +55,7 @@ Tutti i percorsi sono relativi a `/config`, in formato POSIX (`packages/luci.yam
 | `POST /api/rename` | `{ from, to }` | `Entry` nella nuova posizione |
 | `DELETE /api/file` | `?path=` | `{ path, backup }` |
 | `GET /api/download` | `?path=` | Il file, o la cartella come ZIP (`Content-Disposition: attachment`) |
+| `GET /api/preview` | `?path=` | Immagine o PDF con il proprio Content-Type, `inline` (FS-10); 415 `not_previewable` per gli altri file. Gli SVG hanno una CSP `sandbox`. |
 | `POST /api/upload` | `?dir=&name=&overwrite=`, corpo `application/octet-stream` | 201 con l'`Entry`; 409 `already_exists` senza `overwrite` |
 | `GET /api/versions` | `?path=` | `{ path, versions: Version[] }`, dalla più recente |
 

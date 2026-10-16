@@ -9,6 +9,7 @@ export type ErrorCode =
   | 'not_a_directory'
   | 'too_large'
   | 'binary'
+  | 'not_previewable'
   | 'ha_unavailable'
   | 'ha_error'
   | 'config_invalid'
@@ -25,6 +26,7 @@ const STATUS: Record<ErrorCode, number> = {
   not_a_directory: 400,
   too_large: 413,
   binary: 415,
+  not_previewable: 415,
   ha_unavailable: 503,
   ha_error: 502,
   config_invalid: 409,

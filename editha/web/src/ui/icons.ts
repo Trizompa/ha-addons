@@ -29,7 +29,9 @@ import {
   mdiEyeOutline,
   mdiFileCodeOutline,
   mdiFileDocumentOutline,
+  mdiFileImageOutline,
   mdiFileOutline,
+  mdiFilePdfBox,
   mdiFilePlusOutline,
   mdiFolder,
   mdiFolderOpen,
@@ -133,6 +135,18 @@ export function fileIcon(path: string): { path: string; color: string } {
       return { path: mdiLanguageCss3, color: '#2f7bd6' };
     case 'md':
       return { path: mdiLanguageMarkdownOutline, color: '#6f7a87' };
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'gif':
+    case 'webp':
+    case 'avif':
+    case 'bmp':
+    case 'ico':
+    case 'svg':
+      return { path: mdiFileImageOutline, color: '#8e5cd9' };
+    case 'pdf':
+      return { path: mdiFilePdfBox, color: '#d9473a' };
     case 'txt':
     case 'log':
       return { path: mdiFileDocumentOutline, color: '#6f7a87' };

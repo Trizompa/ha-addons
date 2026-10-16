@@ -405,6 +405,9 @@ export const en: Record<keyof Dictionary, string> = {
   'compare.title': 'Compare: {a} ↔ {b}',
   'compare.legend': 'Red: only in {a} · Green: only in {b}',
   'compare.same': 'The two files are identical.',
+  'preview.actual': 'Click for actual size',
+  'preview.fit': 'Click to fit the window',
+  'preview.failed': 'The image cannot be shown: the file may be damaged or in a format the browser does not support.',
   // Modifica snippet
   'insert.editSnippet': 'Edit snippet',
   'snippet.editTitle': 'Edit snippet',

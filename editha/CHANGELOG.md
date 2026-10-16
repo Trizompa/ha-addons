@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.0
+
+- **Anteprima di immagini e PDF**: cliccando nell'albero un'immagine (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG) o un PDF, EDITHA la mostra al posto dell'editor invece di dire che il file non è testo. In alto nome, dimensioni in pixel e pulsante per scaricarla; un clic sull'immagine passa alla grandezza reale e ritorno; le parti trasparenti si vedono su una scacchiera. Esc, la X o un clic su una tab riportano all'editor.
+- Nell'albero immagini e PDF hanno la loro icona.
+- Sicurezza: un'immagine SVG non può eseguire codice nemmeno se aperta direttamente.
+
 ## 0.18.2
 
 - Descrizione dell'add-on nel negozio: "Smart file editor for Home Assistant". Il motto "Every Day I Tweak HA" resta nell'interfaccia, nel logo e nella documentazione.

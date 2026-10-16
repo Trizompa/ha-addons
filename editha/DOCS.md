@@ -75,6 +75,12 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 
 - **Upload**: use the upload button, or drag files from your PC onto a folder.
 - **Filter by name**: the field above the tree.
+- **Images and PDFs** open in a preview instead of the editor: PNG, JPEG, GIF, WebP, AVIF, BMP,
+  ICO, SVG and PDF. The header shows the size in pixels; click an image to see it at actual size,
+  click again to fit it. Transparent parts show a checkerboard. Esc, the close button or a click on
+  a tab brings back the editor.
+
+  ![Image preview](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/preview.png)
 - **System folders** (`.storage`, `.cloud`, `deps`, `tts`, `.git`) are hidden. The eye button shows
   them, **read-only**: Home Assistant manages them and a manual change can break it.
 
@@ -89,8 +95,8 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
   ![Split view](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/split-view.png)
 
 - **Languages**: YAML, JSON, Python, JavaScript, CSS, Markdown and Jinja templates are
-  highlighted; other files open as plain text. Binary files and files over 5 MB do not open in the
-  editor, but you can still download them.
+  highlighted; other files open as plain text. Images and PDFs open in a preview; other binary
+  files and files over 5 MB do not open in the editor, but you can still download them.
 
 ### Your work is not lost
 
@@ -239,8 +245,8 @@ On a Mac use Cmd instead of Ctrl.
 **No entities in the suggestions or in the insert panel.** EDITHA reads them from Home Assistant:
 check that Home Assistant is running and press the refresh button in the insert panel.
 
-**A file does not open.** Files over 5 MB and binary files cannot be edited; download them
-instead.
+**A file does not open.** Files over 5 MB and binary files (other than images and PDFs) cannot be
+opened; download them instead.
 
 **Something else?** Open an issue on
 [GitHub](https://github.com/Trizompa/ha-addons/issues) with what you did, what you expected and,

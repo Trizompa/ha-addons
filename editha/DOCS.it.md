@@ -79,6 +79,12 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 
 - **Caricare file**: pulsante di caricamento, oppure trascina i file dal PC su una cartella.
 - **Filtra per nome**: il campo sopra l'albero.
+- **Immagini e PDF** si aprono in anteprima invece che nell'editor: PNG, JPEG, GIF, WebP, AVIF,
+  BMP, ICO, SVG e PDF. In alto compaiono le dimensioni in pixel; un clic sull'immagine la mostra a
+  grandezza reale, un altro clic la riadatta. Le parti trasparenti mostrano una scacchiera. Esc, il
+  pulsante di chiusura o un clic su una tab riportano all'editor.
+
+  ![Anteprima di un'immagine](../docs/images/preview.png)
 - **Cartelle di sistema** (`.storage`, `.cloud`, `deps`, `tts`, `.git`): sono nascoste. Il
   pulsante con l'occhio le mostra, **in sola lettura**: le gestisce Home Assistant e una modifica a
   mano può romperlo.
@@ -95,8 +101,8 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
   ![Vista divisa](../docs/images/split-view.png)
 
 - **Linguaggi**: YAML, JSON, Python, JavaScript, CSS, Markdown e template Jinja sono colorati; gli
-  altri file si aprono come testo semplice. I file binari e quelli oltre 5 MB non si aprono
-  nell'editor, ma si possono scaricare.
+  altri file si aprono come testo semplice. Immagini e PDF si aprono in anteprima; gli altri file
+  binari e quelli oltre 5 MB non si aprono nell'editor, ma si possono scaricare.
 
 ### Il lavoro non si perde
 
@@ -249,7 +255,8 @@ oppure riavvia Home Assistant.
 controlla che Home Assistant sia in funzione e premi il pulsante di aggiornamento nel pannello
 Inserisci.
 
-**Un file non si apre.** I file oltre 5 MB e i file binari non si possono modificare: scaricali.
+**Un file non si apre.** I file oltre 5 MB e i file binari (tranne immagini e PDF) non si possono
+aprire: scaricali.
 
 **Altro?** Apri una segnalazione su [GitHub](https://github.com/Trizompa/ha-addons/issues) con
 cosa hai fatto, cosa ti aspettavi e, se puoi, il log dell'add-on (pagina dell'add-on → *Registro*).
