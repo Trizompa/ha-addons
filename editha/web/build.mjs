@@ -1,7 +1,7 @@
 // Bundle dell'interfaccia con esbuild in versione WebAssembly: nessun binario nativo,
 // stesso risultato su amd64 e aarch64 (ENG-7, FEP #17).
-import { context, build } from 'esbuild-wasm';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { build, context, formatMessages } from 'esbuild-wasm';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { brotliCompressSync, gzipSync, constants } from 'node:zlib';
 
@@ -34,7 +34,10 @@ const options = {
   sourcemap: watch,
   legalComments: 'linked',
   define: { __EDITHA_VERSION__: JSON.stringify(version) },
-  logLevel: 'info',
+  // Nella build normale i messaggi li stampa questo script: esbuild-wasm, se scrive da sé su uno
+  // stderr che è un file (es. `npm run build > log`), entra in un ciclo e muore con
+  // «RangeError: Invalid array length». In watch il terminale va bene così.
+  logLevel: watch ? 'info' : 'silent',
 };
 
 // Icone MDI per l'autocompletamento di "mdi:": nome → disegno, caricato solo quando serve.
@@ -75,7 +78,17 @@ if (watch) {
   const ctx = await context(options);
   await ctx.watch();
 } else {
-  await build(options);
+  let result;
+  try {
+    result = await build(options);
+  } catch (err) {
+    const errors = await formatMessages(err.errors ?? [], { kind: 'error' }).catch(() => [String(err)]);
+    process.stderr.write(errors.join(''));
+    process.exit(1);
+  }
+  const warnings = await formatMessages(result.warnings, { kind: 'warning' });
+  if (warnings.length) process.stderr.write(warnings.join(''));
+  console.log(`  ${outdir}/app.js  ${((await stat(`${outdir}/app.js`)).size / 1048576).toFixed(1)} MB`);
   // Versioni compresse servite direttamente dal server (preCompressed).
   for (const file of ['app.js', 'index.html', 'mdi-icons.json']) {
     const data = await readFile(`${outdir}/${file}`);
