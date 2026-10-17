@@ -1,7 +1,7 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { EditorView } from '@codemirror/view';
 import { MergeView, unifiedMergeView } from '@codemirror/merge';
-import { api } from '../api/client.js';
+import { api, errorText } from '../api/client.js';
 import type { Version } from '../api/types.js';
 import { viewerExtensions, type EditorPrefs } from '../editor/setup.js';
 import { getLang, t, type MessageKey } from '../i18n/index.js';
@@ -275,7 +275,7 @@ export class EdithaHistoryPanel extends LitElement {
       versions = (await api.versions(path)).versions.filter((v) => v.kind === 'file');
     } catch (err) {
       versions = [];
-      error = err instanceof Error ? err.message : String(err);
+      error = errorText(err);
     }
     if (token !== this.listToken) return;
     this.versions = versions;
@@ -304,7 +304,7 @@ export class EdithaHistoryPanel extends LitElement {
     } catch (err) {
       if (token !== this.loadToken) return;
       this.loading = false;
-      this.error = err instanceof Error ? err.message : String(err);
+      this.error = errorText(err);
       return;
     }
     if (token !== this.loadToken) return;

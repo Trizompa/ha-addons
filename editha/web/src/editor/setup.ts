@@ -52,18 +52,55 @@ export const compartments = {
   readOnly: new Compartment(),
 };
 
-const yamlLinter = linter(
-  (view) =>
-    lintYaml(view.state.doc.toString()).map((p) => ({
-      from: p.from,
-      to: p.to,
-      severity: p.severity,
-      message: p.message,
-      // Nell'elenco dei problemi ogni voce dice a che riga si trova.
-      source: t('status.lineN', { n: view.state.doc.lineAt(p.from).number }),
-    })),
-  { delay: 300 },
-);
+/**
+ * Controllo YAML del file `path`. Ogni chiamata crea un'istanza nuova: riconfigurare il
+ * compartimento `lint` con una nuova istanza fa ripartire il controllo (cambio di lingua).
+ */
+function yamlLinter(path: string): Extension {
+  return linter(
+    // Il testo con «\n» (anche per i file CRLF): le posizioni coincidono con quelle del documento.
+    (view) =>
+      lintYaml(view.state.doc.toString(), path).map((p) => ({
+        from: p.from,
+        to: p.to,
+        severity: p.severity,
+        message: p.message,
+        // Nell'elenco dei problemi ogni voce dice a che riga si trova.
+        source: t('status.lineN', { n: view.state.doc.lineAt(p.from).number }),
+      })),
+    { delay: 300 },
+  );
+}
+
+/** Testo del documento con i suoi fine riga (CRLF se il file li aveva): è quello da salvare. */
+export function docText(state: EditorState): string {
+  return state.sliceDoc();
+}
+
+/**
+ * Con il separatore CRLF un «\n» da solo (testo incollato da Linux o Mac) resterebbe dentro la
+ * riga: lo si trasforma in un vero a capo. La lunghezza non cambia, quindi la selezione resta giusta.
+ */
+const crlfInput = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged) return tr;
+  const fixes: { from: number; to: number; insert: string }[] = [];
+  tr.changes.iterChanges((_fromA, _toA, fromB, toB, inserted) => {
+    for (const line of inserted.iterLines()) {
+      if (!line.includes('\n')) continue;
+      fixes.push({ from: fromB, to: toB, insert: tr.newDoc.sliceString(fromB, toB, '\r\n').replace(/\r?\n/g, '\r\n') });
+      break;
+    }
+  });
+  return fixes.length ? [tr, { changes: fixes, sequential: true }] : tr;
+});
+
+/** Separatore di riga del file: CRLF se il testo iniziale ne contiene, così si salva com'era. */
+function lineSeparatorFor(doc: string): Extension {
+  return doc.includes('\r\n') ? [EditorState.lineSeparator.of('\r\n'), crlfInput] : [];
+}
+
+/** Spazi speciali (U+00A0, U+2000–U+200A, U+3000) resi visibili: in YAML rompono il rientro. */
+const visibleSpecialChars = highlightSpecialChars({ addSpecialChars: /[\u00a0\u2000-\u200a\u3000]/ });
 
 function languageExtensions(path: string): { language: Extension; lint: Extension } {
   const id: LanguageId = languageOf(path).id;
@@ -73,7 +110,7 @@ function languageExtensions(path: string): { language: Extension; lint: Extensio
     lint:
       id === 'yaml'
         ? [
-            yamlLinter,
+            yamlLinter(path),
             haLinks,
             EditorState.languageData.of(() => [{ autocomplete: haCompletions }, { autocomplete: secretCompletions }, { autocomplete: mdiCompletions }]),
           ]
@@ -84,7 +121,7 @@ function languageExtensions(path: string): { language: Extension; lint: Extensio
 const baseExtensions: Extension = [
   lineNumbers(),
   highlightActiveLineGutter(),
-  highlightSpecialChars(),
+  visibleSpecialChars,
   history(),
   // Le frecce di piegatura compaiono passando sul margine; quelle dei blocchi piegati restano visibili.
   foldGutter({
@@ -178,6 +215,8 @@ export function createEditorState(opts: StateOptions): EditorState {
       ? { selection: { anchor: clamp(opts.selection.anchor), head: clamp(opts.selection.head) } }
       : {}),
     extensions: [
+      // Fuori dai compartimenti: nessuna riconfigurazione lo toglie.
+      lineSeparatorFor(opts.doc),
       baseExtensions,
       compartments.phrases.of(phrasesExtension()),
       compartments.language.of(lang.language),
@@ -190,7 +229,10 @@ export function createEditorState(opts: StateOptions): EditorState {
   });
 }
 
-/** Effetti per aggiornare uno stato esistente (tab attiva o in secondo piano). */
+/**
+ * Effetti per aggiornare uno stato esistente (tab attiva o in secondo piano). Con `path`
+ * il controllo YAML riparte: dopo un cambio di lingua i messaggi si rifanno subito.
+ */
 export function reconfigureEffects(changes: {
   path?: string;
   prefs?: EditorPrefs;
@@ -219,7 +261,7 @@ export function reconfigureEffects(changes: {
 export function viewerExtensions(path: string, prefs: EditorPrefs): Extension {
   return [
     lineNumbers(),
-    highlightSpecialChars(),
+    visibleSpecialChars,
     edithaHighlighting,
     phrasesExtension(),
     languageSupport(languageOf(path).id),

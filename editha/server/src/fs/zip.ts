@@ -1,4 +1,9 @@
-import { deflateRawSync } from 'node:zlib';
+import { promisify } from 'node:util';
+import * as zlib from 'node:zlib';
+
+const deflateRaw = promisify(zlib.deflateRaw);
+/** zlib.crc32 c'è da Node 22.2 (nativo, molto più veloce); altrimenti la versione in JS. */
+const nativeCrc32 = (zlib as { crc32?: (data: Buffer) => number }).crc32;
 
 export interface ZipEntry {
   /** Percorso dentro l'archivio, con "/" come separatore. */
@@ -18,6 +23,11 @@ const CRC_TABLE = (() => {
 })();
 
 export function crc32(data: Buffer): number {
+  if (nativeCrc32) return nativeCrc32(data) >>> 0;
+  return crc32js(data);
+}
+
+export function crc32js(data: Buffer): number {
   let crc = 0xffffffff;
   for (const byte of data) crc = CRC_TABLE[(crc ^ byte) & 0xff]! ^ (crc >>> 8);
   return (crc ^ 0xffffffff) >>> 0;
@@ -32,16 +42,25 @@ function dosDateTime(d: Date): { time: number; date: number } {
 }
 
 /**
- * Archivio ZIP in memoria (deflate), senza dipendenze esterne. Basta per le
- * cartelle di configurazione: chi chiama limita la dimensione totale.
+ * Nome sicuro dentro l'archivio: "\" e ":" diventano "_" (su Windows sarebbero separatori
+ * o unità e un nome come "..\x" uscirebbe dalla cartella di estrazione).
  */
-export function createZip(entries: ZipEntry[]): Buffer {
+export function zipEntryName(name: string): string {
+  return name.replace(/[\\:]/g, '_');
+}
+
+/**
+ * Archivio ZIP in memoria (deflate), senza dipendenze esterne. Basta per le
+ * cartelle di configurazione: chi chiama limita la dimensione totale. La compressione
+ * è asincrona (thread di libuv), così il server non resta fermo per secondi.
+ */
+export async function createZip(entries: ZipEntry[]): Promise<Buffer> {
   const locals: Buffer[] = [];
   const centrals: Buffer[] = [];
   let offset = 0;
   for (const entry of entries) {
-    const name = Buffer.from(entry.name, 'utf8');
-    const compressed = deflateRawSync(entry.data);
+    const name = Buffer.from(zipEntryName(entry.name), 'utf8');
+    const compressed = await deflateRaw(entry.data);
     const stored = compressed.length >= entry.data.length;
     const body = stored ? entry.data : compressed;
     const method = stored ? 0 : 8;

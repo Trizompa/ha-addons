@@ -12,7 +12,8 @@ export interface StatusInfo {
   readOnly: boolean;
   dirty: boolean;
   /** null: nessuna validazione per questo linguaggio. */
-  lint: { errors: number; warnings: number } | null;
+  /** `skipped`: file troppo grande, il controllo YAML non è stato fatto. */
+  lint: { errors: number; warnings: number; skipped?: boolean } | null;
 }
 
 /** Barra di stato (UI-1): percorso, posizione, linguaggio, esito della validazione. */
@@ -100,6 +101,7 @@ export class EdithaStatusBar extends LitElement {
   ];
 
   private renderLint(lint: NonNullable<StatusInfo['lint']>) {
+    if (lint.skipped) return html`<span class="item">${t('lint.tooLarge')}</span>`;
     if (lint.errors === 0 && lint.warnings === 0) {
       return html`<span class="item ok" title=${t('status.yamlValidTitle')}>${icon(icons.ok, 14)} ${t('status.yamlValid')}</span>`;
     }

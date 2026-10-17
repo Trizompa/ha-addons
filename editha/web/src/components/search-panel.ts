@@ -1,7 +1,7 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { api, ApiError } from '../api/client.js';
 import type { SearchMatch, SearchResult } from '../api/types.js';
-import { t } from '../i18n/index.js';
+import { t, type MessageKey } from '../i18n/index.js';
 import { haData } from '../state/ha-data.js';
 import { icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
@@ -15,6 +15,63 @@ export interface SearchRequest {
 
 /** entity_id di HA: dominio.oggetto. */
 export const ENTITY_ID = /^[a-z_][a-z0-9_]*\.[a-z0-9_]+$/;
+
+/** Lunghezza massima del testo da cercare (come sul server). */
+const MAX_QUERY = 500;
+
+/**
+ * La ricerca è valida? Stessa regola del server: espressione con il flag «u», altrimenti senza;
+ * se nessuna delle due si compila il server rifiuterebbe la richiesta.
+ */
+export function validSearch(req: SearchRequest): boolean {
+  if (!req.regex) return true;
+  let source = req.query;
+  if (req.wholeWord) source = `(?<![\\w])(?:${source})(?![\\w])`;
+  const flags = req.caseSensitive ? 'g' : 'gi';
+  for (const f of [flags + 'u', flags]) {
+    try {
+      new RegExp(source, f);
+      return true;
+    } catch {
+      // si prova senza «u»
+    }
+  }
+  return false;
+}
+
+/** Messaggio di un errore del server nella lingua dell'interfaccia, dal suo codice. */
+function errorMessage(err: unknown): string {
+  if (!(err instanceof ApiError)) return String(err);
+  const key = `error.${err.code}`;
+  const text = t(key as MessageKey);
+  return text === key ? err.message : text;
+}
+
+/** SR-3: testo della conferma di «Sostituisci», con singolare e plurale giusti. */
+export function replaceConfirmMessage(opts: {
+  matches: number;
+  files: number;
+  query: string;
+  replacement: string;
+  /** La ricerca si è fermata prima: cambiano solo i file elencati. */
+  truncated?: boolean;
+}): string {
+  const params = { n: opts.matches, files: opts.files, query: opts.query, replacement: opts.replacement };
+  const key: MessageKey =
+    opts.files !== 1 ? 'replace.confirmMany' : opts.matches === 1 ? 'replace.confirmSingle' : 'replace.confirmOne';
+  return t(key, params) + (opts.truncated ? t('replace.onlyListed') : '');
+}
+
+/** SR-3: esito di «Sostituisci» (occorrenze e file, al singolare quando serve). */
+export function replaceDoneMessage(matches: number, files: number): string {
+  if (files === 1) return matches === 1 ? t('replace.doneSingle') : t('replace.doneOneFile', { n: matches });
+  return t('replace.done', { n: matches, files });
+}
+
+/** SR-3: file non modificati dalla sostituzione. */
+export function replaceSkippedMessage(files: number): string {
+  return files === 1 ? t('replace.skippedOne') : t('replace.skipped', { n: files });
+}
 
 /**
  * SR-1/SR-2: ricerca in tutti i file di /config, nella barra laterale al posto dell'albero.
@@ -286,14 +343,34 @@ export class EdithaSearchPanel extends LitElement {
     const req = this.searched;
     const result = this.result;
     if (!req || !result || paths.length === 0) return;
-    const matches = result.results.filter((r) => paths.includes(r.path)).reduce((n, r) => n + r.matches.length, 0);
-    this.emit('search-replace', { paths, request: req, replacement: this.replacement, matches });
+    // `total` conta anche le occorrenze non mostrate (il server ne manda al massimo 200 per file).
+    const counts: Record<string, number> = {};
+    for (const r of result.results) {
+      if (paths.includes(r.path)) counts[r.path] = (r as { total?: number }).total ?? r.matches.length;
+    }
+    const matches = Object.values(counts).reduce((n, c) => n + c, 0);
+    this.emit('search-replace', {
+      paths,
+      counts,
+      request: req,
+      replacement: this.replacement,
+      matches,
+      truncated: result.truncated,
+      message: replaceConfirmMessage({
+        matches,
+        files: paths.length,
+        query: req.query,
+        replacement: this.replacement,
+        truncated: result.truncated,
+      }),
+    });
   }
 
   private async run(): Promise<void> {
     clearTimeout(this.timer);
     const query = this.query;
-    if (query.trim().length < 2 && !this.regex) {
+    // Senza espressione regolare servono almeno due caratteri; con, almeno uno.
+    if (this.regex ? query === '' : query.trim().length < 2) {
       // Una ricerca ancora in viaggio non deve far ricomparire i risultati vecchi.
       ++this.token;
       this.busy = false;
@@ -308,6 +385,12 @@ export class EdithaSearchPanel extends LitElement {
       wholeWord: this.wholeWord,
     };
     const token = ++this.token;
+    if (!validSearch(req)) {
+      this.busy = false;
+      this.result = null;
+      this.error = t('search.badRegex');
+      return;
+    }
     this.busy = true;
     try {
       const result = await api.search(req);
@@ -319,7 +402,7 @@ export class EdithaSearchPanel extends LitElement {
     } catch (err) {
       if (token !== this.token) return;
       this.result = null;
-      this.error = err instanceof ApiError ? err.message : String(err);
+      this.error = errorMessage(err);
     } finally {
       if (token === this.token) this.busy = false;
     }
@@ -386,7 +469,7 @@ export class EdithaSearchPanel extends LitElement {
               ${icon(closed ? icons.chevronRight : icons.chevronDown, 16)}
               <span class="name">${nameOf(file.path)}</span>
               <span class="dir">${dirOf(file.path)}</span>
-              <span class="count">${file.matches.length}</span>
+              <span class="count">${(file as { total?: number }).total ?? file.matches.length}</span>
             </button>${this.replaceOpen
               ? html`<button
                   class="icon-btn small"
@@ -435,6 +518,7 @@ export class EdithaSearchPanel extends LitElement {
         <input
           class="input"
           spellcheck="false"
+          maxlength=${MAX_QUERY}
           placeholder=${t('search.placeholder')}
           .value=${this.query}
           @input=${(e: Event) => {

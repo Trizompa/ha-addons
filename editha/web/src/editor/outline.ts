@@ -11,6 +11,12 @@ export interface OutlineItem {
 
 const MAX_LABEL = 80;
 
+/** Oltre questa lunghezza (circa 1 MB) lo schema non si costruisce: l'editor resterebbe bloccato. */
+export const OUTLINE_MAX_CHARS = 1_000_000;
+
+/** Schema del file; `tooLarge` se il file supera OUTLINE_MAX_CHARS (l'elenco è vuoto). */
+export type Outline = OutlineItem[] & { tooLarge?: boolean };
+
 function short(text: string): string {
   const one = text.replace(/\s+/g, ' ').trim();
   return one.length > MAX_LABEL ? one.slice(0, MAX_LABEL - 1) + '…' : one;
@@ -48,9 +54,14 @@ function itemLabel(node: unknown, index: number): { label: string; detail?: stri
   return { label: `#${index + 1}` };
 }
 
-/** Una mappa i cui valori sono mappe con un nome (script, helper, …) merita le sue voci. */
+/**
+ * Una mappa di oggetti con un nome (script, helper, …) merita le sue voci: tutti i valori sono
+ * mappe (o vuoti, come un input_boolean senza opzioni). Le impostazioni di uno script senza alias
+ * (sequence, fields, mode) non sono voci.
+ */
 function hasNamedChildren(map: YAMLMap): boolean {
-  return map.items.some((p) => isPair(p) && isMap(p.value));
+  const values = map.items.map((p) => (isPair(p) ? p.value : undefined));
+  return values.some((v) => isMap(v)) && values.every((v) => isMap(v) || v === null || (isScalar(v) && v.value === null));
 }
 
 function startLine(node: Node | null | undefined, lc: LineCounter): number | null {
@@ -62,9 +73,10 @@ function startLine(node: Node | null | undefined, lc: LineCounter): number | nul
  * Voci principali di un file YAML: le chiavi di primo livello (con alias, se c'è) e, un livello
  * sotto, gli elementi delle liste e delle mappe di oggetti. Così in `automations.yaml` si vede
  * l'elenco delle automazioni, in `scripts.yaml` quello degli script, in un package le sezioni con
- * le automazioni dentro.
+ * le automazioni dentro. Un file troppo grande dà un elenco vuoto segnato `tooLarge`.
  */
-export function buildOutline(source: string): OutlineItem[] {
+export function buildOutline(source: string): Outline {
+  if (source.length > OUTLINE_MAX_CHARS) return Object.assign([] as OutlineItem[], { tooLarge: true });
   const lc = new LineCounter();
   const doc = parseDocument(source, { lineCounter: lc, prettyErrors: false, uniqueKeys: false });
   const out: OutlineItem[] = [];

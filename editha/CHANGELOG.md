@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.22.0
+
+Secondo giro di revisione completa, più approfondito: soprattutto sicurezza dei dati.
+
+**Nessuna modifica persa**
+- Eliminare un file o una cartella oltre i 50 MB, o sostituirlo caricandone uno nuovo, non lascia copia di sicurezza: ora EDITHA lo dice **prima** e chiede una seconda conferma (prima la conferma prometteva una copia che non veniva fatta).
+- Una copia conservata all'eliminazione si può ripristinare fino a 50 MB (prima solo fino a 5 MB).
+- Se Home Assistant (o un altro programma) riscrive un file proprio mentre lo salvi, EDITHA non sovrascrive più la sua modifica: chiede cosa fare, come per ogni conflitto.
+- Se EDITHA non risponde per un momento (aggiornamento, riavvio), le modifiche scritte nel frattempo vengono conservate appena torna; "Ricarica la pagina" scrive prima le bozze e avvisa se le modifiche andrebbero perse.
+- Le bozze si salvano anche scrivendo di continuo, senza pause.
+- Bozza di un file rinominato o eliminato da un'altra parte: EDITHA propone di **ricrearlo** con le modifiche invece di scartarle. Lo stesso al salvataggio di un file sparito nel frattempo.
+- La domanda sulle bozze arriva prima di riaprire le tab, così non si sovrascrive una bozza scrivendo subito.
+- I file con a capo di Windows (CRLF) restano così al salvataggio (prima diventavano a capo Linux).
+- Ctrl+S su un file non modificato non propone più di sovrascrivere il file cambiato su disco; una ricarica automatica non cancella più il testo appena scritto, e mantiene cursore e posizione.
+- Chiudendo una tab con "Salva", se nel frattempo hai scritto ancora, la tab resta aperta.
+
+**Cronologia più robusta**
+- Niente versioni doppie (salvataggi falliti e ripetuti, sostituzioni che non cambiano niente, ripristina e annulla): le versioni vere non vengono più spinte fuori dalle 10 conservate.
+- Con l'orologio che torna indietro, o il disco pieno, non si perdono versioni e non restano copie troncate; le copie vengono scritte su disco prima di eliminare o sovrascrivere.
+
+**Ricerca, segreti e download**
+- Le copie di `secrets.yaml` sono escluse dalla ricerca in tutte le forme (anche `secrets.yaml_copia.bak` creato da "Duplica", `secrets.yaml.old`, `secret.yaml`…), e le cartelle `.storage`, `.cloud` e `.git` vengono saltate anche dentro altre cartelle.
+- "Parola intera" funziona con le lettere accentate (cercando "caff" non trova più "Caffè"); le espressioni regolari non spezzano più le emoji.
+- La conferma di "Sostituisci" indica il numero giusto di occorrenze anche oltre le 200 mostrate, con singolare e plurale corretti; un'espressione regolare sbagliata viene segnalata subito.
+- Lo ZIP di una cartella non blocca più EDITHA per secondi, e i nomi strani vengono resi innocui.
+
+**Controllo YAML ed editor**
+- Nuovi errori spiegati: tab e spazi "invisibili" incollati da una pagina web, tag sconosciuti (`!secrets` → "forse intendevi !secret?"), apostrofo dentro `'…'`, due punti dentro un testo senza virgolette, `\d` tra virgolette doppie, `{% %}` all'inizio di un valore, spazio mancante dopo i due punti (`name:Casa`).
+- Il JSON incollato con le tab non viene più segnalato come errore; nella cartella `esphome/` i tag di ESPHome (`!lambda`, `!extend`…) sono accettati.
+- I file oltre 1 MB non vengono controllati né schematizzati (prima l'interfaccia si bloccava per secondi); la barra in basso lo indica.
+- Le icone `mdi:` hanno tutte il nome giusto (37 erano sbagliate, es. `molecule-co2`).
+- Uno snippet salvato da una selezione mantiene il rientro giusto.
+- Cambiando lingua i messaggi del controllo YAML si aggiornano subito.
+
+**Tastiera e interfaccia**
+- Windows: AltGr+S (tastiere polacca, rumena, ungherese…) scrive di nuovo la lettera invece di salvare tutto. Le scorciatoie seguono la lettera della tastiera (AZERTY compresa).
+- Alt+W chiude il file della colonna che stai usando; Esc su un menu chiude solo il menu; con una finestra aperta le scorciatoie non agiscono sui file sotto.
+- Sul Mac i suggerimenti dei pulsanti mostrano ⌘, ⌥ e ⇧ (Ripeti è ⌘⇧Z).
+- Cliccando due file di fila resta aperto l'ultimo cliccato.
+- Messaggi di errore tradotti anche in inglese; anteprima con errori precisi (file sparito, troppo grande).
+
 ## 0.21.0
 
 Revisione completa del codice: tante piccole correzioni, nessuna funzione nuova di rilievo.

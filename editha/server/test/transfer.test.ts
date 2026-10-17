@@ -5,7 +5,7 @@ import { readFile, symlink } from 'node:fs/promises';
 import { inflateRawSync } from 'node:zlib';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.js';
-import { crc32 } from '../src/fs/zip.js';
+import { crc32, crc32js } from '../src/fs/zip.js';
 import { makeSandbox, testConfig, writeTree, type Sandbox } from './helpers.js';
 
 const INGRESS = '172.30.32.2';
@@ -48,6 +48,7 @@ describe('upload e download (FS-6)', () => {
       'www/manuale.pdf': '%PDF-1.4\n',
       'packages/luci.yaml': 'light: []\n',
       'packages/sub/città.yaml': 'x: è\n',
+      'packages/a\\b:c.txt': 'x',
       '.storage/core.config': '{}',
     });
     await symlink(sb.outsideDir, path.join(sb.configDir, 'packages/fuori'));
@@ -125,8 +126,22 @@ describe('upload e download (FS-6)', () => {
     assert.equal(res.headers['content-type'], 'application/zip');
     assert.match(res.headers['content-disposition'] as string, /filename="packages.zip"/);
     const files = readZip(res.rawPayload);
-    assert.deepEqual([...files.keys()].sort(), ['luci.yaml', 'sub/città.yaml']);
+    assert.deepEqual([...files.keys()].sort(), ['a_b_c.txt', 'luci.yaml', 'sub/città.yaml']);
+    assert.equal(res.headers['x-content-type-options'], 'nosniff');
     assert.equal(files.get('sub/città.yaml')!.toString(), 'x: è\n');
+  });
+
+  it('scaricando tutta /config le cartelle di sistema restano fuori', async () => {
+    const res = await download('');
+    assert.equal(res.statusCode, 200);
+    const names = [...readZip(res.rawPayload).keys()];
+    assert.ok(names.includes('configuration.yaml'));
+    assert.ok(!names.some((n) => n.startsWith('.storage/')));
+  });
+
+  it('crc32 nativo e in JS danno lo stesso risultato', () => {
+    const data = Buffer.from('Editha ZIP àèì 123'.repeat(100));
+    assert.equal(crc32(data), crc32js(data));
   });
 
   it('carica un file nuovo in una cartella', async () => {
@@ -144,6 +159,7 @@ describe('upload e download (FS-6)', () => {
 
     const ok = await upload('', 'configuration.yaml', Buffer.from('a: 2\n'), true);
     assert.equal(ok.statusCode, 201);
+    assert.match(ok.json().backup, /^\d{8}T\d{9}Z-save$/);
     assert.equal(await readFile(path.join(sb.configDir, 'configuration.yaml'), 'utf8'), 'a: 2\n');
     const versions = await app.inject({
       method: 'GET',
@@ -159,6 +175,20 @@ describe('upload e download (FS-6)', () => {
     assert.equal((await upload('', '..', Buffer.from('1'))).statusCode, 400);
     assert.equal((await upload('../', 'x.yaml', Buffer.from('1'))).json().error.code, 'forbidden_path');
     assert.equal((await upload('packages/fuori', 'x.yaml', Buffer.from('1'))).json().error.code, 'forbidden_path');
+  });
+
+  it('senza copia possibile chiede conferma (no_backup) prima di eliminare o sovrascrivere', async () => {
+    await writeTree(sb.configDir, { 'enorme.bin': Buffer.alloc(2 * 1024 * 1024 + 10) });
+    const over = await upload('', 'enorme.bin', Buffer.from('x'), true);
+    assert.equal(over.statusCode, 409);
+    assert.equal(over.json().error.code, 'no_backup');
+    assert.equal(over.json().error.details.limit, 2 * 1024 * 1024);
+    const del = (q: string) => app.inject({ method: 'DELETE', url: `/api/file?path=enorme.bin${q}`, remoteAddress: INGRESS });
+    assert.equal((await del('')).json().error.code, 'no_backup');
+    assert.equal((await del('&noBackup=si')).statusCode, 400);
+    const ok = await del('&noBackup=true');
+    assert.equal(ok.statusCode, 200);
+    assert.deepEqual(ok.json(), { path: 'enorme.bin', backup: null });
   });
 
   it('rispetta il limite di dimensione', async () => {

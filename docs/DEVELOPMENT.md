@@ -48,27 +48,36 @@ Tutti i percorsi sono relativi a `/config`, in formato POSIX (`packages/luci.yam
 
 Le richieste sono validate con Ajv senza conversioni di tipo (`coerceTypes: false`) e senza
 campi sconosciuti: nella query i booleani sono le stringhe `'true'` / `'false'` (`overwrite`,
-`fresh`).
+`noBackup`, `fresh`).
 
 | Metodo e percorso | Corpo / query | Risposta |
 | --- | --- | --- |
 | `GET /api/health` | | `{ status: "ok", build }`: `build` identifica l'interfaccia installata (`"dev"` senza build); la pagina lo confronta per accorgersi di un aggiornamento |
 | `GET /api/tree` | `?path=` | `{ path, entries: Entry[] }`, cartelle prima |
 | `GET /api/file` | `?path=` | `{ path, content, etag, size, mtime, readOnly }` |
-| `PUT /api/file` | `{ path, content, etag }` | `{ path, etag, size, mtime }`; 409 `conflict` se il file è cambiato, 413 oltre `EDITHA_MAX_FILE_SIZE` |
+| `PUT /api/file` | `{ path, content, etag }` | `{ path, etag, size, mtime }`; 409 `conflict` (`details: { path, etag }`, etag attuale o `null`) se il file è cambiato, anche durante il salvataggio stesso (ricontrollato appena prima della rinomina); 413 oltre `EDITHA_MAX_FILE_SIZE`; 400 `invalid_request` se `content` non è UTF-16 ben formato (surrogati isolati) |
 | `POST /api/file` | `{ path, type: "file" \| "directory", content? }` | 201 con l'`Entry` creata |
 | `POST /api/rename` | `{ from, to }` | `Entry` nella nuova posizione; la cronologia segue il file o la cartella |
-| `DELETE /api/file` | `?path=` | `{ path, backup }`; `backup` è `null` se l'elemento supera `EDITHA_MAX_TRANSFER` (eliminato senza copia) |
-| `GET /api/download` | `?path=` | Il file, o la cartella come ZIP (`Content-Disposition: attachment`); 413 `too_large` oltre `EDITHA_MAX_TRANSFER` |
+| `DELETE /api/file` | `?path=&noBackup=true\|false` | `{ path, backup }` con l'id della copia. Un file o una cartella oltre `EDITHA_MAX_TRANSFER` non ha copia: 409 `no_backup` (`details: { path, size, limit }`; per le cartelle `size` è un minimo) e nulla viene eliminato, a meno di `noBackup=true` (allora `backup: null`). I collegamenti si eliminano senza copia (`backup: null`) senza conferma |
+| `GET /api/download` | `?path=` | Il file, o la cartella come ZIP (`Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`); 413 `too_large` oltre `EDITHA_MAX_TRANSFER`. Nello ZIP `\` e `:` nei nomi diventano `_`; scaricando la radice `.storage`, `.cloud`, `deps`, `tts` e `.git` restano fuori |
 | `GET /api/preview` | `?path=` | Immagine o PDF con il proprio Content-Type, `inline` (FS-10); 415 `not_previewable` per gli altri file, 413 `too_large` oltre `EDITHA_MAX_TRANSFER`. Gli SVG hanno una CSP `sandbox`. |
-| `POST /api/upload` | `?dir=&name=&overwrite=true\|false`, corpo `application/octet-stream` | 201 con l'`Entry`; 409 `already_exists` senza `overwrite`; 413 oltre `EDITHA_MAX_TRANSFER` |
+| `POST /api/upload` | `?dir=&name=&overwrite=true\|false&noBackup=true\|false`, corpo `application/octet-stream` | 201 con `Entry & { backup }`: `backup` è l'id della copia del file sostituito, `null` per un file nuovo o con `noBackup`; 409 `already_exists` senza `overwrite`; 409 `no_backup` (`details: { path, size, limit }`) se il file da sostituire supera `EDITHA_MAX_TRANSFER` e manca `noBackup=true`; 413 se il corpo supera `EDITHA_MAX_TRANSFER` (prima di toccare il disco) |
 | `GET /api/versions` | `?path=` | `{ path, versions: Version[] }`, dalla più recente |
 
 Codici di errore: `invalid_request` / `not_a_file` / `not_a_directory` (400),
 `forbidden_path` / `read_only` / `forbidden_origin` (403), `not_found` (404),
-`already_exists` / `conflict` / `config_invalid` (409), `too_large` (413), `binary` /
-`not_previewable` (415), `internal` (500, dettagli solo nel log), `ha_error` (502),
-`ha_unavailable` (503), `no_space` (507, disco pieno).
+`already_exists` / `conflict` / `config_invalid` (409), `no_backup` (409, nessuna copia
+possibile: ripetere con `noBackup=true` dopo la conferma), `busy` (409, percorso in uso o
+cambiato durante l'operazione, es. una cartella riempita mentre la si elimina: riprovare),
+`cross_device` (409, spostamento tra dischi diversi non supportato), `too_large` (413),
+`binary` / `not_previewable` (415), `internal` (500, dettagli solo nel log), `io_error`
+(500, errore di lettura/scrittura del disco), `ha_error` (502), `ha_unavailable` (503),
+`no_space` (507, disco pieno).
+
+Copie di sicurezza (BK-1): ogni versione si scrive con un nome temporaneo, si sincronizza su
+disco e poi si rinomina, prima dell'operazione che la rende necessaria. Gli id crescono sempre
+(anche se l'orologio torna indietro) e la versione appena creata non viene mai scartata. Un
+contenuto uguale all'ultima versione non crea una versione nuova: si restituisce l'id esistente.
 
 ## Interfaccia (`editha/web`)
 
@@ -100,21 +109,39 @@ Per provare l'interfaccia a mano: `npm run build`, poi avviare il server come so
 | `GET /api/settings` | | Impostazioni (tema, lingua, albero, a capo, carattere, cartelle di sistema, schema) |
 | `POST /api/settings` | campi da cambiare | Impostazioni aggiornate (POST e non PATCH: alcuni reverse proxy bloccano PATCH) |
 | `GET /api/snippets` / `PUT /api/snippets` | `{ snippets: [{ id, name, body }] }` | Snippet personali |
-| `POST /api/search` | `{ query, regex?, caseSensitive?, wholeWord? }` | `{ results: [{ path, matches: [{ line, column, length, text, offset }] }], files, matches, truncated }`; `offset` è la posizione di `text` nella riga (righe lunghe accorciate). Salta cartelle di sistema, collegamenti, file oltre `EDITHA_MAX_FILE_SIZE`, binari e `secrets*.yaml` (anche `.bak`) |
-| `POST /api/replace` | `{ paths, query, replacement, regex?, caseSensitive?, wholeWord? }` | `{ files: [{ path, count, etag }], skipped: [{ path, reason }] }`; `reason` è un codice di errore (`read_only` per `secrets*.yaml`, `conflict`, `too_large`…) |
+| `POST /api/search` | `{ query, regex?, caseSensitive?, wholeWord? }` | `{ results: [{ path, matches: [{ line, column, length, text, offset }], total }], files, matches, truncated }`; `offset` è la posizione di `text` nella riga (righe lunghe accorciate). `matches` è limitato (200 per file, solo entro i primi 10.000 caratteri di una riga); `total` è il numero, senza limiti, di corrispondenze che `POST /api/replace` cambierebbe nel file (da mostrare nella conferma). Il totale `matches` della risposta resta la somma dei `matches` mostrati. Salta le cartelle di sistema al primo livello (`.storage`, `.cloud`, `.git` a qualunque profondità), collegamenti, file oltre `EDITHA_MAX_FILE_SIZE`, binari e i file segreti (vedi sotto) |
+| `POST /api/replace` | `{ paths, query, replacement, regex?, caseSensitive?, wholeWord? }` | `{ files: [{ path, count, etag }], skipped: [{ path, reason }] }`; `files` elenca solo i file cambiati (un file in cui la sostituzione non cambia nulla, es. `a` → `a`, non compare né in `files` né in `skipped`). `reason` è un codice di errore (`read_only` per i file segreti, `conflict`, `too_large`, `not_found`…), `binary` (non è testo UTF-8), `encoding` (il risultato spezzerebbe un carattere, es. una regex senza `u` su metà di un'emoji) o `error` |
 | `GET /api/folders` | | `{ folders }`: cartelle scrivibili, destinazioni di "Sposta in…" (lo spostamento usa `POST /api/rename`) |
 | `GET /api/secrets?path=` | | `{ secrets: [{ key, path, line }] }`: chiavi di !secret visibili dal file, mai i valori |
 | `GET /api/drafts` | | `{ drafts: [{ path, content, etag, savedAt }] }`: modifiche non salvate |
 | `PUT /api/draft` / `DELETE /api/draft?path=` | `{ path, content, etag }` | Conserva o scarta la bozza di un file |
 | `GET /api/version?path=&id=` | | Testo di una versione conservata |
-| `POST /api/restore` | `{ path, id }` | `{ path, etag, size, mtime }`: ripristina una versione, anche di un file eliminato (quella sostituita resta nella cronologia). 413 se la versione supera `EDITHA_MAX_FILE_SIZE` o il file attuale `EDITHA_MAX_TRANSFER`; le versioni di cartelle danno `not_a_file` |
-| `POST /api/copy` | `{ from, to }` | 201 con l'`Entry`: duplica un file o una cartella (link copiati come link, fino a `EDITHA_MAX_TRANSFER`); la destinazione non deve esistere. L'interfaccia duplica solo file |
+| `POST /api/restore` | `{ path, id }` | `{ path, etag, size, mtime }`: ripristina una versione, anche di un file eliminato (ricreato con i permessi della copia; quella sostituita resta nella cronologia). 413 se la versione o il file attuale superano `EDITHA_MAX_TRANSFER`; 409 `conflict` se il file cambia durante il ripristino; le versioni di cartelle danno `not_a_file` |
+| `POST /api/copy` | `{ from, to }` | 201 con l'`Entry`: duplica un file o una cartella (link copiati come link, fino a `EDITHA_MAX_TRANSFER`); la destinazione non deve esistere. Una copia non riuscita non lascia la destinazione a metà. L'interfaccia duplica solo file |
 | `GET /api/ha/status` | | `{ available }` |
 | `GET /api/ha/entities` / `GET /api/ha/services` | `?fresh=true` per saltare la cache | Entità e azioni di HA |
 | `POST /api/ha/check` | | `{ valid, errors, warnings }` |
 | `POST /api/ha/reload` / `POST /api/ha/restart` | | `{ ok, warnings }`: verifica e poi ricarica / riavvia; 409 `config_invalid` con gli errori |
 | `GET /api/session` | | `{ tabs, active, side? }` |
 | `PUT /api/session` | `{ tabs: [{ path, anchor, head, scrollTop }], active, side? }` | La sessione salvata; `side` è il file nella colonna destra della vista divisa |
+
+### Regola di ricerca e file segreti
+
+L'espressione si costruisce con `buildSearchRegExp` (`editha/server/src/fs/search.ts`), che
+l'interfaccia replica:
+
+- testo semplice: la query con `.*+?^${}()|[]\` preceduti da `\`; con `regex` la query così com'è;
+- flag `g`, più `i` senza `caseSensitive`, più `u` se l'espressione è valida con `u`;
+  altrimenti si usa senza `u` (es. `\-` o `{` isolati);
+- `wholeWord`: con `u` `(?<![\p{L}\p{N}_])(?:…)(?![\p{L}\p{N}_])` (lettere accentate comprese),
+  senza `u` `(?<![\w])(?:…)(?![\w])` (solo ASCII);
+- la ricerca e la sostituzione lavorano riga per riga (senza `\r` finale) e ignorano le
+  corrispondenze vuote.
+
+File segreti (SEC-7, mai in ricerca né sostituzione): nome che corrisponde a
+`/^[.#~]?secrets?(?![a-z])[^/]*\.ya?ml/i`, cioè `secret.yaml`, `secrets.yml`,
+`secrets_copia.yaml.bak`, `secrets.yaml_copy.bak`, `secrets.yaml~`, `secrets.yaml.old`,
+`.secrets.yaml.swp`…, ma non `secretary.yaml` né `my_secrets.yaml`.
 
 ## Immagine
 

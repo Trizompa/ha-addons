@@ -3,6 +3,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { fileIcon, icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
 import { t } from '../i18n/index.js';
+import { shortcutLabel } from '../state/keys.js';
 
 export interface TabView {
   path: string;
@@ -203,7 +204,7 @@ export class EdithaTabBar extends LitElement {
               ${tab.dirty ? html`<span class="dot"></span>` : nothing}
               <button
                 class="icon-btn small close"
-                title=${t('tabs.close')}
+                title=${shortcutLabel(t('tabs.close'))}
                 aria-label=${t('tabs.closeName', { name: tab.name })}
                 @click=${(e: Event) => {
                   e.stopPropagation();
@@ -243,7 +244,7 @@ export class EdithaTabBar extends LitElement {
       <span class="end">
         <button
           class="icon-btn small close"
-          title=${t('tabs.close')}
+          title=${shortcutLabel(t('tabs.close'))}
           aria-label=${t('tabs.closeName', { name })}
           @click=${(e: Event) => {
             e.stopPropagation();

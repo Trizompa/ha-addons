@@ -1,5 +1,5 @@
 import { LitElement, css, html, nothing } from 'lit';
-import type { OutlineItem } from '../editor/outline.js';
+import type { Outline, OutlineItem } from '../editor/outline.js';
 import { t } from '../i18n/index.js';
 import { icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
@@ -146,6 +146,7 @@ export class EdithaOutlinePanel extends LitElement {
   private renderList() {
     const items = this.items;
     if (items === null) return html`<div class="note">${t('outline.noYaml')}</div>`;
+    if ((items as Outline).tooLarge) return html`<div class="note">${t('outline.tooLarge')}</div>`;
     if (items.length === 0) return html`<div class="note">${t('outline.empty')}</div>`;
     const q = this.filter.trim().toLowerCase();
     const shown = items

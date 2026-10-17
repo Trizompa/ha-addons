@@ -73,7 +73,7 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 | Rinomina (F2) | Le tab aperte seguono il nuovo nome, e la cronologia del file lo segue. |
 | Duplica… | Solo file. EDITHA propone `nome_copia.est`, che puoi cambiare. Una copia YAML prende anche `.bak` in fondo (`automations_copia.yaml.bak`), così Home Assistant non la carica due volte; un nome che finisce in `.yaml` chiede conferma. |
 | Sposta in… | Scegli la cartella di destinazione da un elenco. Niente trascinamento, apposta: troppo facile sbagliare cartella. La cronologia segue il file. |
-| Elimina (Canc) | Chiede conferma. Una copia resta nella cronologia di EDITHA (vedi [Cronologia](#cronologia-e-confronto)); gli elementi oltre 50 MB vengono eliminati senza copia. |
+| Elimina (Canc) | Chiede conferma. Una copia resta nella cronologia di EDITHA (vedi [Cronologia](#cronologia-e-confronto)); per gli elementi oltre 50 MB non si può tenere una copia: EDITHA lo dice e chiede di nuovo prima di eliminarli. |
 | Scarica sul PC / Scarica come zip | Un file, oppure un'intera cartella come archivio zip, fino a 50 MB. |
 | Copia percorso | Il percorso completo `/config/...`. |
 | Cronologia… | Le versioni salvate del file (vedi [Cronologia](#cronologia-e-confronto)). |
@@ -81,7 +81,7 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 
 - **Caricare file**: pulsante di caricamento, oppure trascina i file dal PC su una cartella. Fino a
   50 MB per file; sostituire un file esistente chiede conferma, e la versione precedente va nella
-  cronologia.
+  cronologia (se il file esistente supera i 50 MB, EDITHA avvisa che non se ne può tenere copia).
 - **Filtra per nome**: il campo sopra l'albero.
 - **Immagini e PDF** si aprono in una tab di anteprima invece che nell'editor: PNG, JPEG, GIF,
   WebP, AVIF, BMP, ICO, SVG e PDF. La tab di anteprima è una sola e viene riusata dalla prossima
@@ -125,9 +125,14 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 
 - Chiudere una tab o la pagina con modifiche non salvate chiede conferma.
 - Se la pagina si chiude comunque (telefono bloccato, browser chiuso), EDITHA conserva le modifiche
-  non salvate come **bozza** e la volta dopo propone di recuperarle. La bozza di un file che non
-  esiste più, o che non si può più salvare (per esempio è diventato di sola lettura), viene scartata
-  con un avviso.
+  non salvate come **bozza** e la volta dopo propone di recuperarle. Se il file non esiste più
+  (rinominato o eliminato da un'altra parte), EDITHA propone di ricrearlo con quelle modifiche; la
+  bozza di un file che non si può più salvare (per esempio è diventato di sola lettura) viene
+  scartata con un avviso. La stessa scelta di ricreare il file compare se salvi un file che nel
+  frattempo è stato rinominato o eliminato da un'altra parte.
+- Se EDITHA smette di rispondere per un momento (aggiornamento o riavvio dell'add-on), lascia la
+  pagina aperta: le modifiche restano nelle tab e le bozze si scrivono appena torna. **Ricarica la
+  pagina** nel banner scrive prima le bozze, e avvisa se EDITHA non risponde ancora.
 - Se un file aperto cambia su disco (per esempio lo ha riscritto Home Assistant), EDITHA avvisa
   prima di salvare: scegli tu se ricaricarlo o sovrascriverlo.
 
@@ -138,14 +143,19 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 EDITHA controlla lo YAML mentre scrivi. Conosce i tag di Home Assistant (`!include`,
 `!include_dir_*`, `!secret`, `!input`, `!env_var`) e, al posto del messaggio criptico della
 libreria, dice cosa non va e in quale riga: due punti mancanti, una riga al livello di rientro
-sbagliato, una tabulazione al posto degli spazi, una chiave ripetuta, un template `{{ … }}` senza
-virgolette, un elenco o un blocco `{ }` usato come chiave, un alias `*nome` senza un'ancora `&nome`
-prima.
+sbagliato, una tabulazione al posto degli spazi, uno spazio speciale invisibile incollato da una
+pagina web, una chiave ripetuta, un template `{{ … }}` senza virgolette, un apostrofo dentro `'…'`,
+un `: ` dentro un testo senza virgolette, un elenco o un blocco `{ }` usato come chiave, un alias
+`*nome` senza un'ancora `&nome` prima, un tag sconosciuto (`!secrets` invece di `!secret`). Nella
+cartella `esphome` sono accettati anche i tag di ESPHome (`!lambda`, `!extend`, `!remove`, …).
 
 ![Un errore YAML spiegato](../docs/images/problems.png)
 
 Avvisa anche di errori tipici di Home Assistant che sono YAML valido, come `on`/`off`/`yes`/`no`
-senza virgolette (lo YAML li trasforma in vero/falso).
+senza virgolette (lo YAML li trasforma in vero/falso) o `name:Casa` senza lo spazio dopo i due punti.
+
+I file molto grandi (oltre 1 MB) non vengono controllati e non hanno lo schema, così l'editor resta
+reattivo.
 
 Clic sul numero di errori nella barra di stato (oppure Ctrl+Maiusc+M) apre l'elenco dei problemi;
 F8 passa al successivo.
@@ -155,7 +165,8 @@ F8 passa al successivo.
 Premi Ctrl+Spazio, oppure scrivi e basta:
 
 - **entità** con nome e stato attuale, dopo `entity_id:` o appena scrivi un dominio come `light.`;
-- **azioni** (`light.turn_on`, …) e i loro campi;
+- **azioni** (`light.turn_on`, …) dopo `action:` o `perform_action:` (i nomi delle azioni, non i
+  loro campi);
 - **chiavi `!secret`** da `secrets.yaml` (solo i nomi: i valori non vengono mai inviati per i
   suggerimenti);
 - **icone Material Design** dopo `mdi:`, con l'anteprima.
@@ -212,7 +223,8 @@ La ricerca salta le cartelle di sistema, i collegamenti, i file oltre 5 MB e i f
 mostra i primi trovati.
 
 Il pulsante con le frecce apre **Sostituisci nei file**. **Sostituisci tutto** cambia tutte le
-occorrenze dopo una conferma; **Sostituisci in *nome*** accanto a un file sostituisce solo lì. Ogni
+occorrenze dopo una conferma; se la ricerca si è fermata prima (troppi risultati), cambia solo i
+file elencati; **Sostituisci in *nome*** accanto a un file sostituisce solo lì. Ogni
 file modificato conserva la versione precedente nella cronologia. I file con modifiche non salvate,
 `secrets.yaml` con le sue copie e le cartelle di sistema non vengono mai toccati.
 
@@ -233,8 +245,8 @@ viene conservato). La cronologia funziona sui file di testo fino a 5 MB.
 
 **Recuperare un file eliminato**: crea un nuovo file con lo stesso nome nella stessa cartella, poi
 apri **Cronologia…** su di lui: le sue versioni sono ancora lì, compresa quella conservata
-all'eliminazione. Le cartelle non si possono ripristinare così, e gli elementi oltre 50 MB vengono
-eliminati senza copia.
+all'eliminazione. Le cartelle non si possono ripristinare così, e degli elementi oltre 50 MB non
+resta copia (EDITHA avvisa prima di eliminarli).
 
 Per confrontare due file qualsiasi: tasto destro sul primo → **Seleziona per il confronto**, poi
 tasto destro sul secondo → **Confronta con *nome*** (il nome del primo file). Esc chiude il

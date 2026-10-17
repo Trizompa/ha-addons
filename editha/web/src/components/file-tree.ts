@@ -1,10 +1,11 @@
 import { LitElement, css, html, nothing } from 'lit';
-import { api, ApiError } from '../api/client.js';
+import { api, ApiError, errorText } from '../api/client.js';
 import type { Entry } from '../api/types.js';
 import { dirname, isWithin } from '../state/paths.js';
 import { fileIcon, icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
 import { t } from '../i18n/index.js';
+import { shortcutLabel } from '../state/keys.js';
 
 export interface TreeSelection {
   path: string;
@@ -248,7 +249,7 @@ export class EdithaFileTree extends LitElement {
       this.dirs = dirs;
       if (dir === '') this.rootError = null;
     } catch (err) {
-      if (dir === '') this.rootError = err instanceof ApiError ? err.message : t('tree.loadError');
+      if (dir === '') this.rootError = err instanceof ApiError ? errorText(err) : t('tree.loadError');
       else if (err instanceof ApiError && err.code === 'not_found') this.forget(dir);
     }
   }
@@ -460,7 +461,7 @@ export class EdithaFileTree extends LitElement {
     const loaded = this.dirs.has('');
     return html`
       <header role="toolbar" aria-label=${t('tree.title')}>
-        <button class="icon-btn small" title=${t('toolbar.searchAll')} @click=${() => this.emit('tree-action', { action: 'search' })}>
+        <button class="icon-btn small" title=${shortcutLabel(t('toolbar.searchAll'))} @click=${() => this.emit('tree-action', { action: 'search' })}>
           ${icon(icons.search, 17)}
         </button>
         <button class="icon-btn small" title=${t('tree.newFile')} @click=${() => this.emit('tree-action', { action: 'new-file' })}>

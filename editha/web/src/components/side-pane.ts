@@ -54,6 +54,16 @@ export class EdithaSidePane extends EdithaEditorPane {
     this.view.scrollDOM.scrollTop = top;
   }
 
+  /**
+   * Testo sostituito mentre la tab è visibile solo qui (ricarica dal disco, bozza recuperata):
+   * la tab è già aggiornata; qui la modifica entra nella cronologia, così Annulla la riporta indietro.
+   */
+  replaceFromOutside(tab: EditorTab, changes: ChangeSet): boolean {
+    if (this.current !== tab || !this.view) return false;
+    this.view.dispatch({ changes, annotations: fromOtherPane.of(true) });
+    return true;
+  }
+
   /** Modifiche fatte nella colonna sinistra sullo stesso file. */
   override applyRemote(tab: EditorTab, changes: ChangeSet): boolean {
     if (this.current !== tab || !this.view) return false;

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
+import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { BackupStore } from '../src/backups/store.js';
 import { makeSandbox, type Sandbox } from './helpers.js';
 
@@ -55,6 +57,49 @@ describe('BackupStore', () => {
     await store.saveFile('a.yaml/b', Buffer.from('b'), 'save');
     assert.equal((await store.list('a.yaml')).length, 1);
     assert.equal((await store.list('a.yaml/b')).length, 1);
+  });
+
+  it('id sempre crescenti anche se l\'orologio torna indietro; la versione nuova non viene mai eliminata', async () => {
+    for (let i = 0; i < 5; i++) {
+      clock = new Date(Date.UTC(2026, 9, 15, 8, 0, 0) - i * 3600_000);
+      await store.saveFile('a.yaml', Buffer.from(String(i)), 'save');
+    }
+    const versions = await store.list('a.yaml');
+    assert.equal(versions.length, 3);
+    assert.deepEqual(
+      await Promise.all(versions.map(async (v) => (await store.read('a.yaml', v.id)).toString())),
+      ['4', '3', '2'],
+    );
+    assert.ok(versions[0]!.id > versions[1]!.id);
+  });
+
+  it('non duplica una versione uguale all\'ultima', async () => {
+    const a = await store.saveFile('a.yaml', Buffer.from('uguale'), 'save');
+    const b = await store.saveFile('a.yaml', Buffer.from('uguale'), 'restore');
+    assert.equal(a, b);
+    const src = path.join(sb.dataDir, 'src.txt');
+    await writeFile(src, 'uguale');
+    assert.equal(await store.saveFileFrom('a.yaml', src, 'delete'), a);
+    assert.equal((await store.list('a.yaml')).length, 1);
+  });
+
+  it('una copia non riuscita non lascia versioni né file temporanei', async () => {
+    await assert.rejects(store.saveFileFrom('a.yaml', path.join(sb.dataDir, 'manca'), 'delete'));
+    assert.equal((await store.list('a.yaml')).length, 0);
+    const dir = path.join(sb.dataDir, 'backups', createHash('sha256').update('a.yaml').digest('hex'));
+    assert.deepEqual(await readdir(dir), ['index.json']);
+  });
+
+  it('ordina i vecchi suffissi numerici (.10 dopo .2)', async () => {
+    const dir = path.join(sb.dataDir, 'backups', createHash('sha256').update('a.yaml').digest('hex'));
+    await mkdir(dir, { recursive: true });
+    for (const id of ['20261015T080000000Z-save', '20261015T080000000Z.2-save', '20261015T080000000Z.10-save']) {
+      await writeFile(path.join(dir, id), id);
+    }
+    assert.deepEqual(
+      (await store.list('a.yaml')).map((v) => v.id),
+      ['20261015T080000000Z.10-save', '20261015T080000000Z.2-save', '20261015T080000000Z-save'],
+    );
   });
 
   it('rifiuta identificativi di versione non validi', async () => {

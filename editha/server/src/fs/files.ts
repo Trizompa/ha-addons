@@ -11,15 +11,16 @@ import { KeyedLock } from './lock.js';
 import { createZip, type ZipEntry } from './zip.js';
 import {
   SEARCH_BUDGET_MS,
+  buildSearchRegExp,
   isSecretsFile,
-  searchPattern,
+  isWellFormed,
   type ReplaceMessage,
   type SearchMessage,
   type SearchOptions,
   type SearchResult,
 } from './search.js';
 import { Worker } from 'node:worker_threads';
-import type { PathGuard, ResolvedPath } from './paths.js';
+import { READ_ONLY_DIRS, type PathGuard, type ResolvedPath } from './paths.js';
 
 export type EntryType = 'file' | 'directory' | 'other';
 
@@ -45,7 +46,7 @@ export interface FileContent {
 }
 
 export type { SearchMatch, SearchOptions, SearchResult } from './search.js';
-export { searchPattern } from './search.js';
+export { buildSearchRegExp } from './search.js';
 
 /** HA-4: una chiave di secrets.yaml, senza il valore (SEC-7). */
 export interface SecretKey {
@@ -131,6 +132,25 @@ class TransferTooLarge extends EdithaError {
     super('too_large', `Troppo grande (${size} byte, limite ${limit})`, { size, limit });
   }
 }
+
+/** Oltre il limite non si tiene una copia: si procede solo se chi chiama lo accetta (`noBackup`). */
+class NoBackup extends EdithaError {
+  constructor(rel: string, size: number, limit: number) {
+    super('no_backup', `Troppo grande per conservarne una copia (${size} byte, limite ${limit}): ${rel}`, {
+      path: rel,
+      size,
+      limit,
+    });
+  }
+}
+
+/** Contenuto non rappresentabile in UTF-8 (surrogati isolati): sarebbe salvato con "\uFFFD". */
+function assertWellFormed(content: string): void {
+  if (!isWellFormed(content)) throw new EdithaError('invalid_request', 'Il contenuto contiene caratteri non validi');
+}
+
+/** Memoria massima dei worker di ricerca e sostituzione: un'espressione esagerata non ferma il server. */
+const WORKER_LIMITS = { maxOldGenerationSizeMb: 256 };
 
 /** Operazioni sui file di /config. Ogni percorso passa da PathGuard. */
 export class FileService {
@@ -236,6 +256,7 @@ export class FileService {
   async write(input: string, content: string, etag: string): Promise<SaveResult> {
     const file = await this.guard.resolveExisting(input);
     this.guard.assertWritable(file);
+    assertWellFormed(content);
     const data = Buffer.from(content, 'utf8');
     if (data.length > this.maxFileSize) {
       throw new EdithaError('too_large', `Contenuto troppo grande (${data.length} byte)`, {
@@ -256,22 +277,46 @@ export class FileService {
         });
       }
       if (!current.equals(data)) {
+        // Se poi la scrittura non riesce, la copia appena fatta non si ripete al nuovo
+        // tentativo: è uguale all'ultima versione (BackupStore non la duplica).
         await this.backups.saveFile(this.guard.relativeOf(file.abs), current, 'save');
-        await writeFileAtomic(file.abs, data, st);
+        await this.writeChecked(file, data, st);
       }
       const after = await stat(file.abs);
       return { path: file.rel, etag: etagOf(data), size: data.length, mtime: after.mtime.toISOString() };
     });
   }
 
+  /**
+   * Scrittura atomica che rinuncia se il file è cambiato dopo `st` (preso sotto il lock):
+   * un altro programma che scrive tra il controllo dell'etag e la rinomina non viene
+   * sovrascritto. Il conflitto riporta l'etag attuale, come quello di write().
+   */
+  private async writeChecked(file: ResolvedPath, data: Buffer, st: Stats): Promise<void> {
+    try {
+      await writeFileAtomic(file.abs, data, { original: st, expect: st });
+    } catch (err) {
+      if (err instanceof EdithaError && err.code === 'conflict') {
+        const etag = await readFile(file.abs).then(etagOf, () => null);
+        throw new EdithaError('conflict', err.message, { path: file.rel, etag });
+      }
+      throw err;
+    }
+  }
+
   /** FS-2: crea un file (con contenuto iniziale opzionale) o una cartella; non sovrascrive mai. */
   async create(input: string, type: 'file' | 'directory', content = ''): Promise<Entry> {
     const target = await this.guard.resolveEntry(input);
     this.guard.assertWritable(target);
+    assertWellFormed(content);
     const size = Buffer.byteLength(content, 'utf8');
     if (size > this.maxFileSize) {
       throw new EdithaError('too_large', `Contenuto troppo grande (${size} byte)`, { size, limit: this.maxFileSize });
     }
+    return this.locked([target.abs], () => this.createLocked(target, type, content));
+  }
+
+  private async createLocked(target: ResolvedPath, type: 'file' | 'directory', content: string): Promise<Entry> {
     try {
       if (type === 'directory') {
         await mkdir(target.abs);
@@ -326,24 +371,34 @@ export class FileService {
     });
   }
 
-  /** FS-4: elimina dopo averne conservato una copia (BK-1). */
-  async remove(input: string): Promise<{ path: string; backup: string | null }> {
+  /**
+   * FS-4: elimina dopo averne conservato una copia (BK-1). Copie solo entro `maxDownload`: un
+   * database o una cartella di video non devono riempire /data. Oltre il limite si rifiuta
+   * con `no_backup`, a meno che chi chiama accetti esplicitamente l'eliminazione senza copia
+   * (`noBackup`, allora `backup: null`). Un collegamento si elimina senza copia: il contenuto
+   * resta nella destinazione.
+   */
+  async remove(input: string, opts: { noBackup?: boolean } = {}): Promise<{ path: string; backup: string | null }> {
     const target = await this.guard.resolveEntry(input);
     this.guard.assertWritable(target);
     return this.locked([target.abs], async () => {
       const st = await this.lstatEntry(target);
       const key = this.guard.relativeOf(target.abs);
       let backup: string | null = null;
-      // Copie di sicurezza solo entro un limite: un database o una cartella di video
-      // non devono riempire /data. Oltre il limite si elimina senza copia (backup: null).
       if (st.isFile()) {
         if (st.size <= this.maxDownload) backup = await this.backups.saveFileFrom(key, target.abs, 'delete');
+        else if (!opts.noBackup) throw new NoBackup(target.rel, st.size, this.maxDownload);
       } else if (st.isDirectory()) {
-        if ((await treeSize(target.abs, this.maxDownload)) <= this.maxDownload) {
-          backup = await this.backups.saveTree(key, target.abs, 'delete');
-        }
+        // treeSize si ferma appena supera il limite: `size` è allora un valore minimo.
+        const size = await treeSize(target.abs, this.maxDownload);
+        if (size <= this.maxDownload) backup = await this.backups.saveTree(key, target.abs, 'delete');
+        else if (!opts.noBackup) throw new NoBackup(target.rel, size, this.maxDownload);
       }
-      await rm(target.abs, { recursive: st.isDirectory(), force: false });
+      try {
+        await rm(target.abs, { recursive: st.isDirectory(), force: false });
+      } catch (err) {
+        throw fromFsError(err, target.rel);
+      }
       return { path: target.rel, backup };
     });
   }
@@ -376,6 +431,9 @@ export class FileService {
     const walk = async (abs: string, prefix: string): Promise<void> => {
       for (const d of await readdir(abs, { withFileTypes: true })) {
         if (d.isSymbolicLink() || isTempName(d.name)) continue;
+        // Scaricando tutta /config le cartelle di sistema (SEC-8) restano fuori: dati interni
+        // di HA, token, dipendenze. Si possono scaricare chiedendo la cartella da sola.
+        if (abs === this.guard.root && d.isDirectory() && READ_ONLY_DIRS.includes(d.name)) continue;
         const childAbs = path.join(abs, d.name);
         const name = prefix ? `${prefix}/${d.name}` : d.name;
         if (d.isDirectory()) {
@@ -392,17 +450,27 @@ export class FileService {
     };
     await walk(dir.abs, '');
     const base = path.posix.basename(dir.rel) || 'config';
-    return { name: `${base}.zip`, data: createZip(entries) };
+    return { name: `${base}.zip`, data: await createZip(entries) };
   }
 
   /**
    * FS-6: carica un file dal PC. Senza `overwrite` non sostituisce mai un file esistente;
-   * con `overwrite` la versione precedente finisce nei backup (BK-1).
+   * con `overwrite` la versione precedente finisce nei backup (BK-1) e il suo id è in
+   * `backup`. Un file esistente oltre `maxDownload` non ha copia: `no_backup`, a meno di
+   * `noBackup` (allora `backup: null`).
    */
-  async upload(dirInput: string, name: string, data: Buffer, overwrite: boolean): Promise<Entry> {
+  async upload(
+    dirInput: string,
+    name: string,
+    data: Buffer,
+    overwrite: boolean,
+    noBackup = false,
+  ): Promise<Entry & { backup: string | null }> {
     if (!name || name === '.' || name === '..' || name.includes('/') || name.includes('\0')) {
       throw new EdithaError('invalid_request', 'Nome di file non valido');
     }
+    // Il limite del corpo HTTP ha un margine: il controllo vero è qui, prima di toccare il disco.
+    if (data.length > this.maxDownload) throw new TransferTooLarge(data.length, this.maxDownload);
     const dir = await this.guard.resolveExisting(dirInput);
     if (!(await stat(dir.abs)).isDirectory()) {
       throw new EdithaError('not_a_directory', `Non è una cartella: ${dir.rel}`);
@@ -416,16 +484,23 @@ export class FileService {
       } catch {
         existing = null;
       }
+      let backup: string | null = null;
       if (existing) {
         if (!existing.isFile()) throw new EdithaError('not_a_file', `Non è un file: ${target.rel}`);
         if (!overwrite) throw new EdithaError('already_exists', `Esiste già: ${target.rel}`, { path: target.rel });
         // Come per l'eliminazione: copia di sicurezza solo entro il limite, senza caricarla in memoria.
         if (existing.size <= this.maxDownload) {
-          await this.backups.saveFileFrom(this.guard.relativeOf(target.abs), target.abs, 'save');
+          backup = await this.backups.saveFileFrom(this.guard.relativeOf(target.abs), target.abs, 'save');
+        } else if (!noBackup) {
+          throw new NoBackup(target.rel, existing.size, this.maxDownload);
         }
       }
-      await writeFileAtomic(target.abs, data, existing ?? undefined);
-      return (await this.describe(target.abs, target.rel, name, false))!;
+      try {
+        await writeFileAtomic(target.abs, data, { original: existing ?? undefined, expect: existing });
+      } catch (err) {
+        throw fromFsError(err, target.rel);
+      }
+      return { ...(await this.describe(target.abs, target.rel, name, false))!, backup };
     });
   }
 
@@ -439,12 +514,13 @@ export class FileService {
   private stopSearch: (() => void) | null = null;
 
   async search(opts: SearchOptions): Promise<SearchResult> {
-    searchPattern(opts);
+    buildSearchRegExp(opts);
     this.stopSearch?.();
     return new Promise((resolve) => {
       const out: SearchResult = { results: [], files: 0, matches: 0, truncated: false };
       const worker = new Worker(new URL('./search-worker.js', import.meta.url), {
         workerData: { mode: 'search', root: this.guard.root, opts, maxFileSize: this.maxFileSize },
+        resourceLimits: WORKER_LIMITS,
       });
       let finished = false;
       const stop = () => {
@@ -463,7 +539,7 @@ export class FileService {
       const timer = setTimeout(stop, SEARCH_BUDGET_MS);
       worker.on('message', (msg: SearchMessage) => {
         if (msg.type === 'file') {
-          out.results.push({ path: msg.path, matches: msg.matches });
+          out.results.push({ path: msg.path, matches: msg.matches, total: msg.total });
           out.matches += msg.matches.length;
         } else {
           out.files = msg.files;
@@ -490,7 +566,7 @@ export class FileService {
     opts: SearchOptions,
     replacement: string,
   ): Promise<{ files: { path: string; count: number; etag: string }[]; skipped: { path: string; reason: string }[] }> {
-    searchPattern(opts);
+    buildSearchRegExp(opts);
     const skipped: { path: string; reason: string }[] = [];
     const targets: { rel: string; abs: string }[] = [];
     for (const input of [...new Set(paths)]) {
@@ -515,6 +591,7 @@ export class FileService {
       const out: Extract<ReplaceMessage, { type: 'file' }>[] = [];
       const worker = new Worker(new URL('./search-worker.js', import.meta.url), {
         workerData: { mode: 'replace', files: targets, opts, replacement, maxFileSize: this.maxFileSize },
+        resourceLimits: WORKER_LIMITS,
       });
       let finished = false;
       const end = (err?: Error) => {
@@ -534,7 +611,13 @@ export class FileService {
         else if (msg.type === 'skip') skipped.push({ path: msg.rel, reason: msg.reason });
         else end();
       });
-      worker.on('error', (err) => end(err));
+      worker.on('error', (err) =>
+        end(
+          (err as NodeJS.ErrnoException).code === 'ERR_WORKER_OUT_OF_MEMORY'
+            ? new EdithaError('too_large', 'Sostituzione troppo grande per la memoria disponibile')
+            : err,
+        ),
+      );
       worker.on('exit', () => end(new Error('worker terminato')));
     });
     const files: { path: string; count: number; etag: string }[] = [];
@@ -555,8 +638,10 @@ export class FileService {
             skipped.push({ path: change.rel, reason: 'too_large' });
             return;
           }
+          // Niente da cambiare: né copia né scrittura, e il file non risulta modificato.
+          if (data.equals(current)) return;
           await this.backups.saveFile(this.guard.relativeOf(abs), current, 'save');
-          await writeFileAtomic(abs, data, st);
+          await writeFileAtomic(abs, data, { original: st, expect: st });
           files.push({ path: change.rel, count: change.count, etag: etagOf(data) });
         });
       } catch (err) {
@@ -649,13 +734,15 @@ export class FileService {
   async restore(input: string, id: string): Promise<SaveResult> {
     const target = await this.historyTarget(input);
     this.guard.assertWritable(target);
-    const data = await this.readVersion(target, id);
-    if (data.length > this.maxFileSize) {
-      throw new EdithaError('too_large', `Versione troppo grande (${data.length} byte)`, {
-        size: data.length,
-        limit: this.maxFileSize,
+    // Stesso limite delle copie fatte all'eliminazione: ciò che si conserva si può ripristinare.
+    const version = await this.statVersionOf(target, id);
+    if (version.size > this.maxDownload) {
+      throw new EdithaError('too_large', `Versione troppo grande (${version.size} byte)`, {
+        size: version.size,
+        limit: this.maxDownload,
       });
     }
+    const data = await this.readVersion(target, id);
     return this.locked([target.abs], async () => {
       let existing: Stats | null = null;
       try {
@@ -669,10 +756,11 @@ export class FileService {
         const current = await readFile(target.abs);
         if (!current.equals(data)) {
           await this.backups.saveFile(this.guard.relativeOf(target.abs), current, 'restore');
-          await writeFileAtomic(target.abs, data, existing);
+          await this.writeChecked(target, data, existing);
         }
       } else {
-        await writeFileAtomic(target.abs, data);
+        // File eliminato: si ricrea con i permessi della copia (copyFile li conserva).
+        await writeFileAtomic(target.abs, data, { mode: version.mode & 0o777, expect: null });
       }
       const after = await stat(target.abs);
       return { path: target.rel, etag: etagOf(data), size: data.length, mtime: after.mtime.toISOString() };
@@ -693,13 +781,22 @@ export class FileService {
     }
   }
 
-  private async readVersion(target: ResolvedPath, id: string): Promise<Buffer> {
+  private async statVersionOf(target: ResolvedPath, id: string): Promise<Stats> {
+    let st: Stats;
     try {
-      const st = await this.backups.statVersion(this.guard.relativeOf(target.abs), id);
-      if (!st.isFile()) throw new EdithaError('not_a_file', 'La versione è una cartella');
+      st = await this.backups.statVersion(this.guard.relativeOf(target.abs), id);
+    } catch {
+      throw new EdithaError('not_found', `Versione non trovata: ${id}`);
+    }
+    if (!st.isFile()) throw new EdithaError('not_a_file', 'La versione è una cartella');
+    return st;
+  }
+
+  private async readVersion(target: ResolvedPath, id: string): Promise<Buffer> {
+    await this.statVersionOf(target, id);
+    try {
       return await this.backups.read(this.guard.relativeOf(target.abs), id);
-    } catch (err) {
-      if (err instanceof EdithaError) throw err;
+    } catch {
       throw new EdithaError('not_found', `Versione non trovata: ${id}`);
     }
   }
@@ -715,19 +812,28 @@ export class FileService {
     const st = await stat(from.abs);
     return this.locked([to.abs], async () => {
       if (await this.exists(to.abs)) throw new EdithaError('already_exists', `Esiste già: ${to.rel}`, { path: to.rel });
+      // La destinazione non esisteva: se la copia si interrompe (disco pieno) si toglie ciò che
+      // questa chiamata ha creato, così un nuovo tentativo non trova "esiste già".
+      let started = false;
       try {
         if (st.isDirectory()) {
           const size = await treeSize(from.abs, this.maxDownload);
           if (size > this.maxDownload) throw new TransferTooLarge(size, this.maxDownload);
+          started = true;
           // I link simbolici restano link: niente copie di file fuori da /config.
           await cp(from.abs, to.abs, { recursive: true, verbatimSymlinks: true, errorOnExist: true, force: false });
         } else if (st.isFile()) {
           if (st.size > this.maxDownload) throw new TransferTooLarge(st.size, this.maxDownload);
+          started = true;
           await copyFile(from.abs, to.abs, fsConstants.COPYFILE_EXCL);
         } else {
           throw new EdithaError('not_a_file', `Non è un file: ${from.rel}`);
         }
       } catch (err) {
+        // EEXIST: la destinazione è comparsa nel frattempo e non è nostra.
+        if (started && (err as NodeJS.ErrnoException).code !== 'EEXIST') {
+          await rm(to.abs, { recursive: true, force: true }).catch(() => undefined);
+        }
         if (err instanceof EdithaError) throw err;
         throw fromFsError(err, to.rel);
       }

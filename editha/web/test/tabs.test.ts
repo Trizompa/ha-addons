@@ -13,6 +13,18 @@ function model(...paths: string[]): TabsModel<string> {
 }
 
 describe('TabsModel', () => {
+  it('insert mette la tab dopo quella attiva senza attivarla', () => {
+    const m = model('a', 'b', 'c');
+    m.activate('a');
+    m.insert(tab('d'));
+    assert.deepEqual(m.tabs.map((t) => t.path), ['a', 'd', 'b', 'c']);
+    assert.equal(m.active?.path, 'a');
+    m.activate('c');
+    m.insert(tab('e'));
+    assert.equal(m.active?.path, 'c');
+    assert.deepEqual(m.tabs.map((t) => t.path), ['a', 'd', 'b', 'c', 'e']);
+  });
+
   it('apre le tab dopo quella attiva e attiva la nuova', () => {
     const m = model('a', 'b', 'c');
     m.activate('a');

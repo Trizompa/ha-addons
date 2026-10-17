@@ -176,11 +176,22 @@ export class EdithaEditorPane extends LitElement {
   }
 
   /** Sostituisce il testo di una tab (es. ricarica dal disco) lasciando la modifica annullabile. */
-  replaceDoc(tab: EditorTab, text: string): void {
+  replaceDoc(tab: EditorTab, text: string): ChangeSet | null {
     const state = this.stateOf(tab);
-    const spec = { changes: { from: 0, to: state.doc.length, insert: text } };
-    if (tab === this.current && this.view) this.view.dispatch(spec);
-    else tab.state = state.update(spec).state;
+    // Si cambia solo la parte diversa: cursore, pieghe e scorrimento restano dove sono.
+    const next = state.toText(text);
+    const a = state.doc.toString();
+    const b = next.toString();
+    if (a === b) return null;
+    const max = Math.min(a.length, b.length);
+    let start = 0;
+    while (start < max && a.charCodeAt(start) === b.charCodeAt(start)) start++;
+    let end = 0;
+    while (end < max - start && a.charCodeAt(a.length - 1 - end) === b.charCodeAt(b.length - 1 - end)) end++;
+    const tr = state.update({ changes: { from: start, to: a.length - end, insert: next.slice(start, b.length - end) } });
+    if (tab === this.current && this.view) this.view.dispatch(tr);
+    else tab.state = tr.state;
+    return tr.changes;
   }
 
   command(name: 'undo' | 'redo' | 'search'): void {
@@ -232,6 +243,19 @@ export class EdithaEditorPane extends LitElement {
     if (!view || !this.current) return '';
     const { from, to } = view.state.selection.main;
     return view.state.sliceDoc(from, to);
+  }
+
+  /**
+   * Selezione da salvare come snippet: a capo sempre \n, e la colonna d'inizio quando prima
+   * della selezione sulla riga ci sono solo spazi (serve a togliere il rientro alle righe dopo).
+   */
+  selectionForSnippet(): { text: string; column: number } {
+    const view = this.view;
+    if (!view || !this.current) return { text: '', column: 0 };
+    const { from, to } = view.state.selection.main;
+    const line = view.state.doc.lineAt(from);
+    const before = view.state.doc.sliceString(line.from, from);
+    return { text: view.state.doc.sliceString(from, to), column: /^\s*$/.test(before) ? before.length : 0 };
   }
 
   focusEditor(): void {

@@ -3,6 +3,7 @@ import type { ThemeMode } from '../api/types.js';
 import { icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
 import { t } from '../i18n/index.js';
+import { shortcutLabel } from '../state/keys.js';
 
 export interface ToolbarState {
   hasTab: boolean;
@@ -86,7 +87,7 @@ export class EdithaToolbar extends LitElement {
       .spacer {
         flex: 1;
       }
-      @media (max-width: 720px) {
+      @media (max-width: 760px) {
         .brand small,
         .hide-narrow {
           display: none;
@@ -137,7 +138,7 @@ export class EdithaToolbar extends LitElement {
   private button(name: string, label: string, path: string, opts: { disabled?: boolean; on?: boolean; cls?: string } = {}) {
     return html`<button
       class="icon-btn ${opts.on ? 'on' : ''} ${opts.cls ?? ''}"
-      title=${label}
+      title=${shortcutLabel(label)}
       aria-label=${label}
       aria-pressed=${opts.on === undefined ? nothing : String(opts.on)}
       ?disabled=${opts.disabled}

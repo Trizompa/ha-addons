@@ -17,6 +17,7 @@ export class EdithaPreviewPanel extends LitElement {
     size: { state: true },
     zoom: { state: true },
     failed: { state: true },
+    pdfReady: { state: true },
   };
 
   declare path: string;
@@ -25,7 +26,12 @@ export class EdithaPreviewPanel extends LitElement {
   /** Percentuale a cui l'immagine è mostrata rispetto ai suoi pixel. */
   declare zoom: number | null;
   private resizeObserver: ResizeObserver | null = null;
-  declare failed: boolean;
+  /** Spiegazione del perché l'anteprima non si vede; null finché va tutto bene. */
+  declare failed: string | null;
+  /** PDF: il server risponde bene, si può caricare nel riquadro (mai il JSON di un errore). */
+  declare pdfReady: boolean;
+  /** Controllo in corso: un cambio di file rende vecchie le risposte precedenti. */
+  private check = 0;
 
   constructor() {
     super();
@@ -33,7 +39,8 @@ export class EdithaPreviewPanel extends LitElement {
     this.actual = false;
     this.size = null;
     this.zoom = null;
-    this.failed = false;
+    this.failed = null;
+    this.pdfReady = false;
   }
 
   static override styles = [
@@ -121,8 +128,51 @@ export class EdithaPreviewPanel extends LitElement {
       this.actual = false;
       this.size = null;
       this.zoom = null;
-      this.failed = false;
+      this.failed = null;
+      this.pdfReady = false;
+      const token = ++this.check;
+      if (this.path && previewKind(this.path) === 'pdf') {
+        void this.diagnose(token).then((message) => {
+          if (token !== this.check) return;
+          if (message) this.failed = message;
+          else this.pdfReady = true;
+        });
+      }
     }
+  }
+
+  /**
+   * Chiede al server lo stato dell'anteprima (senza cache) per spiegare un errore preciso:
+   * file sparito, troppo grande, non consentito. Null se la risposta è buona.
+   */
+  private async diagnose(token: number): Promise<string | null> {
+    const pdf = previewKind(this.path) === 'pdf';
+    const generic = pdf ? t('preview.failedPdf') : t('preview.failed');
+    let status: number;
+    try {
+      const url = api.previewUrl(this.path);
+      let res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+      // HEAD non accettato da un proxy: si chiede il file, senza leggerne il contenuto.
+      if (res.status === 405) {
+        res = await fetch(url, { cache: 'no-store' });
+        void res.body?.cancel();
+      }
+      status = res.status;
+    } catch {
+      return token === this.check ? generic : null;
+    }
+    if (status === 404) return t('preview.notFound');
+    if (status === 413) return t('preview.tooLarge');
+    if (status === 403) return t('preview.forbidden');
+    if (status >= 200 && status < 300) return pdf ? null : generic;
+    return generic;
+  }
+
+  private onError(): void {
+    const token = this.check;
+    void this.diagnose(token).then((message) => {
+      if (token === this.check) this.failed = message ?? t('preview.failed');
+    });
   }
 
   override updated(): void {
@@ -158,15 +208,17 @@ export class EdithaPreviewPanel extends LitElement {
 
   private renderBody() {
     const url = api.previewUrl(this.path);
-    if (previewKind(this.path) === 'pdf') return html`<iframe src=${url} title=${basename(this.path)}></iframe>`;
-    if (this.failed) return html`<div class="note">${t('preview.failed')}</div>`;
+    if (this.failed) return html`<div class="note">${this.failed}</div>`;
+    if (previewKind(this.path) === 'pdf') {
+      return this.pdfReady ? html`<iframe src=${url} title=${basename(this.path)}></iframe>` : nothing;
+    }
     return html`<div class="stage ${this.actual ? 'actual' : ''}">
       <img
         src=${url}
         alt=${basename(this.path)}
         title=${this.actual ? t('preview.fit') : t('preview.actual')}
         @load=${this.onLoad}
-        @error=${() => (this.failed = true)}
+        @error=${this.onError}
         @click=${() => (this.actual = !this.actual)}
       />
     </div>`;

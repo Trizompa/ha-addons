@@ -198,3 +198,21 @@ export function builtinSnippets(): BuiltinSnippet[] {
 export function fillIds(body: string, now = Date.now()): string {
   return body.replaceAll('{{ID}}', String(now));
 }
+
+/**
+ * Testo selezionato da salvare come snippet. Se la selezione parte dopo il rientro della sua
+ * prima riga (`firstLineColumn` = colonna d'inizio, quando prima c'è solo rientro; 0 altrimenti),
+ * la prima riga è senza rientro e le altre lo hanno ancora: si toglie lo stesso rientro anche
+ * a quelle, così all'inserimento la struttura resta giusta. Si tolgono solo spazi, mai testo.
+ */
+export function normalizeSnippetBody(text: string, firstLineColumn: number): string {
+  if (firstLineColumn <= 0) return text;
+  const lines = text.split('\n');
+  return lines
+    .map((line, i) => {
+      if (i === 0) return line;
+      const lead = /^[ \t]*/.exec(line)![0].length;
+      return line.slice(Math.min(lead, firstLineColumn));
+    })
+    .join('\n');
+}

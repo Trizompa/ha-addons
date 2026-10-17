@@ -516,13 +516,16 @@ test.describe('Bozze (ED-14)', () => {
     await expect(again.locator('editha-tab-bar .tab.dirty')).toHaveCount(0);
   });
 
-  test('la bozza di un file cancellato nel frattempo si scarta, senza richiederla ogni volta', async ({ page, request }) => {
+  test('la bozza di un file cancellato nel frattempo si può ricreare', async ({ page, request }) => {
     // Cancellato da fuori mentre la pagina è chiusa.
     const again = await typeAndLeave(page, request, 'drafts/sparisce.yaml', () =>
       rm(path.join(configDir, 'drafts/sparisce.yaml')),
     );
     await dialogButton(again, 'Recupera').click();
-    await expect(again.locator('editha-toasts')).toContainText('sono state scartate');
+    await expect(again.locator('editha-dialog dialog[open]')).toContainText('non esiste più');
+    await dialogButton(again, 'Ricrea il file').click();
+    await expect(activeTab(again)).toHaveAttribute('data-path', 'drafts/sparisce.yaml');
+    await expect.poll(() => disk('drafts/sparisce.yaml')).toBe('stato: salvato\nbozza: si\n');
     await expect.poll(async () => (await (await request.get('api/drafts')).json()).drafts.length).toBe(0);
   });
 });

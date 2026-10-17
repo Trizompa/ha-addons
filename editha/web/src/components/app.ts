@@ -3,14 +3,16 @@ import type { ChangeSet, EditorState, StateEffect, Text } from '@codemirror/stat
 import type { ViewUpdate } from '@codemirror/view';
 import { redoDepth, undoDepth } from '@codemirror/commands';
 import { forEachDiagnostic } from '@codemirror/lint';
-import { api, ApiError, whileLeaving } from '../api/client.js';
+import { api, ApiError, errorText, whileLeaving } from '../api/client.js';
 import { getLang, onLangChange, resolveLang, setLang, t, type LanguageSetting, type MessageKey } from '../i18n/index.js';
 import { connection } from '../api/connection.js';
 import type { Draft, Entry, Session, Settings, ThemeMode } from '../api/types.js';
-import { createEditorState, reconfigureEffects } from '../editor/setup.js';
+import { createEditorState, docText, reconfigureEffects } from '../editor/setup.js';
 import { languageOf } from '../editor/languages.js';
+import { LINT_MAX_CHARS } from '../editor/yaml-lint.js';
 import { basename, dirname, extension, join, resolvePath, validateName } from '../state/paths.js';
 import { previewKind } from '../state/preview.js';
+import { shortcutKey } from '../state/keys.js';
 import { forgetSecrets, secretKeys } from '../state/secrets.js';
 import type { LinkKind } from '../editor/links.js';
 import { TabsModel } from '../state/tabs.js';
@@ -27,7 +29,7 @@ import type { ToolbarState } from './toolbar.js';
 import type { EdithaInsertPanel, InsertTab } from './insert-panel.js';
 import type { Snippet } from '../api/types.js';
 import { haData } from '../state/ha-data.js';
-import { fillIds } from '../editor/snippets.js';
+import { fillIds, normalizeSnippetBody } from '../editor/snippets.js';
 import './context-menu.js';
 import './dialog.js';
 import './editor-pane.js';
@@ -49,7 +51,14 @@ import { activeOutlineIndex, buildOutline, type OutlineItem } from '../editor/ou
 import './snippet-editor.js';
 import type { EdithaSnippetEditor } from './snippet-editor.js';
 import type { CompareSide } from './compare-panel.js';
-import { ENTITY_ID, type EdithaSearchPanel, type SearchRequest } from './search-panel.js';
+import {
+  ENTITY_ID,
+  replaceConfirmMessage,
+  replaceDoneMessage,
+  replaceSkippedMessage,
+  type EdithaSearchPanel,
+  type SearchRequest,
+} from './search-panel.js';
 import type { SearchMatch } from '../api/types.js';
 import type { EdithaFolderPicker } from './folder-picker.js';
 import type { EdithaAboutDialog } from './about-dialog.js';
@@ -463,7 +472,6 @@ export class EdithaApp extends LitElement {
     setLang(resolveLang(this.settings.language));
     this.side!.makeState = (tab) => this.mirrorState(tab);
     this.refreshToolbar();
-    await this.restoreSession();
     await this.recoverDrafts();
     void haData.start();
     void this.loadSnippets();
@@ -527,12 +535,32 @@ export class EdithaApp extends LitElement {
       return;
     }
     clearInterval(this.healthTimer);
+    // Le bozze che non sono partite mentre Editha non rispondeva si scrivono adesso.
+    void this.writeAllDrafts();
     if (this.build && build !== this.build) {
       this.addonUpdated = true;
       return;
     }
     this.offline = false;
     this.toasts.show(t('conn.restored'), 'success');
+  }
+
+  /** Ricarica dal banner: prima le bozze; senza server le modifiche andrebbero perse, e lo si dice. */
+  private async reloadPage(): Promise<void> {
+    if (this.tabs.tabs.some((tab) => tab.dirty)) {
+      if (this.offline && !this.addonUpdated) {
+        const ok = await this.dialog.confirm({
+          title: t('conn.reload'),
+          message: t('conn.reloadOffline'),
+          confirmLabel: t('conn.reload'),
+          danger: true,
+        });
+        if (!ok) return;
+      } else {
+        await this.writeAllDrafts();
+      }
+    }
+    location.reload();
   }
 
   private renderBanner() {
@@ -542,7 +570,7 @@ export class EdithaApp extends LitElement {
       : t('conn.offline');
     return html`<div class="banner ${this.addonUpdated ? 'info' : ''}" role="alert">
       <span>${text}</span>
-      <button class="btn primary" @click=${() => location.reload()}>${t('conn.reload')}</button>
+      <button class="btn primary" @click=${() => void this.reloadPage()}>${t('conn.reload')}</button>
     </div>`;
   }
 
@@ -602,14 +630,19 @@ export class EdithaApp extends LitElement {
     try {
       session = await api.session();
     } catch {
-      this.sessionReady = true;
+      // Sessione non letta: non la si sovrascrive con una vuota (sessionReady resta false).
       return;
     }
     const missing: string[] = [];
     for (const saved of session.tabs) {
-      const tab = await this.loadTab(saved.path, { anchor: saved.anchor, head: saved.head }, true);
+      let failure: unknown = null;
+      const tab = await this.loadTab(saved.path, { anchor: saved.anchor, head: saved.head }, true, (err) => (failure = err));
       if (tab) this.pane.setScrollTop(tab, saved.scrollTop);
-      else missing.push(saved.path);
+      else {
+        missing.push(saved.path);
+        // Un errore passeggero (Editha non risponde) non toglie il file dalla sessione.
+        if (!(failure instanceof ApiError && PERMANENT_OPEN_ERRORS.has(failure.code))) this.unrestored.push(saved);
+      }
     }
     const active = (session.active && this.tabs.find(session.active)) || this.tabs.tabs[0];
     if (active) this.activate(active.path);
@@ -633,12 +666,17 @@ export class EdithaApp extends LitElement {
     this.sessionTimer = setTimeout(() => void this.saveSession(), 600);
   }
 
+  /** Tab della sessione che all'avvio non si sono aperte per un errore passeggero. */
+  private unrestored: Session['tabs'] = [];
+
   private async saveSession(): Promise<void> {
+    const open = this.tabs.tabs.map((tab) => {
+      const sel = this.pane.stateOf(tab).selection.main;
+      return { path: tab.path, anchor: sel.anchor, head: sel.head, scrollTop: this.pane.scrollTopOf(tab) };
+    });
+    const kept = this.unrestored.filter((u) => !this.tabs.find(u.path));
     const session: Session = {
-      tabs: this.tabs.tabs.slice(0, 50).map((tab) => {
-        const sel = this.pane.stateOf(tab).selection.main;
-        return { path: tab.path, anchor: sel.anchor, head: sel.head, scrollTop: this.pane.scrollTopOf(tab) };
-      }),
+      tabs: [...open, ...kept].slice(0, 50),
       active: this.tabs.active?.path ?? null,
       side: this.split ? (this.side?.shown?.path ?? null) : null,
     };
@@ -686,18 +724,24 @@ export class EdithaApp extends LitElement {
     });
     this.saved.set(tab, tab.state.doc);
     // Se nel frattempo lo stesso file è stato aperto da un'altra parte, vale la tab già in elenco.
-    const listed = background ? this.tabs.append(tab) : this.tabs.open(tab);
+    // Mai attivata qui: chi apre la mostra con activate(), se è ancora quella richiesta.
+    const listed = background ? this.tabs.append(tab) : this.tabs.insert(tab);
     this.refreshTabs();
     return listed;
   }
 
+  private openSeq = 0;
+
   async openFile(path: string, asText = false): Promise<void> {
     if (!asText && previewKind(path) && !this.tabs.find(path)) {
+      this.openSeq++;
       this.openPreview(path);
       return;
     }
+    // Due clic rapidi su A e poi B: vince B anche se A arriva dopo.
+    const seq = ++this.openSeq;
     const tab = await this.loadTab(path);
-    if (!tab) return;
+    if (!tab || seq !== this.openSeq) return;
     this.activate(tab.path);
     if (this.narrow) this.drawerOpen = false;
     // Su touch il focus aprirebbe la tastiera a ogni file aperto.
@@ -733,7 +777,8 @@ export class EdithaApp extends LitElement {
         defaultId: 'save',
       });
       if (choice === null) return false;
-      if (choice === 'save' && !(await this.save(tab))) return false;
+      // Salvato, ma intanto si è scritto ancora: la tab resta aperta con le nuove modifiche.
+      if (choice === 'save' && (!(await this.save(tab)) || tab.dirty)) return false;
     }
     // Lo stato della tab chiusa viene staccato dalla vista prima di scegliere la successiva:
     // l'editor mostra sempre il contenuto della nuova tab attiva (ED-4, FEP #19).
@@ -816,8 +861,10 @@ export class EdithaApp extends LitElement {
   }
 
   /** SR-3: sostituzione nei file trovati, dopo conferma; i file con modifiche non salvate si saltano. */
-  private async replaceInFiles(e: CustomEvent<{ paths: string[]; request: SearchRequest; replacement: string; matches: number }>): Promise<void> {
-    const { request, replacement, matches } = e.detail;
+  private async replaceInFiles(
+    e: CustomEvent<{ paths: string[]; counts: Record<string, number>; request: SearchRequest; replacement: string; truncated: boolean }>,
+  ): Promise<void> {
+    const { request, replacement, counts, truncated } = e.detail;
     const dirty = e.detail.paths.filter((p) => this.tabs.find(p)?.dirty);
     const paths = e.detail.paths.filter((p) => !dirty.includes(p));
     if (paths.length === 0) {
@@ -827,11 +874,12 @@ export class EdithaApp extends LitElement {
     const ok = await this.dialog.confirm({
       title: t('replace.confirmTitle'),
       message:
-        t(paths.length === 1 ? 'replace.confirmOne' : 'replace.confirmMany', {
-          n: matches,
+        replaceConfirmMessage({
+          matches: paths.reduce((n, p) => n + (counts[p] ?? 0), 0),
+          files: paths.length,
           query: request.query,
           replacement,
-          files: paths.length,
+          truncated,
         }) + (dirty.length ? t('replace.skipDirty', { names: dirty.map((p) => basename(p)).join(', ') }) : ''),
       confirmLabel: t('replace.all'),
       danger: true,
@@ -850,8 +898,8 @@ export class EdithaApp extends LitElement {
       if (tab && !tab.dirty) await this.reloadFromDisk(tab, true);
     }
     const count = res.files.reduce((n, f) => n + f.count, 0);
-    this.flash(t('replace.done', { n: count, files: res.files.length }));
-    if (res.skipped.length) this.toasts.show(t('replace.skipped', { n: res.skipped.length }), 'warning');
+    this.flash(replaceDoneMessage(count, res.files.length));
+    if (res.skipped.length) this.toasts.show(replaceSkippedMessage(res.skipped.length), 'warning');
     await this.searchPanel.rerun();
   }
 
@@ -865,7 +913,7 @@ export class EdithaApp extends LitElement {
   /** Testo da confrontare: quello della tab aperta (anche non salvato) o quello su disco. */
   private async compareSide(path: string): Promise<CompareSide | null> {
     const tab = this.tabs.find(path);
-    if (tab) return { path, content: this.pane.stateOf(tab).doc.toString() };
+    if (tab) return { path, content: docText(this.pane.stateOf(tab)) };
     try {
       return { path, content: (await api.read(path)).content };
     } catch (err) {
@@ -948,7 +996,7 @@ export class EdithaApp extends LitElement {
     const canonical = this.pane.stateOf(tab);
     const sel = canonical.selection.main;
     return createEditorState({
-      doc: canonical.doc.toString(),
+      doc: docText(canonical),
       path: tab.path,
       readOnly: tab.readOnly,
       prefs: { wordWrap: this.settings.wordWrap, fontSize: this.settings.fontSize },
@@ -996,7 +1044,9 @@ export class EdithaApp extends LitElement {
   }
 
   private async openInSide(path: string): Promise<void> {
-    const tab = await this.loadTab(path, undefined, true);
+    const tab = await this.loadTab(path, undefined, true, (err) =>
+      this.toasts.show(this.openErrorText(path, err), 'error'),
+    );
     if (tab) await this.showInSide(tab);
   }
 
@@ -1023,8 +1073,8 @@ export class EdithaApp extends LitElement {
   /** Testo sostituito (ricarica, bozza recuperata): anche la colonna destra si riallinea. */
   private replaceDoc(tab: EditorTab, text: string): void {
     const visible = this.pane.shown === tab;
-    this.pane.replaceDoc(tab, text);
-    if (!visible) this.side?.resync(tab);
+    const changes = this.pane.replaceDoc(tab, text);
+    if (!visible && changes && !this.side?.replaceFromOutside(tab, changes)) this.side?.resync(tab);
   }
 
   private renderSide() {
@@ -1061,6 +1111,8 @@ export class EdithaApp extends LitElement {
 
   async save(tab: EditorTab | null = this.focusedTab()): Promise<boolean> {
     if (!tab || tab.readOnly) return false;
+    // Niente da salvare: Ctrl+S su una tab pulita non deve proporre di sovrascrivere il file.
+    if (!tab.dirty && !this.saving.has(tab)) return true;
     // Un secondo Ctrl+S mentre il primo è in viaggio aspetta: altrimenti partirebbe con
     // l'etag vecchio e il server lo scambierebbe per un conflitto.
     const previous = this.saving.get(tab) ?? Promise.resolve(true);
@@ -1078,18 +1130,45 @@ export class EdithaApp extends LitElement {
 
   private async saveNow(tab: EditorTab): Promise<boolean> {
     if (this.tabs.find(tab.path) !== tab) return false;
-    const doc = this.pane.stateOf(tab).doc;
+    const state = this.pane.stateOf(tab);
+    const doc = state.doc;
     try {
-      const res = await api.save(tab.path, doc.toString(), tab.etag);
+      const res = await api.save(tab.path, docText(state), tab.etag);
       this.markSaved(tab, doc, res.etag);
       if (tab.name === 'secrets.yaml') forgetSecrets();
       this.flash(t('save.done', { name: tab.name }));
       return true;
     } catch (err) {
       if (err instanceof ApiError && err.code === 'conflict') return this.resolveConflict(tab, err);
+      if (err instanceof ApiError && err.code === 'not_found') return this.recreateOnSave(tab, state);
       this.toasts.show(t('save.failed', { name: tab.name, error: this.errorText(err) }), 'error');
       return false;
     }
+  }
+
+  /** Il file è stato rinominato o eliminato da un'altra parte mentre era aperto qui. */
+  private async recreateOnSave(tab: EditorTab, state: EditorState): Promise<boolean> {
+    const choice = await this.dialog.choose({
+      title: t('save.missingTitle'),
+      message: t('save.missing', { name: tab.path }),
+      choices: [
+        { id: 'cancel', label: t('common.cancel') },
+        { id: 'recreate', label: t('drafts.recreate'), variant: 'primary' },
+      ],
+      defaultId: 'recreate',
+    });
+    if (choice !== 'recreate') return false;
+    try {
+      await api.create(tab.path, 'file', docText(state));
+      const file = await api.read(tab.path);
+      this.markSaved(tab, state.doc, file.etag);
+    } catch (err) {
+      this.toasts.show(t('save.failed', { name: tab.name, error: this.errorText(err) }), 'error');
+      return false;
+    }
+    await this.tree.refresh(dirname(tab.path));
+    this.flash(t('save.done', { name: tab.name }));
+    return true;
   }
 
   private markSaved(tab: EditorTab, doc: Text, etag: string): void {
@@ -1104,39 +1183,64 @@ export class EdithaApp extends LitElement {
 
   // ——— bozze delle modifiche non salvate (ED-14) ———
 
-  private scheduleDraft(tab: EditorTab): void {
+  /** Entro quando la bozza va scritta anche se si continua a scrivere senza pause. */
+  private readonly draftDue = new Map<EditorTab, number>();
+  /**
+   * Bozze della volta precedente non ancora recuperate o scartate: finché l'utente non ha
+   * scelto, una modifica allo stesso file non deve sostituirle sul server.
+   */
+  private pendingDrafts = new Set<string>();
+
+  private scheduleDraft(tab: EditorTab, delay = 1000): void {
     if (tab.readOnly) return;
     clearTimeout(this.draftTimers.get(tab));
+    const now = Date.now();
+    const due = this.draftDue.get(tab) ?? now + 5000;
+    this.draftDue.set(tab, due);
     this.draftTimers.set(
       tab,
-      setTimeout(() => void this.writeDraft(tab), 1000),
+      setTimeout(() => void this.writeDraft(tab), Math.max(0, Math.min(delay, due - now))),
     );
   }
 
   private async writeDraft(tab: EditorTab): Promise<void> {
     clearTimeout(this.draftTimers.get(tab));
     this.draftTimers.delete(tab);
+    this.draftDue.delete(tab);
     if (this.tabs.find(tab.path) !== tab) return;
     if (!tab.dirty) return this.dropDraft(tab.path, tab);
-    const gen = this.draftGen.get(tab) ?? 0;
     const path = tab.path;
+    if (this.pendingDrafts.has(path)) return this.scheduleDraft(tab);
+    const gen = this.draftGen.get(tab) ?? 0;
     try {
-      await api.saveDraft(path, this.pane.stateOf(tab).doc.toString(), tab.etag);
+      await api.saveDraft(path, docText(this.pane.stateOf(tab)), tab.etag);
       // Salvata, scartata o rinominata nel frattempo: questa bozza non serve più.
       if ((this.draftGen.get(tab) ?? 0) !== gen || tab.path !== path) {
         api.deleteDraft(path).catch(() => undefined);
+        // Rinominata: la bozza va riscritta sotto il nuovo nome.
+        if (tab.path !== path && tab.dirty && this.tabs.find(tab.path) === tab) this.scheduleDraft(tab);
         return;
       }
       this.drafted.add(path);
-    } catch {
-      // Senza server la bozza non si salva; il file resta comunque modificato nella tab.
+    } catch (err) {
+      // Editha non risponde (aggiornamento, riavvio): si riprova, e intanto il timer in attesa
+      // fa sì che chiudendo la pagina la bozza parta comunque.
+      if (err instanceof ApiError && err.code === 'offline' && tab.dirty && this.tabs.find(tab.path) === tab) {
+        this.scheduleDraft(tab, 5000);
+      }
     }
+  }
+
+  /** Scrive subito la bozza di ogni tab modificata (prima di ricaricare la pagina, al ritorno del server). */
+  private writeAllDrafts(): Promise<void[]> {
+    return Promise.all(this.tabs.tabs.filter((t) => t.dirty && !t.readOnly).map((t) => this.writeDraft(t)));
   }
 
   private dropDraft(path: string, tab?: EditorTab): void {
     if (tab) {
       clearTimeout(this.draftTimers.get(tab));
       this.draftTimers.delete(tab);
+      this.draftDue.delete(tab);
       this.draftGen.set(tab, (this.draftGen.get(tab) ?? 0) + 1);
     }
     if (!this.drafted.delete(path)) return;
@@ -1152,42 +1256,60 @@ export class EdithaApp extends LitElement {
     if (document.visibilityState === 'hidden') whileLeaving(() => this.flushDrafts());
   };
 
-  /** Alla riapertura: modifiche rimaste in sospeso, da recuperare o scartare. */
+  /**
+   * Alla riapertura: modifiche rimaste in sospeso. La domanda arriva prima di riaprire le tab
+   * della sessione, così non si fa in tempo a modificare un file che ha una bozza da recuperare.
+   */
   private async recoverDrafts(): Promise<void> {
-    let drafts: Draft[];
+    let drafts: Draft[] = [];
     try {
       drafts = (await api.drafts()).drafts;
     } catch {
-      return;
+      // Senza elenco si prosegue: le bozze restano sul server per la prossima apertura.
     }
-    if (drafts.length === 0) return;
-    const names = drafts.map((d) => `• ${d.path} (${formatVersionDate(d.savedAt)})`).join('\n');
-    const choice = await this.dialog.choose({
-      title: t('drafts.title'),
-      message: drafts.length === 1 ? t('drafts.messageOne') : t('drafts.messageMany', { n: drafts.length }),
-      detail: names,
-      choices: [
-        { id: 'discard', label: t('drafts.discard'), variant: 'danger' },
-        { id: 'recover', label: t('drafts.recover'), variant: 'primary' },
-      ],
-      defaultId: 'recover',
-    });
-    if (choice === 'discard') {
-      await Promise.all(drafts.map((d) => api.deleteDraft(d.path).catch(() => undefined)));
-      return;
+    this.pendingDrafts = new Set(drafts.map((d) => d.path));
+    let choice: string | null = null;
+    try {
+      if (drafts.length) {
+        const names = drafts.map((d) => `• ${d.path} (${formatVersionDate(d.savedAt)})`).join('\n');
+        choice = await this.dialog.choose({
+          title: t('drafts.title'),
+          message: drafts.length === 1 ? t('drafts.messageOne') : t('drafts.messageMany', { n: drafts.length }),
+          detail: names,
+          choices: [
+            { id: 'discard', label: t('drafts.discard'), variant: 'danger' },
+            { id: 'recover', label: t('drafts.recover'), variant: 'primary' },
+          ],
+          defaultId: 'recover',
+        });
+      }
+      await this.restoreSession();
+      if (choice === 'discard') {
+        await Promise.all(drafts.map((d) => api.deleteDraft(d.path).catch(() => undefined)));
+      } else if (choice === 'recover') {
+        await this.applyDrafts(drafts);
+      }
+      // Esc: le bozze restano e la domanda torna alla prossima apertura.
+    } finally {
+      this.pendingDrafts = new Set();
     }
-    // Esc: le bozze restano e la domanda torna alla prossima apertura.
-    if (choice !== 'recover') return;
+  }
+
+  private async applyDrafts(drafts: Draft[]): Promise<void> {
     let first: EditorTab | null = null;
     for (const draft of drafts) {
       let failure: unknown = null;
-      const tab = await this.loadTab(draft.path, undefined, true, (err) => (failure = err));
-      // File sparito, diventato di sola lettura o non più apribile: la bozza non si potrà mai
-      // salvare, e tenerla farebbe tornare la domanda a ogni apertura.
-      const permanent =
+      let tab = await this.loadTab(draft.path, undefined, true, (err) => (failure = err));
+      if (!tab && failure instanceof ApiError && failure.code === 'not_found') {
+        // Il file non c'è più (rinominato o eliminato da un'altra parte): si può ricrearlo.
+        tab = await this.recreateFromDraft(draft);
+        if (!tab) continue;
+      } else if (
         (tab !== null && tab.readOnly) ||
-        (failure instanceof ApiError && PERMANENT_OPEN_ERRORS.has(failure.code));
-      if (permanent) {
+        (failure instanceof ApiError && PERMANENT_OPEN_ERRORS.has(failure.code))
+      ) {
+        // Diventato di sola lettura o non più apribile: la bozza non si potrà mai salvare, e
+        // tenerla farebbe tornare la domanda a ogni apertura.
         await api.deleteDraft(draft.path).catch(() => undefined);
         this.toasts.show(t('drafts.dropped', { name: draft.path }), 'warning');
         continue;
@@ -1196,8 +1318,13 @@ export class EdithaApp extends LitElement {
         this.toasts.show(t('drafts.cannotOpen', { name: draft.path }), 'warning');
         continue;
       }
+      if (tab.dirty) {
+        // Modificato mentre si apriva la sessione: non si sovrascrive quello che si è appena scritto.
+        this.toasts.show(t('drafts.skippedDirty', { name: tab.name }), 'warning');
+        continue;
+      }
       const diskEtag = tab.etag;
-      if (this.pane.stateOf(tab).doc.toString() === draft.content) {
+      if (docText(this.pane.stateOf(tab)) === draft.content) {
         // Uguale al file su disco: niente da recuperare.
         await api.deleteDraft(draft.path).catch(() => undefined);
         continue;
@@ -1216,6 +1343,39 @@ export class EdithaApp extends LitElement {
       this.activate(first.path);
       this.flash(t('drafts.recovered'));
     }
+  }
+
+  /** Bozza di un file che non esiste più: ricrearlo con quelle modifiche, o scartarle. */
+  private async recreateFromDraft(draft: Draft): Promise<EditorTab | null> {
+    const choice = await this.dialog.choose({
+      title: t('drafts.title'),
+      message: t('drafts.missing', { name: draft.path }),
+      choices: [
+        { id: 'discard', label: t('drafts.discard'), variant: 'danger' },
+        { id: 'recreate', label: t('drafts.recreate'), variant: 'primary' },
+      ],
+      defaultId: 'recreate',
+    });
+    if (choice === 'discard') {
+      await api.deleteDraft(draft.path).catch(() => undefined);
+      return null;
+    }
+    if (choice !== 'recreate') return null;
+    try {
+      // create non sovrascrive mai: se nel frattempo il file è ricomparso, lo si dice.
+      await api.create(draft.path, 'file', draft.content);
+    } catch (err) {
+      this.toasts.show(t('drafts.recreateFailed', { name: draft.path, error: this.errorText(err) }), 'error');
+      return null;
+    }
+    await api.deleteDraft(draft.path).catch(() => undefined);
+    await this.tree.refresh(dirname(draft.path));
+    const tab = await this.loadTab(draft.path, undefined, true);
+    if (tab) {
+      this.activate(tab.path);
+      this.flash(t('drafts.recreated', { name: tab.name }));
+    }
+    return null;
   }
 
   /** Il file è cambiato su disco dopo l'apertura: decide l'utente. */
@@ -1242,8 +1402,12 @@ export class EdithaApp extends LitElement {
   }
 
   private async reloadFromDisk(tab: EditorTab, quiet = false): Promise<void> {
+    const before = this.pane.stateOf(tab).doc;
     try {
       const file = await api.read(tab.path);
+      // Ricarica automatica (dopo una sostituzione, un caricamento, un ripristino): se intanto si
+      // è scritto nella tab, il testo resta; al salvataggio l'etag vecchio farà chiedere cosa fare.
+      if (quiet && !this.pane.stateOf(tab).doc.eq(before)) return;
       this.replaceDoc(tab, file.content);
       this.markSaved(tab, this.pane.stateOf(tab).doc, file.etag);
       if (!quiet) this.toasts.show(t('conflict.reloaded', { name: tab.name }), 'info');
@@ -1393,15 +1557,29 @@ export class EdithaApp extends LitElement {
       danger: true,
     });
     if (!ok) return;
-    let backup: string | null;
-    try {
-      backup = (await api.remove(entry.path)).backup;
-    } catch (err) {
-      this.toasts.show(t('delete.failed', { name, error: this.errorText(err) }), 'error');
-      return;
+    let noBackup = false;
+    for (;;) {
+      try {
+        await api.remove(entry.path, noBackup);
+        break;
+      } catch (err) {
+        // File o cartelle molto grandi non hanno copia di sicurezza: il server lo dice prima,
+        // e si elimina solo dopo una seconda conferma esplicita.
+        if (err instanceof ApiError && err.code === 'no_backup' && !noBackup) {
+          const sure = await this.dialog.confirm({
+            title: entry.type === 'directory' ? t('delete.folderTitle') : t('delete.fileTitle'),
+            message: t('delete.noBackupConfirm', { what }),
+            confirmLabel: t('delete.noBackupConfirmLabel'),
+            danger: true,
+          });
+          if (!sure) return;
+          noBackup = true;
+          continue;
+        }
+        this.toasts.show(t('delete.failed', { name, error: this.errorText(err) }), 'error');
+        return;
+      }
     }
-    // File o cartelle molto grandi si eliminano senza copia di sicurezza: va detto.
-    if (backup === null) this.toasts.show(t('delete.noBackup', { name }), 'warning');
     for (const tab of affected) await this.closeTab(tab.path, { force: true });
     if (this.history && (this.history.path === entry.path || this.history.path.startsWith(entry.path + '/'))) {
       this.history = null;
@@ -1467,7 +1645,7 @@ export class EdithaApp extends LitElement {
     let current: string;
     let readOnly: boolean;
     if (tab) {
-      current = this.pane.stateOf(tab).doc.toString();
+      current = docText(this.pane.stateOf(tab));
       readOnly = tab.readOnly;
     } else {
       try {
@@ -1531,12 +1709,24 @@ export class EdithaApp extends LitElement {
     const done: string[] = [];
     for (const file of files) {
       let overwrite = false;
+      let noBackup = false;
       for (;;) {
         try {
-          await api.upload(dir, file.name, file, overwrite);
+          await api.upload(dir, file.name, file, overwrite, noBackup);
           done.push(file.name);
           break;
         } catch (err) {
+          if (err instanceof ApiError && err.code === 'no_backup' && !noBackup) {
+            const sure = await this.dialog.confirm({
+              title: t('upload.existsTitle'),
+              message: t('upload.noBackupConfirm', { name: file.name }),
+              confirmLabel: t('upload.overwrite'),
+              danger: true,
+            });
+            if (!sure) break;
+            noBackup = true;
+            continue;
+          }
           if (err instanceof ApiError && err.code === 'already_exists' && !overwrite) {
             const choice = await this.dialog.choose({
               title: t('upload.existsTitle'),
@@ -1761,9 +1951,14 @@ export class EdithaApp extends LitElement {
   }
 
   private async saveSelectionAsSnippet(): Promise<void> {
-    const body = this.editor.selectedText();
+    const selection = this.editor.selectionForSnippet();
+    const body = normalizeSnippetBody(selection.text, selection.column);
     if (!body.trim()) {
       this.toasts.show(t('snippet.selectFirst'), 'warning');
+      return;
+    }
+    if (body.length > 20000) {
+      this.toasts.show(t('snippet.tooLong'), 'warning');
       return;
     }
     const name = await this.dialog.prompt({
@@ -1774,7 +1969,8 @@ export class EdithaApp extends LitElement {
     });
     if (name === null) return;
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    if (await this.saveSnippets([...this.userSnippets, { id, name, body }])) this.flash(t('snippet.saved', { name }));
+    const trimmed = name.trim();
+    if (await this.saveSnippets([...this.userSnippets, { id, name: trimmed, body }])) this.flash(t('snippet.saved', { name: trimmed }));
   }
 
   private async editSnippet(id: string): Promise<void> {
@@ -1940,23 +2136,27 @@ export class EdithaApp extends LitElement {
   // ——— tastiera e uscita ———
 
   private readonly onKeyDown = (e: KeyboardEvent) => {
+    if (e.isComposing) return;
     const mod = e.ctrlKey || e.metaKey;
-    // e.code e non e.key: su Mac Opzione+W scrive «∑» e Opzione+S «ß».
-    const code = e.code;
-    if (mod && e.shiftKey && code === 'KeyF') {
+    const key = shortcutKey(e);
+    // Con una finestra aperta (dialogo, scelta della cartella, snippet, informazioni) le
+    // scorciatoie non agiscono sui file sotto di lei.
+    const modal = () =>
+      this.dialog.busy || e.composedPath().some((n) => n instanceof HTMLDialogElement && n.open);
+    if (mod && e.shiftKey && key === 'f') {
       e.preventDefault();
       void this.openSearch();
-    } else if (mod && (code === 'KeyS' || e.key.toLowerCase() === 's')) {
+    } else if (mod && key === 's') {
       e.preventDefault();
-      // Con una finestra di dialogo aperta non si salva sotto di lei.
-      if (this.dialog.busy) return;
+      if (modal()) return;
       if (e.altKey) void this.saveAll();
       else void this.save();
-    } else if (e.altKey && !mod && code === 'KeyW') {
+    } else if (e.altKey && !mod && key === 'w') {
       e.preventDefault();
-      if (this.dialog.busy) return;
+      if (modal()) return;
+      const tab = this.focusedTab();
       if (this.previewShown) this.closePreview();
-      else if (this.tabs.active) void this.closeTab(this.tabs.active.path);
+      else if (tab) void this.closeTab(tab.path);
     }
   };
 
@@ -2060,7 +2260,7 @@ export class EdithaApp extends LitElement {
       language: lang.label,
       readOnly: tab.readOnly,
       dirty: tab.dirty,
-      lint: lang.id === 'yaml' ? { errors, warnings } : null,
+      lint: lang.id === 'yaml' ? { errors, warnings, skipped: s.doc.length > LINT_MAX_CHARS } : null,
     };
   }
 
@@ -2096,11 +2296,7 @@ export class EdithaApp extends LitElement {
   }
 
   private errorText(err: unknown): string {
-    if (!(err instanceof ApiError)) return t('error.unexpected');
-    if (getLang() === 'it' || err.code === 'offline') return err.message;
-    const key = `error.${err.code}` as MessageKey;
-    const translated = t(key);
-    return translated === key ? err.message : translated;
+    return errorText(err);
   }
 
   private openErrorText(path: string, err: unknown): string {
@@ -2148,8 +2344,7 @@ export class EdithaApp extends LitElement {
           <editha-search-panel
             ?hidden=${!this.searchOpen}
             @search-close=${() => this.closeSearch()}
-            @search-replace=${(e: CustomEvent<{ paths: string[]; request: SearchRequest; replacement: string; matches: number }>) =>
-              void this.replaceInFiles(e)}
+            @search-replace=${(e: Parameters<EdithaApp['replaceInFiles']>[0]) => void this.replaceInFiles(e)}
             @search-open=${(e: CustomEvent<{ path: string; match: SearchMatch }>) =>
               void this.openSearchResult(e.detail.path, e.detail.match)}
           ></editha-search-panel>

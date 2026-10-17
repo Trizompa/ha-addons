@@ -13,7 +13,11 @@ export type ErrorCode =
   | 'ha_unavailable'
   | 'ha_error'
   | 'config_invalid'
-  | 'no_space';
+  | 'no_space'
+  | 'no_backup'
+  | 'busy'
+  | 'io_error'
+  | 'cross_device';
 
 const STATUS: Record<ErrorCode, number> = {
   invalid_request: 400,
@@ -31,6 +35,10 @@ const STATUS: Record<ErrorCode, number> = {
   ha_error: 502,
   config_invalid: 409,
   no_space: 507,
+  no_backup: 409,
+  busy: 409,
+  io_error: 500,
+  cross_device: 409,
 };
 
 /** Errore previsto, con codice stabile per il frontend. */
@@ -55,8 +63,17 @@ export function fromFsError(err: unknown, path: string): unknown {
     case 'ENOENT':
       return new EdithaError('not_found', `Percorso non trovato: ${path}`, { path });
     case 'EEXIST':
-    case 'ENOTEMPTY':
       return new EdithaError('already_exists', `Esiste già: ${path}`, { path });
+    // Da rm: la cartella è cambiata durante l'eliminazione (non "esiste già").
+    case 'ENOTEMPTY':
+    case 'EBUSY':
+    case 'EMFILE':
+    case 'ENFILE':
+      return new EdithaError('busy', `Operazione non riuscita, qualcosa sta usando il percorso: riprova (${path})`, { path });
+    case 'EXDEV':
+      return new EdithaError('cross_device', `Spostamento tra dischi diversi non supportato: ${path}`, { path });
+    case 'EIO':
+      return new EdithaError('io_error', `Errore di lettura o scrittura sul disco: ${path}`, { path });
     case 'ENOTDIR':
       return new EdithaError('not_a_directory', `Non è una cartella: ${path}`, { path });
     case 'EISDIR':

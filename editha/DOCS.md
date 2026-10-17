@@ -69,14 +69,15 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 | Rename (F2) | Open tabs follow the new name, and the file's history goes with it. |
 | Duplicate… | Files only. EDITHA proposes `name_copy.ext`, which you can change. A YAML copy also gets `.bak` at the end (`automations_copy.yaml.bak`), so Home Assistant does not load it twice; a name ending in `.yaml` asks for confirmation. |
 | Move to… | Pick the destination folder from a list. There is no drag-and-drop on purpose: too easy to drop in the wrong place. The history goes with the file. |
-| Delete (Del) | Asks first. A copy is kept in EDITHA's history (see [History](#history-and-comparison)); items larger than 50 MB are deleted without a copy. |
+| Delete (Del) | Asks first. A copy is kept in EDITHA's history (see [History](#history-and-comparison)); for items larger than 50 MB no copy can be kept, and EDITHA says so and asks again before deleting. |
 | Download to your PC / Download as zip | A file, or a whole folder as a zip archive, up to 50 MB. |
 | Copy path | The full `/config/...` path. |
 | History… | The saved versions of the file (see [History](#history-and-comparison)). |
 | Select for compare / Compare with *name* | Compare two files side by side. |
 
 - **Upload**: use the upload button, or drag files from your PC onto a folder. Up to 50 MB per
-  file; replacing an existing file asks first, and its previous version goes to the history.
+  file; replacing an existing file asks first, and its previous version goes to the history (if
+  the existing file is over 50 MB, EDITHA warns that no copy can be kept).
 - **Filter by name**: the field above the tree.
 - **Images and PDFs** open in a preview tab instead of the editor: PNG, JPEG, GIF, WebP, AVIF,
   BMP, ICO, SVG and PDF. There is one preview tab, reused by the next image you open. The header
@@ -118,8 +119,13 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 
 - Closing a tab or the page with unsaved changes asks first.
 - If the page closes anyway (phone locked, browser closed), EDITHA keeps the unsaved changes as a
-  **draft**. Next time it offers to recover them. A draft of a file that no longer exists, or that
-  can no longer be saved (for example it became read-only), is discarded with a notice.
+  **draft**. Next time it offers to recover them. If the file no longer exists (renamed or deleted
+  elsewhere), EDITHA offers to recreate it with those changes; a draft of a file that can no longer
+  be saved (for example it became read-only) is discarded with a notice. The same choice to
+  recreate the file appears if you save a file that was renamed or deleted elsewhere meanwhile.
+- If EDITHA stops responding for a moment (add-on update or restart), keep the page open: the
+  changes stay in the tabs and their drafts are written as soon as it comes back. **Reload page**
+  in the banner writes the drafts first, and warns you if EDITHA is still unreachable.
 - If a file changes on disk while it is open (for example Home Assistant rewrote it), EDITHA warns
   you before saving: you choose whether to reload it or overwrite it.
 
@@ -130,13 +136,19 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 EDITHA checks the YAML while you type. It knows the Home Assistant tags (`!include`,
 `!include_dir_*`, `!secret`, `!input`, `!env_var`) and, instead of the parser's cryptic message,
 tells you what is wrong and on which line: a missing colon, a line indented to the wrong level, a
-tab instead of spaces, a duplicate key, a `{{ … }}` template without quotes, a list or `{ }` block
-used as a key, an alias `*name` with no anchor `&name` before it.
+tab instead of spaces, an invisible special space pasted from a web page, a duplicate key, a
+`{{ … }}` template without quotes, an apostrophe inside `'…'`, a `: ` inside an unquoted text, a
+list or `{ }` block used as a key, an alias `*name` with no anchor `&name` before it, an unknown
+tag (`!secrets` instead of `!secret`). In the `esphome` folder the ESPHome tags (`!lambda`,
+`!extend`, `!remove`, …) are accepted too.
 
 ![A YAML error explained](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/problems.png)
 
 It also warns about common Home Assistant mistakes that are valid YAML, such as unquoted
-`on`/`off`/`yes`/`no` (YAML turns them into true/false).
+`on`/`off`/`yes`/`no` (YAML turns them into true/false) or `name:Casa` without a space after the
+colon.
+
+Very large files (over 1 MB) are not checked, and get no outline, so the editor stays responsive.
 
 Click the error count in the status bar (or press Ctrl+Shift+M) for the list of problems; F8 jumps
 to the next one.
@@ -147,7 +159,8 @@ Press Ctrl+Space, or just type:
 
 - **entities** with their name and current state, after `entity_id:` or as soon as you type a
   domain such as `light.`;
-- **actions** (`light.turn_on`, …) and their fields;
+- **actions** (`light.turn_on`, …) after `action:` or `perform_action:` (the action ids, not
+  their fields);
 - **`!secret` keys** from `secrets.yaml` (only the names: the values are never sent for
   suggestions);
 - **Material Design icons** after `mdi:`, with a preview.
@@ -203,7 +216,7 @@ images and the like). With too many results (2000) or a search that takes too lo
 first ones.
 
 The arrows button opens **Replace in files**. **Replace all** changes every match after a
-confirmation; **Replace in *name*** next to a file replaces only there. Every changed file keeps
+confirmation; if the search stopped early (too many results), only the listed files are changed; **Replace in *name*** next to a file replaces only there. Every changed file keeps
 its previous version in the history. Files with unsaved changes, `secrets.yaml` and its copies,
 and system folders are never touched.
 
@@ -223,7 +236,8 @@ because the current content is kept too). History works on text files up to 5 MB
 
 **Bring back a deleted file**: create a new file with the same name in the same folder, then open
 **History…** on it: its versions are still there, including the one kept when it was deleted.
-Folders cannot be restored this way, and items larger than 50 MB are deleted without a copy.
+Folders cannot be restored this way, and items larger than 50 MB have no copy (EDITHA warns you
+before deleting them).
 
 To compare any two files: right-click the first → **Select for compare**, then right-click the
 second → **Compare with *name*** (the name of the first file). Esc closes the comparison.

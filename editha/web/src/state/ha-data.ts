@@ -24,24 +24,38 @@ class HaData {
     for (const fn of this.listeners) fn();
   }
 
-  async start(): Promise<void> {
+  private starting: Promise<void> | null = null;
+
+  /** Controlla se HA è raggiungibile e carica i dati; se non lo è, riprova al giro successivo. */
+  start(): Promise<void> {
+    this.starting ??= this.connect().finally(() => (this.starting = null));
+    return this.starting;
+  }
+
+  private async connect(): Promise<void> {
     try {
       this.available = (await api.ha.status()).available;
     } catch {
       this.available = false;
     }
+    // Anche se ora HA non risponde: ogni minuto si riprova (refresh richiama start).
+    clearInterval(this.timer);
+    this.timer = setInterval(() => void this.refresh(), 60_000);
     if (!this.available) {
       this.loaded = true;
       this.notify();
       return;
     }
-    await this.refresh();
-    clearInterval(this.timer);
-    this.timer = setInterval(() => void this.refresh(), 60_000);
+    await this.load(false);
   }
 
+  /** Aggiorna entità e servizi; se HA non era raggiungibile, prima ricontrolla (pulsante Aggiorna). */
   async refresh(fresh = false): Promise<void> {
-    if (!this.available) return;
+    if (!this.available) return this.start();
+    await this.load(fresh);
+  }
+
+  private async load(fresh: boolean): Promise<void> {
     try {
       const [e, s] = await Promise.all([api.ha.entities(fresh), api.ha.services(fresh)]);
       this.entities = e.entities;

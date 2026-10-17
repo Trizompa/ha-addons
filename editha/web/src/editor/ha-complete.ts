@@ -5,7 +5,9 @@ import { mdiIcons } from '../state/mdi.js';
 import { filePath } from './links.js';
 import { t } from '../i18n/index.js';
 
-const SERVICE_KEY = /\b(service|action)\s*:\s*["']?[\w.]*$/;
+const SERVICE_KEY = /\b(service|action|perform_action)\s*:\s*["']?[\w.]*$/;
+/** Dopo «!secret » e «mdi:» ci sono suggerimenti propri: niente entità in mezzo. */
+const OTHER_CONTEXT = /(?:!secret[ \t]+[\w.-]*|(?:^|[^\w-])mdi:[a-z0-9-]*)$/;
 const ENTITY_KEY = /\b(entity_id|entities|entity)\s*:\s*["']?[\w.]*$/;
 
 function entityOptions(): Completion[] {
@@ -28,14 +30,14 @@ function serviceOptions(): Completion[] {
 
 /**
  * Autocompletamento di entità e azioni del proprio HA (HA-2, HA-3): si attiva scrivendo
- * "dominio." (es. "light."), dopo "entity_id:" / "action:", oppure con Ctrl+Spazio.
+ * "dominio." (es. "light."), dopo "entity_id:" / "action:" / "perform_action:", oppure con Ctrl+Spazio.
  */
 export function haCompletions(ctx: CompletionContext): CompletionResult | null {
   if (!haData.available) return null;
   const word = ctx.matchBefore(/[a-z_][a-z0-9_]*(\.[a-z0-9_]*)?/);
   const line = ctx.state.doc.lineAt(ctx.pos);
   const before = line.text.slice(0, ctx.pos - line.from);
-  if (/^\s*#/.test(before)) return null;
+  if (/^\s*#/.test(before) || OTHER_CONTEXT.test(before)) return null;
   const isService = SERVICE_KEY.test(before);
   const isEntity = ENTITY_KEY.test(before);
   const dotted = !!word?.text.includes('.');

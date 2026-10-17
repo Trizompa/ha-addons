@@ -25,7 +25,11 @@ export interface SearchMatch {
 }
 
 export interface SearchResult {
-  results: { path: string; matches: SearchMatch[] }[];
+  /**
+   * `matches` è limitato (200 per file, righe esaminate fino a 10.000 caratteri); `total` è il
+   * numero di corrispondenze che la sostituzione cambierebbe nel file, senza limiti.
+   */
+  results: { path: string; matches: SearchMatch[]; total: number }[];
   files: number;
   matches: number;
   /** La ricerca si è fermata prima (troppi risultati o troppo tempo). */
@@ -39,30 +43,66 @@ const MAX_LINE = 400;
 const MAX_SCAN = 10_000;
 export const SEARCH_BUDGET_MS = 8000;
 /** File che non vale la pena leggere: database, archivi, immagini. */
+/** Cartelle saltate a qualunque profondità. */
+const SKIP_DIRS: readonly string[] = ['.storage', '.cloud', '.git'];
 const SKIP_EXT = /\.(db|db-shm|db-wal|sqlite|sqlite3|zip|gz|tar|tgz|png|jpe?g|gif|webp|ico|bmp|mp3|mp4|wav|pdf|woff2?|ttf|so|pyc)$/i;
 
 /**
- * SEC-7: secrets.yaml e le sue copie (secrets_copia.yaml.bak, secrets.old.yaml…) non entrano mai
- * nella ricerca né nella sostituzione.
+ * SEC-7: secrets.yaml e le sue copie non entrano mai nella ricerca né nella sostituzione.
+ * Si guarda solo l'inizio del nome: "secret" o "secrets" (anche dopo ".", "#" o "~" di editor
+ * e copie nascoste) non seguito da un'altra lettera, e poi ".yaml"/".yml" in qualunque punto.
+ * Così valgono secret.yaml, secrets_copia.yaml.bak, secrets.yaml_copy.bak, secrets.yaml~,
+ * secrets.yaml.old, .secrets.yaml.swp; non secretary.yaml né my_secrets.yaml.
  */
 export function isSecretsFile(name: string): boolean {
-  return /^secrets.*\.ya?ml(\.bak)?$/i.test(name);
+  return /^[.#~]?secrets?(?![a-z])[^/]*\.ya?ml/i.test(name);
 }
 
-/** Espressione regolare per la ricerca; un errore di sintassi diventa invalid_request. */
-export function searchPattern(opts: SearchOptions): RegExp {
-  let source = opts.regex ? opts.query : opts.query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  if (opts.wholeWord) source = `(?<![\\w])(?:${source})(?![\\w])`;
+/** Lettere, cifre e "_" (Unicode): ciò che non deve stare attorno a una parola intera. */
+const WORD_U = '[\\p{L}\\p{N}_]';
+
+/**
+ * Regola esatta della ricerca (la replica anche l'interfaccia):
+ * - testo semplice: la query con i caratteri speciali (.*+?^${}()|[]\) preceduti da "\";
+ *   con `regex` la query così com'è;
+ * - flag "g", più "i" senza `caseSensitive`, più "u" se l'espressione è valida in quella
+ *   modalità; altrimenti si riprova senza "u";
+ * - `wholeWord`: con "u" `(?<![\p{L}\p{N}_])(?:…)(?![\p{L}\p{N}_])` (lettere accentate
+ *   comprese), senza "u" `(?<![\w])(?:…)(?![\w])` (solo ASCII).
+ * Un errore di sintassi in entrambe le modalità diventa invalid_request.
+ */
+export function buildSearchRegExp(opts: SearchOptions): RegExp {
+  const source = opts.regex ? opts.query : opts.query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const flags = opts.caseSensitive ? 'g' : 'gi';
   try {
-    return new RegExp(source, opts.caseSensitive ? 'g' : 'gi');
+    return new RegExp(opts.wholeWord ? `(?<!${WORD_U})(?:${source})(?!${WORD_U})` : source, flags + 'u');
+  } catch {
+    // es. "\-" o "{" non sono ammessi con "u": si usa la modalità classica.
+  }
+  try {
+    return new RegExp(opts.wholeWord ? `(?<![\\w])(?:${source})(?![\\w])` : source, flags);
   } catch (err) {
     throw new EdithaError('invalid_request', `Espressione regolare non valida: ${(err as Error).message}`);
   }
 }
 
+/** Testo UTF-16 ben formato (niente surrogati isolati, che in UTF-8 diventerebbero "\uFFFD"). */
+export function isWellFormed(text: string): boolean {
+  return (text as string & { isWellFormed(): boolean }).isWellFormed();
+}
+
+/** Posizione dopo una corrispondenza vuota, come fa String.prototype.replace (con "u" per punti di codice). */
+function advance(text: string, index: number, unicode: boolean): number {
+  if (!unicode || index + 1 >= text.length) return index + 1;
+  const c = text.charCodeAt(index);
+  if (c < 0xd800 || c > 0xdbff) return index + 1;
+  const d = text.charCodeAt(index + 1);
+  return d >= 0xdc00 && d <= 0xdfff ? index + 2 : index + 1;
+}
+
 /** Messaggi dal worker di ricerca: un file con risultati, oppure la fine. */
 export type SearchMessage =
-  | { type: 'file'; path: string; matches: SearchMatch[] }
+  | { type: 'file'; path: string; matches: SearchMatch[]; total: number }
   | { type: 'done'; files: number; truncated: boolean };
 
 /**
@@ -73,9 +113,9 @@ export async function searchTree(
   root: string,
   opts: SearchOptions,
   maxFileSize: number,
-  onFile: (path: string, matches: SearchMatch[]) => void,
+  onFile: (path: string, matches: SearchMatch[], total: number) => void,
 ): Promise<{ files: number; truncated: boolean }> {
-  const pattern = searchPattern(opts);
+  const pattern = buildSearchRegExp(opts);
   let files = 0;
   let total = 0;
   let truncated = false;
@@ -93,8 +133,9 @@ export async function searchTree(
       const childAbs = path.join(abs, d.name);
       const childRel = rel ? `${rel}/${d.name}` : d.name;
       if (d.isDirectory()) {
-        // Cartelle di sistema (SEC-8): solo al primo livello, come nel resto di Editha.
-        if (!(rel === '' && READ_ONLY_DIRS.includes(d.name))) await walk(childAbs, childRel);
+        // Cartelle di sistema (SEC-8); .storage, .cloud e .git anche più in basso (copie, repository).
+        if (rel === '' ? READ_ONLY_DIRS.includes(d.name) : SKIP_DIRS.includes(d.name)) continue;
+        await walk(childAbs, childRel);
         continue;
       }
       // secrets.yaml e copie (SEC-7): password e chiavi non devono comparire nei risultati.
@@ -110,16 +151,20 @@ export async function searchTree(
       if (text === null) continue;
       files++;
       const matches: SearchMatch[] = [];
+      let fileTotal = 0;
       const lines = text.split('\n');
-      for (let i = 0; i < lines.length && matches.length < MAX_MATCHES_PER_FILE; i++) {
+      for (let i = 0; i < lines.length; i++) {
         const full = lines[i]!.replace(/\r$/, '');
-        const line = full.length > MAX_SCAN ? full.slice(0, MAX_SCAN) : full;
+        // Si contano tutte le corrispondenze della riga, come le cambierebbe replaceInText;
+        // i dettagli solo per le prime, entro MAX_SCAN caratteri.
         pattern.lastIndex = 0;
-        for (let m = pattern.exec(line); m; m = pattern.exec(line)) {
+        for (let m = pattern.exec(full); m; m = pattern.exec(full)) {
           if (m[0].length === 0) {
-            pattern.lastIndex++;
+            pattern.lastIndex = advance(full, pattern.lastIndex, pattern.unicode);
             continue;
           }
+          fileTotal++;
+          if (matches.length >= MAX_MATCHES_PER_FILE || m.index + m[0].length > MAX_SCAN) continue;
           // Nelle righe lunghe si manda la parte attorno alla corrispondenza, non solo l'inizio.
           const offset = m.index + m[0].length <= MAX_LINE ? 0 : Math.max(0, m.index - 80);
           matches.push({
@@ -129,11 +174,10 @@ export async function searchTree(
             text: full.slice(offset, offset + MAX_LINE),
             offset,
           });
-          if (matches.length >= MAX_MATCHES_PER_FILE) break;
         }
       }
       if (matches.length) {
-        onFile(childRel, matches);
+        onFile(childRel, matches, fileTotal);
         total += matches.length;
         if (total >= MAX_MATCHES) truncated = true;
       }
@@ -143,6 +187,9 @@ export async function searchTree(
   return { files, truncated };
 }
 
+/** Interrompe String.replace appena il risultato supera il limite. */
+class ReplaceLimit extends Error {}
+
 /** SR-3: sostituzione in un testo, riga per riga come la ricerca (le corrispondenze sono le stesse). */
 export function replaceInText(
   text: string,
@@ -150,23 +197,37 @@ export function replaceInText(
   replacement: string,
   maxLength = Infinity,
 ): { content: string; count: number } | null {
-  const pattern = searchPattern(opts);
+  const pattern = buildSearchRegExp(opts);
   let count = 0;
   let length = 0;
   const lines: string[] = [];
-  for (const line of text.split('\n')) {
-    const cr = line.endsWith('\r');
-    const body = cr ? line.slice(0, -1) : line;
-    const replaced = body.replace(pattern, (...args: unknown[]) => {
-      const match = args[0] as string;
-      if (match.length === 0) return match;
-      count++;
-      return opts.regex ? expandReplacement(replacement, args) : replacement;
-    });
-    lines.push(cr ? replaced + '\r' : replaced);
-    // Un risultato oltre il limite dei file non si costruisce nemmeno (memoria del server).
-    length += replaced.length + 1;
-    if (length > maxLength) return null;
+  try {
+    for (const line of text.split('\n')) {
+      const cr = line.endsWith('\r');
+      const body = cr ? line.slice(0, -1) : line;
+      // "\n" prima di ogni riga tranne la prima.
+      const start = length + (lines.length ? 1 : 0);
+      let grow = 0;
+      const replaced = body.replace(pattern, (...args: unknown[]) => {
+        const match = args[0] as string;
+        if (match.length === 0) return match;
+        count++;
+        const piece = opts.regex ? expandReplacement(replacement, args) : replacement;
+        grow += piece.length - match.length;
+        // Lunghezza già certa del risultato (la riga fin qui): oltre il limite ci si ferma
+        // subito, senza costruire una stringa enorme (es. "$`" ripetuto su una riga lunga).
+        const end = (args[args.length - (typeof args[args.length - 1] === 'object' ? 3 : 2)] as number) + match.length;
+        if (start + end + grow > maxLength) throw new ReplaceLimit();
+        return piece;
+      });
+      lines.push(cr ? replaced + '\r' : replaced);
+      // Un risultato oltre il limite dei file non si costruisce nemmeno (memoria del server).
+      length = start + replaced.length + (cr ? 1 : 0);
+      if (length > maxLength) return null;
+    }
+  } catch (err) {
+    if (err instanceof ReplaceLimit) return null;
+    throw err;
   }
   return { content: lines.join('\n'), count };
 }
@@ -200,5 +261,6 @@ export function expandReplacement(template: string, args: unknown[]): string {
 
 export type ReplaceMessage =
   | { type: 'file'; rel: string; content: string; count: number; etag: string }
-  | { type: 'skip'; rel: string; reason: 'too_large' }
+  // reason: too_large, binary, encoding o il codice di errore della lettura.
+  | { type: 'skip'; rel: string; reason: string }
   | { type: 'done' };

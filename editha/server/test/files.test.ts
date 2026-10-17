@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { chmod, mkdir, readdir, readFile, stat, symlink, writeFile } from 'node:fs/promises';
 import { BackupStore } from '../src/backups/store.js';
 import { EdithaError } from '../src/errors.js';
@@ -452,12 +453,118 @@ describe('FileService', () => {
       assert.equal((await files.versions('link.yaml')).length, 1);
     });
 
-    it('un file oltre il limite si elimina senza copia, senza leggerlo in memoria', async () => {
+    it('un file o una cartella oltre il limite si eliminano senza copia solo con noBackup', async () => {
       const small = new FileService(await PathGuard.create(sb.configDir), backups, 1024, 4);
-      await writeTree(sb.configDir, { 'grande.bin': 'x'.repeat(10) });
-      const res = await small.remove('grande.bin');
-      assert.equal(res.backup, null);
+      await writeTree(sb.configDir, { 'grande.bin': 'x'.repeat(10), 'dir/a.txt': 'x'.repeat(10) });
+      await assert.rejects(small.remove('grande.bin'), (err: unknown) => {
+        assert.ok(err instanceof EdithaError && err.code === 'no_backup' && err.status === 409);
+        assert.equal(err.details?.size, 10);
+        assert.equal(err.details?.limit, 4);
+        return true;
+      });
+      await stat(abs('grande.bin'));
+      await assert.rejects(small.remove('dir'), rejectsWith('no_backup'));
+      await stat(abs('dir/a.txt'));
+      assert.equal((await small.remove('grande.bin', { noBackup: true })).backup, null);
+      assert.equal((await small.remove('dir', { noBackup: true })).backup, null);
       await assert.rejects(stat(abs('grande.bin')));
+      await assert.rejects(stat(abs('dir')));
+    });
+  });
+
+  describe('correzioni della seconda revisione', () => {
+    it('rifiuta un contenuto con surrogati isolati invece di salvarlo con \uFFFD', async () => {
+      const f = await files.read('automations.yaml');
+      await assert.rejects(files.write('automations.yaml', 'x: \uD83D\n', f.etag), rejectsWith('invalid_request'));
+      assert.equal(await readFile(abs('automations.yaml'), 'utf8'), '[]\n');
+    });
+
+    it('ripristina una versione più grande del limite dell\'editor, con i permessi originali', async () => {
+      const big = 'x'.repeat(4096);
+      await writeTree(sb.configDir, { 'grande.txt': big });
+      await chmod(abs('grande.txt'), 0o600);
+      const { backup } = await files.remove('grande.txt');
+      assert.ok(backup);
+      await files.restore('grande.txt', backup);
+      assert.equal(await readFile(abs('grande.txt'), 'utf8'), big);
+      assert.equal((await stat(abs('grande.txt'))).mode & 0o777, 0o600);
+    });
+
+    it('la ricerca dà il totale senza limiti, uguale al conteggio della sostituzione', async () => {
+      await writeTree(sb.configDir, { 'molti.txt': 'ab '.repeat(300) + '\n' + 'x'.repeat(12_000) + 'ab\n' });
+      const svc = new FileService(await PathGuard.create(sb.configDir), backups, 64 * 1024);
+      const res = await svc.search({ query: 'ab', caseSensitive: true });
+      const file = res.results.find((r) => r.path === 'molti.txt')!;
+      assert.equal(file.matches.length, 200);
+      assert.equal(file.total, 301);
+      const rep = await svc.replace(['molti.txt'], { query: 'ab', caseSensitive: true }, 'cd');
+      assert.equal(rep.files[0]?.count, 301);
+    });
+
+    it('la ricerca salta .storage, .cloud e .git a qualunque profondità e le copie di secrets.yaml', async () => {
+      await writeTree(sb.configDir, {
+        'sub/.git/config': 'parola_rara',
+        'sub/.storage/x': 'parola_rara',
+        'secrets.yaml_copy.bak': 'parola_rara',
+        'secret.yaml': 'parola_rara',
+        'sub/ok.yaml': 'parola_rara',
+      });
+      const res = await files.search({ query: 'parola_rara' });
+      assert.deepEqual(res.results.map((r) => r.path), ['sub/ok.yaml']);
+    });
+
+    it('la sostituzione salta i file invariati e segnala binari e codifica', async () => {
+      await writeTree(sb.configDir, {
+        'same.yaml': 'a: x\n',
+        'bin.dat': Buffer.from([0x78, 0x00, 0x01]),
+        'emoji.txt': 'ciao 😀\n',
+      });
+      const same = await files.replace(['same.yaml'], { query: 'x' }, 'x');
+      assert.deepEqual(same, { files: [], skipped: [] });
+      assert.equal((await files.versions('same.yaml')).length, 0);
+      const bin = await files.replace(['bin.dat'], { query: 'x' }, 'y');
+      assert.deepEqual(bin.skipped, [{ path: 'bin.dat', reason: 'binary' }]);
+      // "\-" non è valido con u: in modalità classica \uD83D trova metà della coppia.
+      const enc = await files.replace(['emoji.txt'], { query: '\\uD83D|\\-zz', regex: true }, 'X');
+      assert.deepEqual(enc.skipped, [{ path: 'emoji.txt', reason: 'encoding' }]);
+      assert.equal(await readFile(abs('emoji.txt'), 'utf8'), 'ciao 😀\n');
+    });
+
+    it('caricare sopra un file oltre il limite richiede noBackup; il file caricato non supera il limite', async () => {
+      const small = new FileService(await PathGuard.create(sb.configDir), backups, 1024, 8);
+      await writeTree(sb.configDir, { 'g.bin': 'x'.repeat(10), 'p.bin': 'yy' });
+      await assert.rejects(small.upload('', 'nuovo.bin', Buffer.alloc(9), false), rejectsWith('too_large'));
+      await assert.rejects(stat(abs('nuovo.bin')));
+      await assert.rejects(small.upload('', 'g.bin', Buffer.from('z'), true), rejectsWith('no_backup'));
+      assert.equal(await readFile(abs('g.bin'), 'utf8'), 'x'.repeat(10));
+      const forced = await small.upload('', 'g.bin', Buffer.from('z'), true, true);
+      assert.equal(forced.backup, null);
+      const kept = await small.upload('', 'p.bin', Buffer.from('z'), true);
+      assert.ok(kept.backup);
+      assert.equal((await files.versionContent('p.bin', kept.backup)).content, 'yy');
+    });
+
+    it('una copia interrotta non lascia una destinazione a metà', async () => {
+      await writeTree(sb.configDir, { 'src/a.txt': 'a' });
+      // Una FIFO fa fallire fs.cp dopo aver già creato la cartella di destinazione.
+      execFileSync('mkfifo', [abs('src/pipe')]);
+      await assert.rejects(files.copy('src', 'dst'));
+      await assert.rejects(stat(abs('dst')));
+    });
+
+    it('un no-op ripetuto non riempie la cronologia', async () => {
+      const keep2 = new BackupStore(path.join(sb.dataDir, 'b2'), 2);
+      const svc = new FileService(await PathGuard.create(sb.configDir), keep2, 1024);
+      await writeTree(sb.configDir, { 'h.yaml': 'v1' });
+      let f = await svc.read('h.yaml');
+      await svc.write('h.yaml', 'v2', f.etag);
+      const first = (await svc.versions('h.yaml'))[0]!.id;
+      // Ripristino e annullamento ripetuti: la versione "v1" resta.
+      for (let i = 0; i < 3; i++) await svc.restore('h.yaml', first);
+      assert.equal(await readFile(abs('h.yaml'), 'utf8'), 'v1');
+      assert.ok((await svc.versions('h.yaml')).some((v) => v.id === first));
+      f = await svc.read('h.yaml');
+      assert.equal(f.content, 'v1');
     });
   });
 

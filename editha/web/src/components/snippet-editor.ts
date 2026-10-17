@@ -108,12 +108,27 @@ export class EdithaSnippetEditor extends LitElement {
     this.finish({ name, body });
   }
 
-  /** Tab nel testo inserisce due spazi invece di spostare il focus (gli snippet sono YAML). */
+  /**
+   * Tab nel testo inserisce due spazi invece di spostare il focus (gli snippet sono YAML);
+   * con del testo selezionato rientra di due spazi le righe selezionate, senza cancellarle.
+   */
   private onKey(e: KeyboardEvent): void {
-    if (e.key !== 'Tab' || e.shiftKey) return;
+    if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
     e.preventDefault();
     const area = e.target as HTMLTextAreaElement;
-    area.setRangeText('  ', area.selectionStart, area.selectionEnd, 'end');
+    const { selectionStart: start, selectionEnd: end, value } = area;
+    if (start === end) {
+      area.setRangeText('  ', start, end, 'end');
+      return;
+    }
+    const blockStart = value.lastIndexOf('\n', start - 1) + 1;
+    // Una selezione che finisce all'inizio di una riga non comprende quella riga.
+    const last = end > blockStart && value[end - 1] === '\n' ? end - 1 : end;
+    const lineEnd = value.indexOf('\n', last);
+    const blockEnd = lineEnd === -1 ? value.length : lineEnd;
+    const lines = value.slice(blockStart, blockEnd).split('\n');
+    area.setRangeText(lines.map((l) => '  ' + l).join('\n'), blockStart, blockEnd);
+    area.setSelectionRange(start + 2, end + 2 * lines.length);
   }
 
   override render() {

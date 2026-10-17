@@ -44,6 +44,16 @@ export class TabsModel<S> {
     return tab;
   }
 
+  /** Inserisce una tab dopo quella attiva senza attivarla (chi apre decide se mostrarla). */
+  insert(tab: Tab<S>): Tab<S> {
+    const existing = this.find(tab.path);
+    if (existing) return existing;
+    const at = this.activeIndex === -1 ? this.list.length : this.activeIndex + 1;
+    this.list.splice(at, 0, tab);
+    if (this.activeIndex >= at) this.activeIndex++;
+    return tab;
+  }
+
   /** Aggiunge una tab in fondo senza cambiare quella attiva (ripristino della sessione). */
   append(tab: Tab<S>): Tab<S> {
     const existing = this.find(tab.path);

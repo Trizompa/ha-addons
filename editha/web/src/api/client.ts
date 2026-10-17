@@ -14,7 +14,7 @@ import type {
   Version,
 } from './types.js';
 import { connection, isPathFailure } from './connection.js';
-import { t } from '../i18n/index.js';
+import { getLang, t, type MessageKey } from '../i18n/index.js';
 
 /** Errore restituito dal server, con il codice stabile di errors.ts. */
 export class ApiError extends Error {
@@ -64,13 +64,22 @@ async function send(method: Method, url: string, body: unknown): Promise<{ res: 
     headers: body === undefined ? {} : { 'content-type': raw ? 'application/octet-stream' : 'application/json' },
     body: body === undefined ? null : raw ? (body as RawBody).blob : json,
     cache: 'no-store',
-    keepalive: leaving && json !== null && new TextEncoder().encode(json).length < 60_000,
+    keepalive: leaving && !raw && (json === null || new TextEncoder().encode(json).length < 60_000),
   });
   const data: unknown = await res.json().catch(() => null);
   return { res, data };
 }
 
 const offlineError = () => new ApiError(0, 'offline', t('error.offline'));
+
+/** Testo di un errore per l'utente: i messaggi del server sono in italiano, le altre lingue usano il codice. */
+export function errorText(err: unknown): string {
+  if (!(err instanceof ApiError)) return t('error.unexpected');
+  if (getLang() === 'it' || err.code === 'offline') return err.message;
+  const key = `error.${err.code}` as MessageKey;
+  const translated = t(key);
+  return translated === key ? err.message : translated;
+}
 
 async function request<T>(method: Method, url: string, body?: unknown): Promise<T> {
   let result: { res: Response; data: unknown } | null = null;
@@ -109,7 +118,9 @@ export const api = {
   create: (path: string, type: 'file' | 'directory', content?: string) =>
     request<Entry>('POST', 'api/file', content === undefined ? { path, type } : { path, type, content }),
   rename: (from: string, to: string) => request<Entry>('POST', 'api/rename', { from, to }),
-  remove: (path: string) => request<{ path: string; backup: string | null }>('DELETE', `api/file${q(path)}`),
+  /** Senza `noBackup` il server rifiuta (no_backup) ciò di cui non può tenere una copia. */
+  remove: (path: string, noBackup = false) =>
+    request<{ path: string; backup: string | null }>('DELETE', `api/file${q(path)}${noBackup ? '&noBackup=true' : ''}`),
   versions: (path: string) => request<{ path: string; versions: Version[] }>('GET', `api/versions${q(path)}`),
   version: (path: string, id: string) =>
     request<{ path: string; id: string; content: string }>('GET', `api/version${q(path)}&id=${encodeURIComponent(id)}`),
@@ -123,10 +134,11 @@ export const api = {
   downloadUrl: (path: string) => `api/download${q(path)}`,
   /** FS-10: URL dell'anteprima di un'immagine o di un PDF. */
   previewUrl: (path: string) => `api/preview${q(path)}`,
-  upload: (dir: string, name: string, file: Blob, overwrite = false) =>
-    request<Entry>(
+  upload: (dir: string, name: string, file: Blob, overwrite = false, noBackup = false) =>
+    request<Entry & { backup?: string | null }>(
       'POST',
-      `api/upload?dir=${encodeURIComponent(dir)}&name=${encodeURIComponent(name)}&overwrite=${overwrite}`,
+      `api/upload?dir=${encodeURIComponent(dir)}&name=${encodeURIComponent(name)}&overwrite=${overwrite}` +
+        (noBackup ? '&noBackup=true' : ''),
       new RawBody(file),
     ),
   snippets: () => request<SnippetList>('GET', 'api/snippets'),

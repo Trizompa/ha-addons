@@ -87,8 +87,22 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
     async (req) => files.rename(req.body.from, req.body.to),
   );
 
-  app.delete<{ Querystring: PathQuery }>('/api/file', { schema: { querystring: pathQuery } }, async (req) =>
-    files.remove(req.query.path),
+  // Oltre EDITHA_MAX_TRANSFER non si conserva una copia: 409 no_backup, a meno di noBackup=true.
+  app.delete<{ Querystring: PathQuery & { noBackup: string } }>(
+    '/api/file',
+    {
+      schema: {
+        querystring: {
+          type: 'object',
+          required: ['path'],
+          properties: {
+            path: { type: 'string' },
+            noBackup: { type: 'string', enum: ['true', 'false'], default: 'false' },
+          },
+        },
+      },
+    },
+    async (req) => files.remove(req.query.path, { noBackup: req.query.noBackup === 'true' }),
   );
 
   app.get<{ Querystring: PathQuery }>('/api/versions', { schema: { querystring: pathQuery } }, async (req) => ({
@@ -145,7 +159,7 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
     },
   );
 
-    // FS-5: cartelle di destinazione per "Sposta in…".
+  // FS-5: cartelle di destinazione per "Sposta in…".
   app.get('/api/folders', async () => ({ folders: await files.folders() }));
 
   // HA-4: chiavi di secrets.yaml per l'autocompletamento di !secret (mai i valori).
@@ -210,6 +224,7 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
       .header('Content-Type', zip ? 'application/zip' : 'application/octet-stream')
       .header('Content-Disposition', contentDisposition(name))
       .header('Cache-Control', 'no-store')
+      .header('X-Content-Type-Options', 'nosniff')
       .send(data);
   });
 
@@ -230,7 +245,7 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
 
   // FS-6: upload dal PC; il corpo è il contenuto grezzo del file.
   app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
-  app.post<{ Querystring: { dir: string; name: string; overwrite: string }; Body: Buffer }>(
+  app.post<{ Querystring: { dir: string; name: string; overwrite: string; noBackup: string }; Body: Buffer }>(
     '/api/upload',
     {
       schema: {
@@ -241,6 +256,7 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
             dir: { type: 'string' },
             name: { type: 'string', minLength: 1, maxLength: 255 },
             overwrite: { type: 'string', enum: ['true', 'false'], default: 'false' },
+            noBackup: { type: 'string', enum: ['true', 'false'], default: 'false' },
           },
         },
       },
@@ -249,7 +265,13 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
       if (!Buffer.isBuffer(req.body)) {
         return reply.code(400).send({ error: { code: 'invalid_request', message: 'Contenuto del file mancante' } });
       }
-      const entry = await files.upload(req.query.dir, req.query.name, req.body, req.query.overwrite === 'true');
+      const entry = await files.upload(
+        req.query.dir,
+        req.query.name,
+        req.body,
+        req.query.overwrite === 'true',
+        req.query.noBackup === 'true',
+      );
       return reply.code(201).send(entry);
     },
   );

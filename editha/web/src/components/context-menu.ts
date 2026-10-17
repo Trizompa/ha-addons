@@ -97,7 +97,10 @@ export class EdithaContextMenu extends LitElement {
     if (!e.composedPath().includes(this)) this.close(null);
   };
   private readonly onKey = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') this.close(null);
+    if (e.key !== 'Escape') return;
+    // Questo Esc chiude solo il menu, non anche il pannello che c'è sotto.
+    e.preventDefault();
+    this.close(null);
   };
   private readonly onBlur = () => this.close(null);
 
