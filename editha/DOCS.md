@@ -119,7 +119,8 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 
 - Closing a tab or the page with unsaved changes asks first.
 - If the page closes anyway (phone locked, browser closed), EDITHA keeps the unsaved changes as a
-  **draft**. Next time it offers to recover them. If the file no longer exists (renamed or deleted
+  **draft**. Next time it offers to recover them (Esc postpones the choice: the drafts stay, and
+  the first time you change one of those files EDITHA asks again). If the file no longer exists (renamed or deleted
   elsewhere), EDITHA offers to recreate it with those changes; a draft of a file that can no longer
   be saved (for example it became read-only) is discarded with a notice. The same choice to
   recreate the file appears if you save a file that was renamed or deleted elsewhere meanwhile.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.22.2
+
+- Bozze: se all'apertura rispondi con Esc alla domanda sulle modifiche non salvate, le bozze restano davvero per dopo. Prima la prima modifica allo stesso file le sostituiva; ora, alla prima modifica di uno di quei file, EDITHA chiede se recuperarle o scartarle.
+- La domanda che compare mentre scrivi ignora i tasti battuti per inerzia (Tab, spazio, Invio) finché non fai una pausa: non si può più scartare una bozza per sbaglio.
+- Le bozze in sospeso seguono il file se lo rinomini o lo sposti, e vengono tolte se lo elimini.
+
 ## 0.22.1
 
 - Un file con a capo misti (in parte Windows, in parte Linux) si vede di nuovo a righe normali: con la 0.22.0 alcune righe apparivano incollate. Questi file si salvano con gli a capo Linux; quelli tutti Windows restano Windows.

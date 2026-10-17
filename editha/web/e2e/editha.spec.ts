@@ -516,6 +516,27 @@ test.describe('Bozze (ED-14)', () => {
     await expect(again.locator('editha-tab-bar .tab.dirty')).toHaveCount(0);
   });
 
+  test('con Esc la bozza resta; modificando il file si chiede se recuperarla', async ({ page, request }) => {
+    const again = await typeAndLeave(page, request, 'drafts/dopo.yaml');
+    await again.keyboard.press('Escape');
+    await expect(again.locator('editha-dialog dialog[open]')).toHaveCount(0);
+    await expect(activeTab(again)).toHaveAttribute('data-path', 'drafts/dopo.yaml');
+    await editor(again).click();
+    await again.keyboard.press('Control+Home');
+    // Si continua a scrivere: i tasti battuti per inerzia non scelgono nella finestra.
+    await again.keyboard.type('# a');
+    // Tab (rientro in YAML), spazio e Invio battuti per inerzia non scelgono «Scarta».
+    await again.keyboard.press('Tab');
+    await again.keyboard.type(' x ');
+    await again.keyboard.press('Enter');
+    // La bozza vecchia non è stata sostituita: si chiede alla prima modifica.
+    await expect(again.locator('editha-dialog dialog[open]')).toContainText('ancora una bozza');
+    expect((await (await request.get('api/drafts')).json()).drafts[0].content).toBe('stato: salvato\nbozza: si\n');
+    await dialogButton(again, 'Recupera').click();
+    await expect(editor(again)).toContainText('bozza: si');
+    await expect(activeTab(again)).toHaveClass(/dirty/);
+  });
+
   test('la bozza di un file cancellato nel frattempo si può ricreare', async ({ page, request }) => {
     // Cancellato da fuori mentre la pagina è chiusa.
     const again = await typeAndLeave(page, request, 'drafts/sparisce.yaml', () =>

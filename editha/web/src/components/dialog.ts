@@ -17,6 +17,11 @@ interface Pending {
   choices: Choice[];
   /** Scelta del tasto Invio. */
   defaultId: string;
+  /**
+   * Finestra che compare mentre si sta scrivendo: il focus va alla finestra e non a un pulsante,
+   * così lo spazio o l'Invio battuti per inerzia non scelgono al posto dell'utente.
+   */
+  whileTyping?: boolean;
   resolve: (result: { id: string | null; value: string }) => void;
 }
 
@@ -107,6 +112,21 @@ export class EdithaDialog extends LitElement {
     `,
   ];
 
+  /**
+   * Per una finestra comparsa mentre si scriveva: fino a questo istante i tasti (Tab, spazio,
+   * Invio…) battuti per inerzia vengono ignorati, così non scelgono niente al posto dell'utente.
+   */
+  private typingUntil = 0;
+
+  private readonly onTypingKey = (e: KeyboardEvent) => {
+    if (Date.now() < this.typingUntil && e.key !== 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      // Si sta ancora scrivendo: la finestra aspetta una pausa di un secondo.
+      this.typingUntil = Date.now() + 1000;
+    }
+  };
+
   /** Una finestra è aperta e aspetta una risposta. */
   get busy(): boolean {
     return !!this.pending;
@@ -117,6 +137,7 @@ export class EdithaDialog extends LitElement {
     this.pending?.resolve({ id: null, value: '' });
     return new Promise((resolve) => {
       this.error = null;
+      this.typingUntil = 0;
       this.pending = { ...p, resolve };
       void this.updateComplete.then(() => {
         const dialog = this.renderRoot.querySelector('dialog');
@@ -126,6 +147,10 @@ export class EdithaDialog extends LitElement {
         if (input) {
           input.focus();
           input.setSelectionRange(0, p.input?.selectUntil ?? input.value.length);
+        } else if (p.whileTyping) {
+          dialog.tabIndex = -1;
+          dialog.focus();
+          this.typingUntil = Date.now() + 1000;
         } else {
           (this.renderRoot.querySelector(`[data-id="${p.defaultId}"]`) as HTMLElement | null)?.focus();
         }
@@ -181,6 +206,7 @@ export class EdithaDialog extends LitElement {
     detail?: string;
     choices: Choice[];
     defaultId: string;
+    whileTyping?: boolean;
   }): Promise<string | null> {
     const res = await this.open(opts);
     return res.id === 'cancel' ? null : res.id;
@@ -218,6 +244,7 @@ export class EdithaDialog extends LitElement {
     const p = this.pending;
     return html`
       <dialog
+        @keydown=${this.onTypingKey}
         @cancel=${(e: Event) => {
           e.preventDefault();
           this.finish(null);

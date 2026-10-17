@@ -20,7 +20,7 @@ import { icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
 import type { EdithaContextMenu, MenuEntry } from './context-menu.js';
 import type { EdithaDialog } from './dialog.js';
-import { fromOtherPane, type EdithaEditorPane, type EditorTab } from './editor-pane.js';
+import { fromOtherPane, programmatic, type EdithaEditorPane, type EditorTab } from './editor-pane.js';
 import type { EdithaFileTree } from './file-tree.js';
 import type { StatusInfo } from './status-bar.js';
 import type { TabView } from './tab-bar.js';
@@ -819,7 +819,8 @@ export class EdithaApp extends LitElement {
         tab.dirty = dirty;
         this.refreshTabs();
       }
-      this.scheduleDraft(tab);
+      // Dell'utente ogni modifica che Editha non ha fatto da sé (anche quelle scritte nella colonna destra).
+      this.scheduleDraft(tab, 1000, update.transactions.some((tr) => tr.docChanged && !tr.annotation(programmatic)));
     }
     if (tab !== this.tabs.active) return;
     this.refreshStatus(update.state);
@@ -1026,7 +1027,7 @@ export class EdithaApp extends LitElement {
       tab.dirty = dirty;
       this.refreshTabs();
     }
-    this.scheduleDraft(tab);
+    this.scheduleDraft(tab, 1000, true);
   }
 
   private async showInSide(tab: EditorTab): Promise<void> {
@@ -1178,7 +1179,12 @@ export class EdithaApp extends LitElement {
     this.refreshTabs();
     // Salvato quello che c'era nella bozza: se nel frattempo si è scritto ancora, la bozza si aggiorna.
     if (tab.dirty) this.scheduleDraft(tab);
-    else this.dropDraft(tab.path, tab);
+    else {
+      this.dropDraft(tab.path, tab);
+      // Salvato: la prossima modifica richiede cosa fare della bozza vecchia ancora in sospeso.
+      const deferred = this.deferredDrafts.get(tab.path);
+      if (deferred) deferred.asked = false;
+    }
   }
 
   // ——— bozze delle modifiche non salvate (ED-14) ———
@@ -1191,8 +1197,20 @@ export class EdithaApp extends LitElement {
    */
   private pendingDrafts = new Set<string>();
 
-  private scheduleDraft(tab: EditorTab, delay = 1000): void {
+  /**
+   * Bozze lasciate in sospeso con Esc all'avvio: restano sul server per la prossima volta, e la
+   * prima modifica allo stesso file chiede cosa farne invece di sostituirle (`asked`: già chiesto).
+   */
+  private readonly deferredDrafts = new Map<string, { draft: Draft; asked: boolean }>();
+
+  /** `byUser`: modifica scritta dall'utente (non una ricarica dal disco o un ripristino). */
+  private scheduleDraft(tab: EditorTab, delay = 1000, byUser = false): void {
     if (tab.readOnly) return;
+    const deferred = this.deferredDrafts.get(tab.path);
+    if (deferred) {
+      if (byUser && !deferred.asked) void this.askDeferredDraft(tab, deferred);
+      return;
+    }
     clearTimeout(this.draftTimers.get(tab));
     const now = Date.now();
     const due = this.draftDue.get(tab) ?? now + 5000;
@@ -1210,6 +1228,7 @@ export class EdithaApp extends LitElement {
     if (this.tabs.find(tab.path) !== tab) return;
     if (!tab.dirty) return this.dropDraft(tab.path, tab);
     const path = tab.path;
+    if (this.deferredDrafts.has(path)) return;
     if (this.pendingDrafts.has(path)) return this.scheduleDraft(tab);
     const gen = this.draftGen.get(tab) ?? 0;
     try {
@@ -1229,6 +1248,49 @@ export class EdithaApp extends LitElement {
         this.scheduleDraft(tab, 5000);
       }
     }
+  }
+
+  /** Si modifica un file con una bozza rimasta in sospeso: recuperarla o scartarla, adesso. */
+  private async askDeferredDraft(tab: EditorTab, deferred: { draft: Draft; asked: boolean }): Promise<void> {
+    deferred.asked = true;
+    const { draft } = deferred;
+    const choice = await this.dialog.choose({
+      title: t('drafts.title'),
+      message: t('drafts.deferred', { name: draft.path, date: formatVersionDate(draft.savedAt) }),
+      choices: [
+        { id: 'discard', label: t('drafts.discardOld'), variant: 'danger' },
+        { id: 'recover', label: t('drafts.recover'), variant: 'primary' },
+      ],
+      defaultId: 'recover',
+      whileTyping: true,
+    });
+    if (choice === null) {
+      // Ancora "dopo": la bozza vecchia resta, ma le modifiche nuove di questo file non hanno bozza.
+      this.toasts.show(t('drafts.deferredKept', { name: tab.name }), 'warning');
+      return;
+    }
+    if (choice === 'recover' && this.tabs.find(draft.path) !== tab) {
+      // La tab nel frattempo non c'è più: la bozza resta in sospeso.
+      deferred.asked = false;
+      return;
+    }
+    this.deferredDrafts.delete(draft.path);
+    if (choice === 'discard') {
+      await api.deleteDraft(draft.path).catch(() => undefined);
+      if (tab.dirty) this.scheduleDraft(tab);
+      return;
+    }
+    // Recupera: il testo appena scritto torna indietro con Annulla.
+    const diskEtag = tab.etag;
+    this.replaceDoc(tab, draft.content);
+    tab.etag = draft.etag;
+    if (diskEtag !== draft.etag) this.toasts.show(t('drafts.changedOnDisk', { name: tab.name }), 'warning');
+    const saved = this.saved.get(tab);
+    tab.dirty = !saved || !this.pane.stateOf(tab).doc.eq(saved);
+    this.drafted.add(tab.path);
+    this.refreshTabs();
+    if (this.tabs.active !== tab && this.side?.shown !== tab) this.activate(tab.path);
+    this.flash(t('drafts.recovered'));
   }
 
   /** Scrive subito la bozza di ogni tab modificata (prima di ricaricare la pagina, al ritorno del server). */
@@ -1283,13 +1345,14 @@ export class EdithaApp extends LitElement {
           defaultId: 'recover',
         });
       }
+      // Esc: le bozze restano per la prossima apertura; modificando uno di quei file si chiede.
+      if (choice === null) for (const draft of drafts) this.deferredDrafts.set(draft.path, { draft, asked: false });
       await this.restoreSession();
       if (choice === 'discard') {
         await Promise.all(drafts.map((d) => api.deleteDraft(d.path).catch(() => undefined)));
       } else if (choice === 'recover') {
         await this.applyDrafts(drafts);
       }
-      // Esc: le bozze restano e la domanda torna alla prossima apertura.
     } finally {
       this.pendingDrafts = new Set();
     }
@@ -1527,6 +1590,25 @@ export class EdithaApp extends LitElement {
         if (tab.dirty) void this.writeDraft(tab);
       }
     }
+    // Anche le bozze lasciate in sospeso seguono il file.
+    for (const [path, deferred] of [...this.deferredDrafts]) {
+      if (path !== entry.path && !path.startsWith(entry.path + '/')) continue;
+      const moved = to + path.slice(entry.path.length);
+      // Al nuovo nome c'è già un'altra bozza in sospeso: questa resta dov'è.
+      if (this.deferredDrafts.has(moved)) continue;
+      const draft = { ...deferred.draft, path: moved };
+      // Subito, prima di aspettare il server: una modifica fatta intanto vale già per il nuovo nome.
+      this.deferredDrafts.delete(path);
+      this.deferredDrafts.set(moved, { draft, asked: deferred.asked });
+      try {
+        await api.saveDraft(moved, draft.content, draft.etag);
+      } catch {
+        this.deferredDrafts.delete(moved);
+        this.deferredDrafts.set(path, deferred);
+        continue;
+      }
+      await api.deleteDraft(path).catch(() => undefined);
+    }
     // La cronologia aperta su quel percorso non è più valida.
     if (this.history && (this.history.path === entry.path || this.history.path.startsWith(entry.path + '/'))) {
       this.history = null;
@@ -1581,6 +1663,12 @@ export class EdithaApp extends LitElement {
       }
     }
     for (const tab of affected) await this.closeTab(tab.path, { force: true });
+    // Eliminato su conferma: anche le bozze in sospeso di quei file non servono più.
+    for (const path of [...this.deferredDrafts.keys()]) {
+      if (path !== entry.path && !path.startsWith(entry.path + '/')) continue;
+      this.deferredDrafts.delete(path);
+      await api.deleteDraft(path).catch(() => undefined);
+    }
     if (this.history && (this.history.path === entry.path || this.history.path.startsWith(entry.path + '/'))) {
       this.history = null;
     }

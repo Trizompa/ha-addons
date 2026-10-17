@@ -125,7 +125,8 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 
 - Chiudere una tab o la pagina con modifiche non salvate chiede conferma.
 - Se la pagina si chiude comunque (telefono bloccato, browser chiuso), EDITHA conserva le modifiche
-  non salvate come **bozza** e la volta dopo propone di recuperarle. Se il file non esiste più
+  non salvate come **bozza** e la volta dopo propone di recuperarle (Esc rimanda la scelta: le
+  bozze restano, e alla prima modifica di uno di quei file EDITHA lo chiede di nuovo). Se il file non esiste più
   (rinominato o eliminato da un'altra parte), EDITHA propone di ricrearlo con quelle modifiche; la
   bozza di un file che non si può più salvare (per esempio è diventato di sola lettura) viene
   scartata con un avviso. La stessa scelta di ricreare il file compare se salvi un file che nel

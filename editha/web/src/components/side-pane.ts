@@ -1,6 +1,6 @@
 import { EditorState, Transaction, type ChangeSet, type StateEffect } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { EdithaEditorPane, fromOtherPane, type EditorTab } from './editor-pane.js';
+import { EdithaEditorPane, fromOtherPane, programmatic, type EditorTab } from './editor-pane.js';
 
 /**
  * ED-17: colonna destra della vista divisa. Mostra una tab con uno stato "specchio":
@@ -60,7 +60,7 @@ export class EdithaSidePane extends EdithaEditorPane {
    */
   replaceFromOutside(tab: EditorTab, changes: ChangeSet): boolean {
     if (this.current !== tab || !this.view) return false;
-    this.view.dispatch({ changes, annotations: fromOtherPane.of(true) });
+    this.view.dispatch({ changes, annotations: [fromOtherPane.of(true), programmatic.of(true)] });
     return true;
   }
 

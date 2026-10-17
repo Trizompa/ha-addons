@@ -352,6 +352,9 @@ export const it = {
   'drafts.recreate': 'Ricrea il file',
   'drafts.recreated': 'Ricreato {name} con le modifiche conservate',
   'drafts.recreateFailed': 'Impossibile ricreare {name}: {error}. La bozza resta per la prossima volta.',
+  'drafts.deferred': 'Di {name} c\'è ancora una bozza con modifiche non salvate ({date}). Vuoi recuperarla adesso? Quello che hai appena scritto torna indietro con Annulla.',
+  'drafts.discardOld': 'Scarta la bozza',
+  'drafts.deferredKept': 'La bozza vecchia di {name} resta per la prossima apertura: le modifiche nuove di questo file non vengono conservate come bozza.',
   'drafts.changedOnDisk': '{name} è stato modificato fuori da Editha dopo queste modifiche: al salvataggio Editha chiederà cosa fare.',
   // Vista divisa
   'toolbar.outline': 'Schema del file: automazioni, script e sezioni',

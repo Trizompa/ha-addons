@@ -338,6 +338,9 @@ export const en: Record<keyof Dictionary, string> = {
   'drafts.recreate': 'Recreate the file',
   'drafts.recreated': 'Recreated {name} with the kept changes',
   'drafts.recreateFailed': 'Could not recreate {name}: {error}. The draft is kept for next time.',
+  'drafts.deferred': '{name} still has a draft with unsaved changes ({date}). Recover it now? What you just typed comes back with Undo.',
+  'drafts.discardOld': 'Discard the draft',
+  'drafts.deferredKept': 'The old draft of {name} stays for next time: new changes to this file are not kept as a draft.',
   'drafts.changedOnDisk': '{name} was changed outside Editha after these changes: Editha will ask what to do when you save.',
   // Vista divisa
   'toolbar.split': 'Split view in two columns',

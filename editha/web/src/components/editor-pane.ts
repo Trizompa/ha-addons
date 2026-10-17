@@ -11,6 +11,8 @@ export type EditorTab = Tab<EditorState>;
 
 /** ED-17: modifica arrivata dall'altra colonna della vista divisa, da non rimandare indietro. */
 export const fromOtherPane = Annotation.define<boolean>();
+/** Testo cambiato da Editha e non dall'utente (ricarica dal disco, bozza recuperata). */
+export const programmatic = Annotation.define<boolean>();
 
 /**
  * Un'unica EditorView: ogni tab conserva il proprio EditorState (testo,
@@ -193,6 +195,7 @@ export class EdithaEditorPane extends LitElement {
     const tr = state.update({
       changes: { from: start, to: a.length - end, insert: next.slice(start, b.length - end) },
       filter: false,
+      annotations: programmatic.of(true),
     });
     if (tab === this.current && this.view) this.view.dispatch(tr);
     else tab.state = tr.state;
