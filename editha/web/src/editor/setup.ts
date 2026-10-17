@@ -94,9 +94,13 @@ const crlfInput = EditorState.transactionFilter.of((tr) => {
   return fixes.length ? [tr, { changes: fixes, sequential: true }] : tr;
 });
 
-/** Separatore di riga del file: CRLF se il testo iniziale ne contiene, così si salva com'era. */
+/**
+ * Separatore di riga del file: CRLF se tutte le righe finiscono così, e il file si salva com'era.
+ * Un file misto (CRLF e LF insieme) si mostra a righe normali e si salva con LF: con il solo
+ * separatore CRLF le righe LF apparirebbero incollate.
+ */
 function lineSeparatorFor(doc: string): Extension {
-  return doc.includes('\r\n') ? [EditorState.lineSeparator.of('\r\n'), crlfInput] : [];
+  return doc.includes('\r\n') && !/(^|[^\r])\n/.test(doc) ? [EditorState.lineSeparator.of('\r\n'), crlfInput] : [];
 }
 
 /** Spazi speciali (U+00A0, U+2000–U+200A, U+3000) resi visibili: in YAML rompono il rientro. */

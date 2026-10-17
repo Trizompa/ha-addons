@@ -179,7 +179,9 @@ export class EdithaEditorPane extends LitElement {
   replaceDoc(tab: EditorTab, text: string): ChangeSet | null {
     const state = this.stateOf(tab);
     // Si cambia solo la parte diversa: cursore, pieghe e scorrimento restano dove sono.
-    const next = state.toText(text);
+    // Il testo nuovo segue i fine riga della tab (un file CRLF resta CRLF): niente filtro
+    // dell'input, che altrimenti li cambierebbe solo nella parte diversa.
+    const next = state.toText(state.lineBreak === '\r\n' ? text.replace(/\r?\n/g, '\r\n') : text);
     const a = state.doc.toString();
     const b = next.toString();
     if (a === b) return null;
@@ -188,7 +190,10 @@ export class EdithaEditorPane extends LitElement {
     while (start < max && a.charCodeAt(start) === b.charCodeAt(start)) start++;
     let end = 0;
     while (end < max - start && a.charCodeAt(a.length - 1 - end) === b.charCodeAt(b.length - 1 - end)) end++;
-    const tr = state.update({ changes: { from: start, to: a.length - end, insert: next.slice(start, b.length - end) } });
+    const tr = state.update({
+      changes: { from: start, to: a.length - end, insert: next.slice(start, b.length - end) },
+      filter: false,
+    });
     if (tab === this.current && this.view) this.view.dispatch(tr);
     else tab.state = tr.state;
     return tr.changes;

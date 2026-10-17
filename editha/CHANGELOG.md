@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.22.1
+
+- Un file con a capo misti (in parte Windows, in parte Linux) si vede di nuovo a righe normali: con la 0.22.0 alcune righe apparivano incollate. Questi file si salvano con gli a capo Linux; quelli tutti Windows restano Windows.
+- Ricaricando un file dal disco (dopo una sostituzione, un ripristino o un conflitto) gli a capo non vengono più cambiati di nascosto.
+- Esclusione dei segreti più precisa: `secret_sensori.yaml` o `secret-porta.yaml` tornano a essere file normali nella ricerca; restano esclusi `secrets*.yaml` e le copie di `secret.yaml`.
+
 ## 0.22.0
 
 Secondo giro di revisione completa, più approfondito: soprattutto sicurezza dei dati.

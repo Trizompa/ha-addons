@@ -25,13 +25,16 @@ describe('isSecretsFile (SEC-7)', () => {
       '.secrets.yaml',
       '.secrets.yaml.swp',
       '#secrets.yaml#',
+      'secret_old.yaml',
+      'secret.yaml.bak',
+      'secrets_esphome.yaml',
     ]) {
       assert.equal(isSecretsFile(name), true, name);
     }
   });
 
   it('non tocca gli altri file', () => {
-    for (const name of ['secretary.yaml', 'my_secrets_notes.txt', 'my_secrets.yaml', 'secrets.json', 'configuration.yaml', 'secrets']) {
+    for (const name of ['secret_sensors.yaml', 'secret-door.yaml', 'secret_garage_automation.yml', 'secretary.yaml', 'my_secrets_notes.txt', 'my_secrets.yaml', 'secrets.json', 'configuration.yaml', 'secrets']) {
       assert.equal(isSecretsFile(name), false, name);
     }
   });

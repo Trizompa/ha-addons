@@ -49,13 +49,16 @@ const SKIP_EXT = /\.(db|db-shm|db-wal|sqlite|sqlite3|zip|gz|tar|tgz|png|jpe?g|gi
 
 /**
  * SEC-7: secrets.yaml e le sue copie non entrano mai nella ricerca né nella sostituzione.
- * Si guarda solo l'inizio del nome: "secret" o "secrets" (anche dopo ".", "#" o "~" di editor
- * e copie nascoste) non seguito da un'altra lettera, e poi ".yaml"/".yml" in qualunque punto.
- * Così valgono secret.yaml, secrets_copia.yaml.bak, secrets.yaml_copy.bak, secrets.yaml~,
- * secrets.yaml.old, .secrets.yaml.swp; non secretary.yaml né my_secrets.yaml.
+ * "secrets" (anche dopo ".", "#" o "~" di editor e copie nascoste) non seguito da un'altra
+ * lettera, poi ".yaml"/".yml" in qualunque punto: secrets_copia.yaml.bak, secrets.yaml_copy.bak,
+ * secrets.yaml~, secrets.yaml.old, secrets_esphome.yaml. Il singolare "secret" vale solo come
+ * copia (secret.yaml, secret_old.yaml), così secret_sensors.yaml resta un file normale.
  */
 export function isSecretsFile(name: string): boolean {
-  return /^[.#~]?secrets?(?![a-z])[^/]*\.ya?ml/i.test(name);
+  return (
+    /^[.#~]?secrets(?![a-z])[^/]*\.ya?ml/i.test(name) ||
+    /^[.#~]?secret(?:[._~ -]?(?:\d+|bak|backup|old|orig|copy|copia|new|\(\d+\)))*\.ya?ml/i.test(name)
+  );
 }
 
 /** Lettere, cifre e "_" (Unicode): ciò che non deve stare attorno a una parola intera. */

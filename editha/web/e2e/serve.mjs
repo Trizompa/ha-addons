@@ -41,6 +41,8 @@ const files = {
   'lint/problemi.yaml': 'trigger:\n  - platform: state\n    to: on\naction:\n  - service:light.turn_on\n',
   'drafts/scarta.yaml': 'stato: salvato\n',
   'drafts/sparisce.yaml': 'stato: salvato\n',
+  'crlf/windows.yaml': 'a: 1\r\nb: 2\r\n',
+  'crlf/misto.yaml': 'a: 1\r\nb: 2\nc: 3\n',
   'dup/originale.yaml': 'copia: no\n',
   'dup/telefono.yaml': 't: 1\n',
   'unsaved/file.yaml': 'originale: true\n',

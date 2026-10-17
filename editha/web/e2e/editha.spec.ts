@@ -939,3 +939,18 @@ test('FS-1 – le cartelle vuote non hanno la freccia per espanderle', async ({ 
   await expect(row(page, 'sempre-vuota').locator('.chevron svg')).toHaveCount(0);
   await expect(row(page, 'tabs').locator('.chevron svg')).toHaveCount(1);
 });
+
+test('a capo di Windows (CRLF) conservati al salvataggio; un file misto si vede a righe normali', async ({ page }) => {
+  await openFile(page, 'crlf/windows.yaml');
+  await expect(editor(page).locator('.cm-line')).toHaveCount(3);
+  await editor(page).click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('c: 3');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Control+s');
+  await expect(activeTab(page)).not.toHaveClass(/dirty/);
+  expect(await disk('crlf/windows.yaml')).toBe('a: 1\r\nb: 2\r\nc: 3\r\n');
+
+  await openFile(page, 'crlf/misto.yaml');
+  await expect(editor(page).locator('.cm-line')).toHaveCount(4);
+});
