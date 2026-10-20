@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.0
+
+- **Pulizia della cronologia**: nella finestra *Cronologia: spazio e pulizia* puoi eliminare le versioni più vecchie di 7, 30, 90 giorni, un anno o una data a scelta. Prima **Anteprima** mostra quante versioni di quanti file se ne andrebbero e quanto spazio si libera, poi serve una conferma esplicita. Alla fine dice quanto spazio è stato liberato e il registro dell'add-on elenca cosa è stato eliminato. I file in `/config` non vengono mai toccati.
+
 ## 0.23.0
 
 - **Spazio occupato dalla cronologia**: nuova finestra *Cronologia: spazio e pulizia*, da **Informazioni** (riga *Cronologia*) o dal pulsante a forma di disco nell'intestazione della cronologia. Mostra quanto spazio occupa davvero sul disco la cronologia, in tutto e file per file (dai più pesanti), con il numero di versioni, la data dell'ultima e i file che non esistono più. Per ora si guarda soltanto: la pulizia arriva nei prossimi passi.

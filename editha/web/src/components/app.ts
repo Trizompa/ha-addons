@@ -65,7 +65,7 @@ import type { SearchMatch } from '../api/types.js';
 import type { EdithaFolderPicker } from './folder-picker.js';
 import type { EdithaAboutDialog } from './about-dialog.js';
 import type { EdithaSidePane } from './side-pane.js';
-import { formatVersionDate } from './history-panel.js';
+import { formatVersionDate, type EdithaHistoryPanel } from './history-panel.js';
 
 const DEFAULT_SETTINGS: Settings = {
   theme: 'auto',
@@ -1636,6 +1636,12 @@ export class EdithaApp extends LitElement {
     return null;
   }
 
+  /** Versioni eliminate: la cronologia aperta di un file ricarica il suo elenco. */
+  private async afterHistoryPruned(): Promise<void> {
+    const panel = this.renderRoot.querySelector('editha-history-panel') as EdithaHistoryPanel | null;
+    if (panel && this.history) await panel.reload(this.history.current);
+  }
+
   /** BK-7: spazio occupato dalla cronologia. */
   private openHistorySpace(): Promise<void> {
     return (this.renderRoot.querySelector('editha-history-space') as EdithaHistorySpace).show();
@@ -2753,7 +2759,7 @@ export class EdithaApp extends LitElement {
       <editha-dialog></editha-dialog>
       <editha-context-menu></editha-context-menu>
       <editha-about-dialog @history-space=${() => void this.openHistorySpace()}></editha-about-dialog>
-      <editha-history-space></editha-history-space>
+      <editha-history-space @history-pruned=${() => void this.afterHistoryPruned()}></editha-history-space>
       <editha-folder-picker></editha-folder-picker>
       <editha-snippet-editor></editha-snippet-editor>
       <editha-toasts></editha-toasts>

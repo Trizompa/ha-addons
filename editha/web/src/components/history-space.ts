@@ -1,9 +1,27 @@
 import { LitElement, css, html, nothing } from 'lit';
-import { api, errorText, type HistoryUsageInfo } from '../api/client.js';
+import { api, errorText, type HistoryUsageInfo, type PruneInfo } from '../api/client.js';
 import { t } from '../i18n/index.js';
 import { icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
 import { formatCount, formatSize, formatVersionDate } from './history-panel.js';
+
+/** Oggi nel fuso del browser, come lo vuole un campo data (AAAA-MM-GG). */
+function todayLocal(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Frase con N versioni di M file, al singolare quando serve: `prefix` + "Versions"/"Files" One/Many.
+ * Il segnaposto {size} resta da sostituire.
+ */
+function versionsOf(versions: number, files: number, key: 'clean.previewText' | 'clean.done'): string {
+  return t(versions === 1 ? `${key}One` : key, {
+    versions: t(versions === 1 ? 'clean.versionOne' : 'clean.versionMany', { n: formatCount(versions) }),
+    files: t(files === 1 ? 'clean.fileOne' : 'clean.fileMany', { n: formatCount(files) }),
+    size: '{size}',
+  });
+}
 
 /**
  * BK-7: spazio occupato dalla cronologia, in tutto e file per file. Le copie stanno nella
@@ -13,15 +31,38 @@ export class EdithaHistorySpace extends LitElement {
   static override properties = {
     usage: { state: true },
     error: { state: true },
+    period: { state: true },
+    customDate: { state: true },
+    preview: { state: true },
+    confirming: { state: true },
+    busy: { state: true },
+    result: { state: true },
   };
 
   declare usage: HistoryUsageInfo | null;
   declare error: string | null;
+  /** Giorni della soglia, oppure 'date' per una data scelta. */
+  declare period: string;
+  declare customDate: string;
+  /** Anteprima per la soglia `previewBefore`. */
+  declare preview: PruneInfo | null;
+  declare confirming: boolean;
+  declare busy: boolean;
+  /** Messaggio dopo l'eliminazione (o di errore). */
+  declare result: { text: string; ok: boolean } | null;
+  /** Soglia dell'anteprima: l'eliminazione usa esattamente questa, non una ricalcolata. */
+  private previewBefore: string | null = null;
 
   constructor() {
     super();
     this.usage = null;
     this.error = null;
+    this.period = '30';
+    this.customDate = '';
+    this.preview = null;
+    this.confirming = false;
+    this.busy = false;
+    this.result = null;
   }
 
   static override styles = [
@@ -123,6 +164,42 @@ export class EdithaHistorySpace extends LitElement {
         justify-content: flex-end;
         margin-top: 14px;
       }
+      .clean {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+        font-size: 13px;
+      }
+      .clean h3 {
+        margin: 0 0 8px;
+        font-size: 14px;
+      }
+      .clean .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .clean select,
+      .clean input {
+        min-height: 32px;
+      }
+      .clean p {
+        margin: 10px 0 0;
+        line-height: 1.5;
+      }
+      .clean ul {
+        margin: 6px 0 0;
+        padding-left: 18px;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+      .warn {
+        color: var(--danger, #c62828);
+      }
+      .ok {
+        color: var(--success, #2e7d32);
+      }
       @media (max-width: 760px) {
         th.date,
         td.date {
@@ -136,17 +213,178 @@ export class EdithaHistorySpace extends LitElement {
   private loadToken = 0;
 
   async show(): Promise<void> {
+    this.resetClean();
+    this.result = null;
+    await this.open();
+  }
+
+  private resetClean(): void {
+    this.preview = null;
+    this.previewBefore = null;
+    this.confirming = false;
+  }
+
+  private get dialog(): HTMLDialogElement {
+    return this.renderRoot.querySelector('dialog') as HTMLDialogElement;
+  }
+
+  private async open(): Promise<void> {
     const token = ++this.loadToken;
     this.usage = null;
     this.error = null;
     await this.updateComplete;
-    (this.renderRoot.querySelector('dialog') as HTMLDialogElement).showModal();
+    if (!this.dialog.open) this.dialog.showModal();
+    await this.loadUsage(token);
+  }
+
+  /** Ricarica i numeri lasciando visibile il contenuto attuale (il focus resta nella finestra). */
+  private async loadUsage(token = ++this.loadToken): Promise<void> {
     try {
       const usage = await api.historyUsage();
       if (token === this.loadToken) this.usage = usage;
     } catch (err) {
       if (token === this.loadToken) this.error = errorText(err);
     }
+  }
+
+  /** Il focus non deve finire fuori dalla finestra (su un pulsante appena disattivato o rimosso). */
+  private async keepFocus(): Promise<void> {
+    await this.updateComplete;
+    if (!this.dialog.open) return;
+    const active = this.renderRoot instanceof ShadowRoot ? this.renderRoot.activeElement : null;
+    if (!active || (active as HTMLButtonElement).disabled) {
+      this.dialog.tabIndex = -1;
+      this.dialog.focus();
+    }
+  }
+
+  /** Soglia scelta: N giorni (contati dal server, con il suo orologio) o l'inizio del giorno scelto. */
+  private threshold(): { olderThanDays: number } | { before: string } | null {
+    if (this.period !== 'date') return { olderThanDays: Number(this.period) };
+    if (!this.customDate || this.customDate > todayLocal()) return null;
+    const d = new Date(`${this.customDate}T00:00:00`);
+    return Number.isNaN(d.getTime()) ? null : { before: d.toISOString() };
+  }
+
+  private async runPreview(): Promise<void> {
+    const before = this.threshold();
+    if (!before) return;
+    this.busy = true;
+    this.result = null;
+    this.confirming = false;
+    try {
+      this.preview = await api.pruneHistory(before, true);
+      // La cancellazione userà esattamente questa soglia, calcolata dal server.
+      this.previewBefore = this.preview.before;
+    } catch (err) {
+      this.result = { text: errorText(err), ok: false };
+    } finally {
+      this.busy = false;
+    }
+    void this.keepFocus();
+  }
+
+  private async runPrune(): Promise<void> {
+    const before = this.previewBefore;
+    if (!before) return;
+    this.busy = true;
+    try {
+      const done = await api.pruneHistory({ before }, false);
+      const text =
+        versionsOf(done.versions, done.files.length, 'clean.done') +
+        (done.failed.length ? ' ' + (done.failed.length === 1 ? t('clean.failedOne') : t('clean.failed', { n: formatCount(done.failed.length) })) : '');
+      this.result = { ok: done.failed.length === 0, text: text.replace('{size}', formatSize(done.bytes)) };
+      this.dispatchEvent(new CustomEvent('history-pruned', { bubbles: true, composed: true }));
+    } catch (err) {
+      this.result = { text: errorText(err), ok: false };
+    } finally {
+      this.busy = false;
+      this.resetClean();
+    }
+    // Chiusa nel frattempo: resta chiusa.
+    if (this.dialog.open) {
+      await this.loadUsage();
+      void this.keepFocus();
+    }
+  }
+
+  private renderClean() {
+    const p = this.preview;
+    return html`<section class="clean">
+      <h3>${t('clean.title')}</h3>
+      <div class="row">
+        <label for="clean-period">${t('clean.olderThan')}</label>
+        <select
+          id="clean-period"
+          .value=${this.period}
+          ?disabled=${this.busy}
+          @change=${(e: Event) => {
+            this.period = (e.target as HTMLSelectElement).value;
+            this.resetClean();
+          }}
+        >
+          ${['7', '30', '90', '365'].map(
+            (d) => html`<option value=${d} ?selected=${this.period === d}>${t(`clean.days${d}` as 'clean.days7')}</option>`,
+          )}
+          <option value="date" ?selected=${this.period === 'date'}>${t('clean.beforeDate')}</option>
+        </select>
+        ${this.period === 'date'
+          ? html`<input
+              type="date"
+              aria-label=${t('clean.beforeDate')}
+              .value=${this.customDate}
+              max=${todayLocal()}
+              ?disabled=${this.busy}
+              @change=${(e: Event) => {
+                this.customDate = (e.target as HTMLInputElement).value;
+                this.resetClean();
+              }}
+            />`
+          : nothing}
+        <button class="btn" data-action="clean-preview" ?disabled=${this.busy || !this.threshold()} @click=${() => void this.runPreview()}>
+          ${t('clean.preview')}
+        </button>
+      </div>
+      ${p
+        ? p.versions === 0
+          ? html`<p>${t('clean.nothing')}</p>`
+          : html`<p>
+                ${versionsOf(p.versions, p.files.length, 'clean.previewText').replace('{size}', formatSize(p.bytes))}
+                ${p.files.some((f) => f.emptied)
+                  ? t('clean.emptied', { n: formatCount(p.files.filter((f) => f.emptied).length) })
+                  : nothing}
+              </p>
+              <ul>
+                ${p.files.slice(0, 8).map(
+                  (f) => html`<li>${f.path ?? t('space.unknown')}: ${t(
+                      f.versions === 1 ? 'space.versionsOne' : 'space.versionsMany',
+                      { n: formatCount(f.versions) },
+                    )}, ${formatSize(f.bytes)}</li>`,
+                )}
+                ${p.files.length > 8 ? html`<li>${t('space.more', { n: formatCount(p.files.length - 8) })}</li>` : nothing}
+              </ul>
+              ${this.confirming
+                ? html`<p class="warn">${t('clean.confirm')}</p>
+                    <div class="row">
+                      <button class="btn" ?disabled=${this.busy} @click=${() => {
+                        this.confirming = false;
+                        void this.keepFocus();
+                      }}>${t('common.cancel')}</button>
+                      <button class="btn danger" data-action="clean-confirm" ?disabled=${this.busy} @click=${() => void this.runPrune()}>
+                        ${t('clean.confirmButton')}
+                      </button>
+                    </div>`
+                : html`<div class="row" style="margin-top: 8px">
+                    <button class="btn danger" data-action="clean-delete" ?disabled=${this.busy} @click=${() => {
+                      this.confirming = true;
+                      void this.keepFocus();
+                    }}>
+                      ${p.versions === 1 ? t('clean.deleteOne') : t('clean.delete', { n: formatCount(p.versions) })}
+                    </button>
+                  </div>`}`
+        : nothing}
+      ${this.result ? html`<p class=${this.result.ok ? 'ok' : 'warn'} role="status">${this.result.text}</p>` : nothing}
+    </section>`;
   }
 
   private close(): void {
@@ -205,6 +443,7 @@ export class EdithaHistorySpace extends LitElement {
         : this.usage
           ? this.renderUsage(this.usage)
           : html`<p class="empty">${t('insert.loading')}</p>`}
+      ${this.usage && (this.usage.versions > 0 || this.result) ? this.renderClean() : nothing}
       <div class="actions">
         <button class="btn" @click=${() => this.close()}>${t('common.close')}</button>
       </div>

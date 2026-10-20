@@ -256,7 +256,11 @@ resta copia (EDITHA avvisa prima di eliminarli).
 **Spazio occupato dalla cronologia**: in **Informazioni** (riga *Cronologia*, **Spazio e
 pulizia…**) o con il pulsante a forma di disco nell'intestazione della cronologia, EDITHA mostra
 quanto spazio occupa la cronologia sul disco, in tutto e file per file, dai più pesanti, segnalando
-i file che non esistono più. Si limita a mostrare: i tuoi file in `/config` non vengono toccati.
+i file che non esistono più. Sotto puoi eliminare le versioni più vecchie di 7, 30, 90 giorni, un
+anno o una data a scelta: prima **Anteprima** dice quante versioni di quanti file se ne andrebbero
+e quanto spazio liberano, poi **Elimina N versioni…** chiede conferma. Le versioni eliminate non si
+possono più ripristinare; i tuoi file in `/config` non vengono mai toccati. Il registro
+dell'add-on elenca cosa è stato eliminato.
 
 Per confrontare due file qualsiasi: tasto destro sul primo → **Seleziona per il confronto**, poi
 tasto destro sul secondo → **Confronta con *nome*** (il nome del primo file). Esc chiude il

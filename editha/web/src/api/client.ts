@@ -155,6 +155,17 @@ export interface HistoryUsageInfo {
   files: { path: string | null; bytes: number; versions: number; oldest: string; newest: string; exists: boolean }[];
 }
 
+/** Esito (o anteprima) della pulizia della cronologia. */
+export interface PruneInfo {
+  versions: number;
+  bytes: number;
+  files: { path: string | null; versions: number; bytes: number; emptied: boolean }[];
+  /** Cronologie che non si sono potute pulire. */
+  failed: (string | null)[];
+  /** Soglia usata, come istante ISO. */
+  before: string;
+}
+
 const q = (path: string) => `?path=${encodeURIComponent(path)}`;
 
 export const api = {
@@ -170,6 +181,12 @@ export const api = {
     request<{ path: string; backup: string | null }>('DELETE', `api/file${q(path)}${noBackup ? '&noBackup=true' : ''}`),
   /** Manutenzione: spazio occupato dalla cronologia, in tutto e per file. */
   historyUsage: () => request<HistoryUsageInfo>('GET', 'api/history/usage'),
+  /**
+   * Versioni più vecchie di N giorni (contati dal server) o di una data già passata: con
+   * `dryRun` solo contate, altrimenti eliminate. La risposta dice la soglia usata (`before`).
+   */
+  pruneHistory: (threshold: { olderThanDays: number } | { before: string }, dryRun: boolean) =>
+    request<PruneInfo>('POST', 'api/history/prune', { ...threshold, dryRun }),
   versions: (path: string) => request<{ path: string; versions: Version[] }>('GET', `api/versions${q(path)}`),
   version: (path: string, id: string) =>
     request<{ path: string; id: string; content: string }>('GET', `api/version${q(path)}&id=${encodeURIComponent(id)}`),

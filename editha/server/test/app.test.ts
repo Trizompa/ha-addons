@@ -185,6 +185,28 @@ describe('API', () => {
     }
   });
 
+  it('BK-7: pulizia della cronologia, con anteprima e data controllata', async () => {
+    const bad = await call({ method: 'POST', url: '/api/history/prune', payload: { before: 'ieri', dryRun: true } });
+    assert.equal(bad.statusCode, 400);
+    const missing = await call({ method: 'POST', url: '/api/history/prune', payload: { before: '2026-01-01T00:00:00Z' } });
+    assert.equal(missing.statusCode, 400);
+    const future = await call({
+      method: 'POST',
+      url: '/api/history/prune',
+      payload: { before: new Date(Date.now() + 3_600_000).toISOString(), dryRun: true },
+    });
+    assert.equal(future.statusCode, 400);
+    const none = await call({
+      method: 'POST',
+      url: '/api/history/prune',
+      payload: { before: '2000-01-01T00:00:00Z', dryRun: true },
+    });
+    assert.deepEqual(none.json(), { versions: 0, bytes: 0, files: [], failed: [], before: '2000-01-01T00:00:00.000Z' });
+    const days = await call({ method: 'POST', url: '/api/history/prune', payload: { olderThanDays: 30, dryRun: true } });
+    assert.equal(days.statusCode, 200);
+    assert.ok(Math.abs(Date.parse(days.json().before) - (Date.now() - 30 * 86_400_000)) < 60_000);
+  });
+
   it('crea, rinomina ed elimina', async () => {
     const created = await call({
       method: 'POST',

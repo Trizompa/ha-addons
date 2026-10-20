@@ -108,6 +108,53 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
   // Manutenzione della cronologia: spazio occupato, in tutto e per file.
   app.get('/api/history/usage', async () => files.historyUsage());
 
+  // Pulizia: versioni più vecchie di N giorni (contati qui, con l'orologio del server) o di una
+  // data già passata. Con dryRun solo l'anteprima; la risposta dice la soglia usata, che la
+  // cancellazione vera ripete identica (così non tocca versioni nate dopo l'anteprima).
+  app.post<{ Body: { olderThanDays?: number; before?: string; dryRun: boolean } }>(
+    '/api/history/prune',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['dryRun'],
+          properties: {
+            olderThanDays: { type: 'integer', minimum: 1, maximum: 36500 },
+            before: { type: 'string', minLength: 1, maxLength: 64 },
+            dryRun: { type: 'boolean' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (req) => {
+      const now = Date.now();
+      let before: Date;
+      if (req.body.olderThanDays !== undefined) before = new Date(now - req.body.olderThanDays * 86_400_000);
+      else if (req.body.before !== undefined) before = new Date(req.body.before);
+      else throw new EdithaError('invalid_request', 'Manca la soglia (olderThanDays o before)');
+      if (Number.isNaN(before.getTime())) throw new EdithaError('invalid_request', 'Data non valida');
+      // Una soglia nel futuro cancellerebbe anche versioni appena create.
+      if (before.getTime() > now) throw new EdithaError('invalid_request', 'La data è nel futuro');
+      const result = await files.pruneHistory(before, req.body.dryRun);
+      if (!req.body.dryRun && (result.versions > 0 || result.failed.length > 0)) {
+        // Traccia nel registro dell'add-on di ciò che è stato eliminato (solo percorsi, mai contenuti).
+        req.log.info(
+          {
+            before: before.toISOString(),
+            versions: result.versions,
+            bytes: result.bytes,
+            files: result.files.slice(0, 50).map((f) => `${f.path ?? '(senza nome)'}: ${f.versions}`),
+            moreFiles: Math.max(0, result.files.length - 50),
+            failed: result.failed.map((p) => p ?? '(senza nome)'),
+          },
+          'cronologia: versioni vecchie eliminate',
+        );
+      }
+      return { ...result, before: before.toISOString() };
+    },
+  );
+
   app.get<{ Querystring: PathQuery }>('/api/versions', { schema: { querystring: pathQuery } }, async (req) => ({
     path: req.query.path,
     versions: await files.versions(req.query.path),

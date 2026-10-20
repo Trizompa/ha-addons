@@ -1073,3 +1073,41 @@ test('a capo di Windows (CRLF) conservati al salvataggio; un file misto si vede 
   await openFile(page, 'crlf/misto.yaml');
   await expect(editor(page).locator('.cm-line')).toHaveCount(4);
 });
+
+// In fondo: tocca la cronologia, che altri test usano.
+test('BK-7 – elimina le versioni più vecchie: anteprima, conferma, spazio liberato', async ({ page, request }) => {
+  // spazio/pulisci.yaml ha una versione di due anni fa (serve.mjs); ne aggiungiamo una di oggi.
+  await openFile(page, 'spazio/pulisci.yaml');
+  await editor(page).click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('b: 2\n');
+  await page.keyboard.press('Control+s');
+  await expect(activeTab(page)).not.toHaveClass(/dirty/);
+  const versions = async () =>
+    (await (await request.get('api/versions?path=spazio%2Fpulisci.yaml')).json()).versions.length;
+  expect(await versions()).toBe(2);
+
+  await page.locator('editha-toolbar button[title="Informazioni su Editha"]').click();
+  await page.locator('editha-about-dialog dialog[open] button', { hasText: 'Spazio e pulizia' }).click();
+  const space = page.locator('editha-history-space dialog[open]');
+  await space.locator('select').selectOption('365');
+  await space.locator('button[data-action="clean-preview"]').click();
+  await expect(space).toContainText('Verrà eliminata 1 versione di 1 file o cartella');
+  // L'anteprima non cancella niente.
+  expect(await versions()).toBe(2);
+
+  await space.locator('button[data-action="clean-delete"]').click();
+  await expect(space).toContainText('non si potranno più ripristinare');
+  await space.locator('button[data-action="clean-confirm"]').click();
+  await expect(space.locator('[role="status"]')).toContainText('Fatto: eliminata 1 versione');
+  // Resta solo la versione di oggi; il file in /config non è stato toccato.
+  expect(await versions()).toBe(1);
+  expect(await disk('spazio/pulisci.yaml')).toBe('a: 1\nb: 2\n');
+
+  // Una data futura non si può usare: il pulsante Anteprima resta disattivato.
+  await space.locator('select').selectOption('date');
+  const tomorrow = new Date(Date.now() + 86_400_000);
+  const ymd = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+  await space.locator('input[type="date"]').fill(ymd);
+  await expect(space.locator('button[data-action="clean-preview"]')).toBeDisabled();
+});

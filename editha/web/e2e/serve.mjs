@@ -1,5 +1,6 @@
 // Avvia il server compilato su una /config di prova (usato da playwright.config.ts).
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import http from 'node:http';
 import { access } from 'node:fs/promises';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -45,6 +46,7 @@ const files = {
   'drafts/due-finestre.yaml': 'stato: salvato\n',
   'drafts/conteso.yaml': 'stato: salvato\n',
   'spazio/pesante.yaml': 'a: 1\n',
+  'spazio/pulisci.yaml': 'a: 1\n',
   'crlf/windows.yaml': 'a: 1\r\nb: 2\r\n',
   'crlf/misto.yaml': 'a: 1\r\nb: 2\nc: 3\n',
   'dup/originale.yaml': 'copia: no\n',
@@ -75,6 +77,14 @@ for (const [rel, content] of Object.entries(files)) {
 await mkdir(path.join(configDir, 'vuota'), { recursive: true });
 await mkdir(path.join(configDir, 'sempre-vuota'), { recursive: true });
 await mkdir(dataDir, { recursive: true });
+// BK-7: una versione vecchia di due anni da eliminare con la pulizia della cronologia.
+{
+  const key = createHash('sha256').update('spazio/pulisci.yaml').digest('hex');
+  const dir = path.join(dataDir, 'backups', key);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, 'index.json'), JSON.stringify({ path: 'spazio/pulisci.yaml' }) + '\n');
+  await writeFile(path.join(dir, '20200101T000000000Z-save'), 'vecchia: si\n');
+}
 
 // Finto Home Assistant Core: la configurazione è "non valida" finché esiste check/rotto.yaml.
 const HA_TOKEN = 'e2e-token';

@@ -33,6 +33,22 @@ export interface HistoryUsage {
   files: HistoryFileUsage[];
 }
 
+/** Esito della pulizia per un file: `emptied` = non gli resta nessuna versione. */
+export interface PruneFileResult {
+  path: string | null;
+  versions: number;
+  bytes: number;
+  emptied: boolean;
+}
+
+export interface PruneResult {
+  versions: number;
+  bytes: number;
+  files: PruneFileResult[];
+  /** Cronologie che non si sono potute pulire (errore del disco): restano com'erano o quasi. */
+  failed: (string | null)[];
+}
+
 /** Spazio su disco di una voce: blocchi occupati (un file da 1 KB ne usa comunque 4), non solo i byte. */
 function diskBytes(st: Stats): number {
   return Math.max(st.size, st.blocks * 512);
@@ -371,6 +387,73 @@ export class BackupStore {
     }
     files.sort((a, b) => b.bytes - a.bytes);
     return { totalBytes, versions, files };
+  }
+
+  /**
+   * BK-7: elimina le versioni create prima di `before` (con `dryRun` le conta soltanto).
+   * Una cronologia che resta vuota sparisce del tutto, indice compreso. Ogni file è
+   * trattato sotto il suo blocco, quindi non si incrocia con un salvataggio in corso.
+   */
+  async pruneBefore(before: Date, dryRun: boolean): Promise<PruneResult> {
+    const limit = compactTimestamp(before);
+    let keys: string[];
+    try {
+      keys = await readdir(this.dir);
+    } catch {
+      return { versions: 0, bytes: 0, files: [], failed: [] };
+    }
+    const files: PruneFileResult[] = [];
+    const failed: (string | null)[] = [];
+    for (const key of keys) {
+      const dir = path.join(this.dir, key);
+      let rel: string | null = null;
+      // Quanto è già stato eliminato: se un errore interrompe la cartella a metà, va contato lo stesso.
+      const gone = { versions: 0, bytes: 0 };
+      const done = await this.lock.run(dir, async (): Promise<PruneFileResult | null> => {
+        let ids: string[];
+        try {
+          if (!(await stat(dir)).isDirectory()) return null;
+          ids = await this.ids(dir);
+        } catch {
+          return null;
+        }
+        const old = ids.filter((id) => VERSION_RE.exec(id)![1]! < limit);
+        if (old.length === 0) return null;
+        try {
+          const p = (JSON.parse(await readFile(path.join(dir, INDEX_FILE), 'utf8')) as { path?: unknown }).path;
+          if (typeof p === 'string') rel = p;
+        } catch {
+          // indice illeggibile: il file resta senza nome
+        }
+        const all = old.length === ids.length;
+        const sizes: number[] = [];
+        for (const id of old) sizes.push(await treeBytes(path.join(dir, id)));
+        // Tutte vecchie: se ne va l'intera cartella, quindi conta tutto il suo spazio.
+        const bytes = all ? await treeBytes(dir) : sizes.reduce((n, b) => n + b, 0);
+        if (!dryRun) {
+          // Prima le versioni, l'indice e la cartella per ultimi: un errore a metà non lascia
+          // versioni senza nome.
+          for (const [i, id] of old.entries()) {
+            await rm(path.join(dir, id), { recursive: true, force: true });
+            gone.versions++;
+            gone.bytes += sizes[i]!;
+          }
+          if (all) await rm(dir, { recursive: true, force: true });
+        }
+        return { path: rel, versions: old.length, bytes, emptied: all };
+      }).catch(() => {
+        failed.push(rel);
+        return gone.versions > 0 ? { path: rel, versions: gone.versions, bytes: gone.bytes, emptied: false } : null;
+      });
+      if (done) files.push(done);
+    }
+    files.sort((a, b) => b.bytes - a.bytes);
+    return {
+      versions: files.reduce((n, f) => n + f.versions, 0),
+      bytes: files.reduce((n, f) => n + f.bytes, 0),
+      files,
+      failed,
+    };
   }
 
   /** Tiene le ultime N versioni; quella appena creata non si tocca mai. */

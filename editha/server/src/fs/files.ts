@@ -5,7 +5,7 @@ import { copyFile, cp, lstat, mkdir, open, opendir, readdir, readFile, realpath,
 import type { Stats } from 'node:fs';
 import { isMap, isScalar, LineCounter, parseDocument } from 'yaml';
 import { EdithaError, fromFsError } from '../errors.js';
-import type { BackupStore, HistoryFileUsage, HistoryUsage, Version } from '../backups/store.js';
+import type { BackupStore, HistoryFileUsage, HistoryUsage, PruneResult, Version } from '../backups/store.js';
 import { isTempName, writeFileAtomic } from './atomic.js';
 import { KeyedLock } from './lock.js';
 import { createZip, type ZipEntry } from './zip.js';
@@ -739,6 +739,11 @@ export class FileService {
       }),
     );
     return { ...usage, fileCount: usage.files.length, keep: this.backups.keep, files };
+  }
+
+  /** BK-7: elimina (o con `dryRun` conta) le versioni della cronologia create prima di `before`. */
+  async pruneHistory(before: Date, dryRun: boolean): Promise<PruneResult> {
+    return this.backups.pruneBefore(before, dryRun);
   }
 
   /** BK-3: testo di una versione conservata, per il confronto con il file attuale. */

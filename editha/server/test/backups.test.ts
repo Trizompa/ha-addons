@@ -51,6 +51,37 @@ describe('BackupStore', () => {
     assert.equal(usage.files[0]!.newest, '2026-10-15T08:00:01.000Z');
   });
 
+  it('BK-7: elimina le versioni più vecchie di una data; con dryRun le conta soltanto', async () => {
+    store = new BackupStore(path.join(sb.dataDir, 'backups'), 10, () => clock);
+    clock = new Date('2026-01-01T10:00:00.000Z');
+    await store.saveFile('a.yaml', Buffer.from('a1'), 'save');
+    await store.saveFile('b.yaml', Buffer.from('b1'), 'delete');
+    clock = new Date('2026-03-01T10:00:00.000Z');
+    await store.saveFile('a.yaml', Buffer.from('a2'), 'save');
+
+    const preview = await store.pruneBefore(new Date('2026-02-01T00:00:00.000Z'), true);
+    assert.equal(preview.versions, 2);
+    assert.deepEqual(preview.files.map((f) => [f.path, f.versions, f.emptied]).sort(), [
+      ['a.yaml', 1, false],
+      ['b.yaml', 1, true],
+    ]);
+    assert.ok(preview.bytes > 0);
+    // L'anteprima non tocca niente.
+    assert.equal((await store.list('a.yaml')).length, 2);
+    assert.equal((await store.list('b.yaml')).length, 1);
+
+    const done = await store.pruneBefore(new Date('2026-02-01T00:00:00.000Z'), false);
+    assert.equal(done.versions, 2);
+    assert.deepEqual((await store.list('a.yaml')).map((v) => v.createdAt), ['2026-03-01T10:00:00.000Z']);
+    assert.deepEqual(await store.list('b.yaml'), []);
+    // La cronologia rimasta vuota sparisce del tutto, indice compreso.
+    const keyB = createHash('sha256').update('b.yaml').digest('hex');
+    assert.ok(!(await readdir(path.join(sb.dataDir, 'backups'))).includes(keyB));
+    assert.deepEqual((await store.usage()).files.map((f) => f.path), ['a.yaml']);
+    // Niente di più vecchio: niente da fare.
+    assert.equal((await store.pruneBefore(new Date('2026-02-01T00:00:00.000Z'), false)).versions, 0);
+  });
+
   it('elenca le versioni dalla più recente', async () => {
     await store.saveFile('a.yaml', Buffer.from('1'), 'save');
     clock = new Date('2026-10-15T08:00:01.000Z');
