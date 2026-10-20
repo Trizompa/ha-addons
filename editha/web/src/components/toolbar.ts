@@ -23,6 +23,8 @@ export interface ToolbarState {
   searchOpen: boolean;
   /** Schema del file a fianco dell'editor (ED-18). */
   outline: boolean;
+  /** Cronologia del file aperta: il pulsante la chiude. */
+  historyOpen: boolean;
 }
 
 const THEME_ICON: Record<ThemeMode, string> = { auto: icons.themeAuto, light: icons.themeLight, dark: icons.themeDark };
@@ -160,7 +162,7 @@ export class EdithaToolbar extends LitElement {
       ${this.button('undo', t('toolbar.undo'), icons.undo, { disabled: !s.canUndo })}
       ${this.button('redo', t('toolbar.redo'), icons.redo, { disabled: !s.canRedo })}
       ${this.button('search', t('toolbar.search'), icons.search, { disabled: !s.hasTab })}
-      ${this.button('history', t('toolbar.history'), icons.history, { disabled: !s.hasTab, cls: 'hide-narrow' })}
+      ${this.button('history', t('toolbar.history'), icons.history, { on: s.historyOpen, disabled: !s.hasTab && !s.historyOpen, cls: 'hide-narrow' })}
       ${this.button('word-wrap', t('toolbar.wrap'), icons.wrap, { on: s.wordWrap, cls: 'hide-narrow' })}
       ${this.button('split', t('toolbar.split'), icons.split, { on: s.split, disabled: !s.hasTab && !s.split, cls: 'hide-narrow' })}
       ${this.button('outline', t('toolbar.outline'), icons.outline, { on: s.outline, cls: 'hide-narrow' })}

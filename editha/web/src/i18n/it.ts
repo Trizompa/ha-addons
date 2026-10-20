@@ -1,6 +1,6 @@
 /** Testi in italiano (lingua di riferimento: ogni chiave deve esistere anche in en.ts). */
 export const it = {
-  'app.tagline': 'Every Day I Tweak HA',
+  'app.tagline': '“Every Day I Tweak HA”',
 
   // Barra degli strumenti
   'toolbar.sidebar': 'Mostra/nascondi esplora file',
@@ -189,7 +189,6 @@ export const it = {
   'git.unavailable': 'Il programma git non è disponibile in questa versione dell\'add-on.',
   'git.broken': 'In /config c\'è una cartella .git, ma git non la riconosce come repository. EDITHA non la tocca: controllala o rimuovila da un terminale.',
   'git.noneIntro': 'In /config non c\'è ancora un repository Git. Git conserva la storia dei tuoi file con dei «commit»: istantanee che decidi tu quando fare, ognuna con un messaggio, da poter confrontare e ripristinare.',
-  'git.localOnly': 'Il repository resta qui, sul tuo Home Assistant: EDITHA non invia niente fuori (niente GitHub né altri server).',
   'git.ignoredIntro': 'Verrà creato anche un file .gitignore che tiene fuori dal repository:',
   'git.ignoredSecrets': 'password e chiavi: secrets.yaml e le sue copie',
   'git.ignoredInternal': 'i dati interni di Home Assistant (.storage, .cloud, deps, tts…)',
@@ -240,9 +239,10 @@ export const it = {
   'git.ignore': 'Escludi dal repository (aggiunge una riga al .gitignore)',
   'git.ignored': 'Escluso dal repository: {path} (aggiunto al .gitignore)',
   'git.firstCommitHint': 'È il primo commit: di solito contiene tutta la configurazione. Prima di farlo, escludi con l\'occhio barrato le cartelle che non ti servono (per esempio quelle scaricate da HACS o le copie di altri add-on).',
-  'git.legendCheck': 'la spunta sceglie cosa entra in questo commit',
-  'git.legendEye': 'esclude per sempre (riga nel .gitignore)',
-  'git.legendCompare': 'confronta con l\'ultimo commit',
+  'git.legend': 'Legenda',
+  'git.legendCheck': 'Includi nel commit',
+  'git.legendEye': 'Escludi per sempre (.gitignore)',
+  'git.legendCompare': 'Confronta con l\'ultimo commit',
   'git.ignoredList': 'Esclusi ({n})',
   'git.ignoredListHint': 'File e cartelle esclusi dal repository (righe del .gitignore). «Includi» li fa ricomparire tra le modifiche.',
   'git.unignore': 'Includi',
@@ -260,7 +260,6 @@ export const it = {
   'git.gitignoreDone': 'File .gitignore creato',
   'git.gitignoreKept': 'Il file .gitignore esiste già: non è stato modificato',
   'error.git_unavailable': 'il programma git non è disponibile',
-  'template.menu': 'Anteprima template',
   'template.title': 'Anteprima template',
   'template.source': '{file}, riga {line}',
   'template.refresh': 'Calcola di nuovo (dal cursore o dalla selezione)',
@@ -521,9 +520,7 @@ export const it = {
   'space.unknown': '(nome sconosciuto)',
   'space.deleted': 'eliminato',
   'space.more': '…e altri {n} file e cartelle più piccoli',
-  'space.open': 'Spazio e pulizia…',
   'space.openTitle': 'Spazio occupato dalla cronologia',
-  'about.history': 'Cronologia',
   'about.developer': 'Sviluppatore',
   'about.repository': 'Repository',
   'about.version': 'Versione',

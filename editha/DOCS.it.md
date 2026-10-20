@@ -218,7 +218,7 @@ se **Salva tutto e continua** o **Continua senza salvare**.
 ### Anteprima dei template
 
 Metti il cursore su un template (o selezionalo) e premi **Alt+T**, oppure usa il pulsante
-**Anteprima template** nella barra (le parentesi graffe) o la voce nel menu di Home Assistant. Senza selezione EDITHA prende il valore sotto il cursore,
+**Anteprima template** nella barra (le parentesi graffe). Senza selezione EDITHA prende il valore sotto il cursore,
 letto come lo legge Home Assistant: anche su più righe (`value_template: >`, `|`, virgolette che
 vanno a capo). Nei file `.jinja` prende il file intero.
 
@@ -280,8 +280,9 @@ apri **Cronologia…** su di lui: le sue versioni sono ancora lì, compresa quel
 all'eliminazione. Le cartelle non si possono ripristinare così, e degli elementi oltre 50 MB non
 resta copia (EDITHA avvisa prima di eliminarli).
 
-**Spazio occupato dalla cronologia**: in **Informazioni** (riga *Cronologia*, **Spazio e
-pulizia…**) o con il pulsante a forma di disco nell'intestazione della cronologia, EDITHA mostra
+**Spazio occupato dalla cronologia**: con il pulsante a forma di disco nell'intestazione della
+cronologia (aperta dal pulsante **Cronologia del file** nella barra, che con un secondo clic la
+chiude), EDITHA mostra
 quanto spazio occupa la cronologia sul disco, in tutto e file per file, dai più pesanti, segnalando
 i file che non esistono più. Sotto puoi eliminare le versioni più vecchie di 7, 30, 90 giorni, un
 anno o una data a scelta: prima **Anteprima** dice quante versioni di quanti file se ne andrebbero

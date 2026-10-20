@@ -26,6 +26,13 @@ async function openFile(page: Page, p: string) {
   await expect(activeTab(page)).toHaveAttribute('data-path', p);
 }
 
+/** BK-7: la finestra dello spazio si apre dal pannello Cronologia (con un file aperto). */
+async function openSpaceDialog(page: Page) {
+  if (!(await activeTab(page).count())) await openFile(page, 'spazio/pulisci.yaml');
+  await page.locator('editha-toolbar button[aria-label="Cronologia del file"]').click();
+  await page.locator('editha-history-panel button[title="Spazio occupato dalla cronologia"]').click();
+}
+
 test.beforeEach(async ({ page, request }) => {
   // Ogni test parte da sessione e impostazioni pulite.
   await request.put('api/session', { data: { tabs: [], active: null } });
@@ -697,7 +704,7 @@ test('Informazioni: autore, versione e licenza', async ({ page }) => {
   await expect(about).toHaveCount(0);
 });
 
-test('BK-7 – spazio della cronologia: totale e file per file, da Informazioni e dalla cronologia', async ({ page }) => {
+test('BK-7 – spazio della cronologia: totale e file per file, dal pannello Cronologia', async ({ page }) => {
   // Due salvataggi: due versioni di spazio/pesante.yaml.
   await openFile(page, 'spazio/pesante.yaml');
   for (const line of ['b: 2', 'c: 3']) {
@@ -708,8 +715,7 @@ test('BK-7 – spazio della cronologia: totale e file per file, da Informazioni 
     await expect(activeTab(page)).not.toHaveClass(/dirty/);
   }
 
-  await page.locator('editha-toolbar button[title="Informazioni su Editha"]').click();
-  await page.locator('editha-about-dialog dialog[open] button', { hasText: 'Spazio e pulizia' }).click();
+  await openSpaceDialog(page);
   const space = page.locator('editha-history-space dialog[open]');
   await expect(space).toContainText('La cronologia occupa');
   const row = space.locator('tr', { hasText: 'spazio/pesante.yaml' });
@@ -717,8 +723,7 @@ test('BK-7 – spazio della cronologia: totale e file per file, da Informazioni 
   await space.locator('button', { hasText: 'Chiudi' }).click();
   await expect(space).toHaveCount(0);
 
-  // Anche dall'intestazione della cronologia.
-  await page.locator('editha-toolbar button[title^="Cronologia"]').click();
+  // La cronologia è rimasta aperta: si riapre dal suo pulsante.
   await page.locator('editha-history-panel button[title="Spazio occupato dalla cronologia"]').click();
   await expect(space).toContainText('spazio/pesante.yaml');
 });
@@ -1080,10 +1085,9 @@ test('HA-7 – anteprima del template sotto il cursore: risultato, errore di sin
   const panel = page.locator('editha-template-panel');
   const lineOf = (n: number) => editor(page).locator('.cm-line').nth(n - 1);
 
-  // Cursore sul valore tra virgolette, dalla voce del menu Home Assistant.
+  // Cursore sul valore tra virgolette, con Alt+T.
   await lineOf(4).click();
-  await page.locator('editha-toolbar button[title^="Home Assistant"]').click();
-  await menuItem(page, 'Anteprima template').click();
+  await page.keyboard.press('Alt+t');
   await expect(panel.locator('.ok pre')).toHaveText('on');
   await expect(panel.locator('.source')).toHaveText('auto.yaml, riga 4');
 
@@ -1250,6 +1254,17 @@ test('GIT-1…6 – pannello Git: inizializza, modifiche, commit dei file scelti
   await expect(row(page, '.gitignore')).toBeVisible();
 });
 
+test('il pulsante Cronologia della barra apre e, al secondo clic, chiude la cronologia', async ({ page }) => {
+  await openFile(page, 'tabs/a.yaml');
+  const button = page.locator('editha-toolbar button[aria-label="Cronologia del file"]');
+  await button.click();
+  await expect(page.locator('editha-history-panel')).toBeVisible();
+  await expect(button).toHaveAttribute('aria-pressed', 'true');
+  await button.click();
+  await expect(page.locator('editha-history-panel')).toHaveCount(0);
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+});
+
 // In fondo: tocca la cronologia, che altri test usano.
 test('BK-7 – elimina le versioni più vecchie: anteprima, conferma, spazio liberato', async ({ page, request }) => {
   // spazio/pulisci.yaml ha una versione di due anni fa (serve.mjs); ne aggiungiamo una di oggi.
@@ -1263,8 +1278,7 @@ test('BK-7 – elimina le versioni più vecchie: anteprima, conferma, spazio lib
     (await (await request.get('api/versions?path=spazio%2Fpulisci.yaml')).json()).versions.length;
   expect(await versions()).toBe(2);
 
-  await page.locator('editha-toolbar button[title="Informazioni su Editha"]').click();
-  await page.locator('editha-about-dialog dialog[open] button', { hasText: 'Spazio e pulizia' }).click();
+  await openSpaceDialog(page);
   const space = page.locator('editha-history-space dialog[open]');
   await space.locator('select').selectOption('365');
   await space.locator('button[data-action="clean-preview"]').click();
@@ -1294,8 +1308,7 @@ test('BK-7 – cancella tutta la cronologia solo dopo aver scritto CANCELLA', as
   expect((await usage()).versions).toBeGreaterThan(0);
   const before = await disk('spazio/pulisci.yaml');
 
-  await page.locator('editha-toolbar button[title="Informazioni su Editha"]').click();
-  await page.locator('editha-about-dialog dialog[open] button', { hasText: 'Spazio e pulizia' }).click();
+  await openSpaceDialog(page);
   const space = page.locator('editha-history-space dialog[open]');
   await space.locator('select').selectOption('all');
   await space.locator('button[data-action="clean-preview"]').click();

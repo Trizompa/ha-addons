@@ -223,11 +223,40 @@ export class EdithaGitPanel extends LitElement {
         font-size: 12px;
       }
       .legend {
-        margin: 0 0 8px;
-        line-height: 1.6;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        margin: 0 0 10px;
+        padding: 6px 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+      /* Una voce per riga: mai a capo. */
+      .legend-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        line-height: 1.4;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      .legend-row > span:last-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      /* Simbolo a sinistra, testo accanto sulla stessa riga. */
+      .legend .sym {
+        display: inline-flex;
+        flex: none;
       }
       .legend .badge {
         display: inline-block;
+        width: auto;
+      }
+      .legend .tick {
+        color: var(--accent);
       }
       ul.changes.ignored li {
         gap: 6px;
@@ -641,7 +670,6 @@ export class EdithaGitPanel extends LitElement {
     if (info.repo === 'none') {
       return html`
         <p>${t('git.noneIntro')}</p>
-        <p class="muted">${t('git.localOnly')}</p>
         ${info.gitignore ? html`<p class="muted">${t('git.gitignoreExists')}</p>` : this.renderIgnored()}
         <button class="btn primary" data-action="git-init" ?disabled=${this.busy} @click=${() => void this.init()}>
           ${icon(icons.git, 16)} ${t('git.init')}
@@ -669,7 +697,6 @@ export class EdithaGitPanel extends LitElement {
             <button class="btn" data-action="git-gitignore" ?disabled=${this.busy} @click=${() => void this.createGitignore()}>
               ${t('git.createGitignore')}
             </button>`}
-      <p class="muted small">${t('git.localOnly')}</p>
     `;
   }
 
@@ -716,13 +743,19 @@ export class EdithaGitPanel extends LitElement {
         </label>
       </div>
       ${!this.info?.head ? html`<p class="hint small">${t('git.firstCommitHint')}</p>` : nothing}
-      <p class="legend muted small">
-        <span class="badge added">N</span> ${t('git.statusAdded')} · <span class="badge modified">M</span> ${t('git.statusModified')} ·
-        <span class="badge deleted">${t('git.statusDeleted').slice(0, 1)}</span> ${t('git.statusDeleted')}<br />
-        ${t('git.legendCheck')} · ${icon(icons.hide, 13)} ${t('git.legendEye')}${this.info?.head
-          ? html` · ${icon(icons.compare, 13)} ${t('git.legendCompare')}`
+      <div class="legend" role="note" aria-label=${t('git.legend')}>
+        <div class="legend-row"><span class="sym tick">${icon(icons.checkbox, 15)}</span><span>${t('git.legendCheck')}</span></div>
+        <div class="legend-row">
+          <span
+            ><span class="badge added">N</span> ${t('git.statusAdded')} · <span class="badge modified">M</span> ${t('git.statusModified')} ·
+            <span class="badge deleted">${t('git.statusDeleted').slice(0, 1)}</span> ${t('git.statusDeleted')}</span
+          >
+        </div>
+        <div class="legend-row"><span class="sym">${icon(icons.hide, 15)}</span><span>${t('git.legendEye')}</span></div>
+        ${this.info?.head
+          ? html`<div class="legend-row"><span class="sym">${icon(icons.compare, 15)}</span><span>${t('git.legendCompare')}</span></div>`
           : nothing}
-      </p>
+      </div>
       <ul class="changes">
         ${changes.map((c) => {
           const blocked = c.blocked !== null || this.merging;

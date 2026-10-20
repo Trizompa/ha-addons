@@ -212,7 +212,7 @@ whether to **Save all and continue** or **Continue without saving**.
 ### Template preview
 
 Put the cursor on a template (or select it) and press **Alt+T**, or use the **Template preview**
-button in the toolbar (the curly braces) or the entry in the Home Assistant menu. Without a selection EDITHA takes the value under the cursor, read the way
+button in the toolbar (the curly braces). Without a selection EDITHA takes the value under the cursor, read the way
 Home Assistant reads it: also across several lines (`value_template: >`, `|`, quoted text that
 wraps). In `.jinja` files it takes the whole file.
 
@@ -270,8 +270,8 @@ because the current content is kept too). History works on text files up to 5 MB
 Folders cannot be restored this way, and items larger than 50 MB have no copy (EDITHA warns you
 before deleting them).
 
-**Space taken by the history**: in **About** (row *History*, **Space and cleanup…**) or with the
-disk button in the history header, EDITHA shows how much disk space the history takes in total and
+**Space taken by the history**: with the disk button in the history header (opened by the **File
+history** toolbar button, which closes it on a second click), EDITHA shows how much disk space the history takes in total and
 file by file, biggest first, marking the files that no longer exist. Below that you can delete the
 versions older than 7, 30, 90 days, one year or a date you choose: **Preview** first tells you how
 many versions of how many files would go and how much space they free, then **Delete N versions…**

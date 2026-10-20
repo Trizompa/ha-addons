@@ -12,7 +12,7 @@ import { languageOf } from '../editor/languages.js';
 import { LINT_MAX_CHARS } from '../editor/yaml-lint.js';
 import { basename, dirname, extension, isSecretsFile, join, resolvePath, validateName } from '../state/paths.js';
 import { previewKind } from '../state/preview.js';
-import { shortcutKey, shortcutLabel } from '../state/keys.js';
+import { shortcutKey } from '../state/keys.js';
 import { forgetSecrets, secretKeys } from '../state/secrets.js';
 import type { LinkKind } from '../editor/links.js';
 import { TabsModel } from '../state/tabs.js';
@@ -372,27 +372,6 @@ export class EdithaApp extends LitElement {
         text-align: center;
         color: var(--text-muted);
         background: var(--editor-bg);
-      }
-      .welcome .logo {
-        display: grid;
-        place-items: center;
-        width: 64px;
-        height: 64px;
-        border-radius: 18px;
-        background: linear-gradient(135deg, var(--accent), #6a5cff);
-        color: #fff;
-        font-size: 32px;
-        font-weight: 700;
-        box-shadow: var(--shadow);
-      }
-      .welcome h1 {
-        margin: 0;
-        color: var(--text);
-        font-size: 22px;
-        font-weight: 650;
-      }
-      .welcome p {
-        margin: -8px 0 0;
       }
       .keys {
         display: grid;
@@ -2468,8 +2447,6 @@ export class EdithaApp extends LitElement {
     // Fuori da Home Assistant (sviluppo) le voci restano visibili ma disattivate.
     const off = !haData.available;
     const items: MenuEntry[] = [
-      { id: 'template', label: t('template.menu'), icon: icons.template, hint: shortcutLabel('Alt+T'), disabled: off },
-      'separator',
       { id: 'check', label: t('ha.check'), icon: icons.check, disabled: off },
       { id: 'reload', label: t('ha.reload'), icon: icons.reload, disabled: off },
       'separator',
@@ -2478,8 +2455,7 @@ export class EdithaApp extends LitElement {
     const x = rect ? rect.left : 16;
     const y = rect ? rect.bottom + 4 : 56;
     const choice = await this.menu.show(items, x, y);
-    if (choice === 'template') await this.previewTemplate();
-    else if (choice === 'check') await this.haCheck();
+    if (choice === 'check') await this.haCheck();
     else if (choice === 'reload') await this.haReload();
     else if (choice === 'restart') await this.haRestart();
   }
@@ -2732,6 +2708,8 @@ export class EdithaApp extends LitElement {
       case 'about':
         return (this.renderRoot.querySelector('editha-about-dialog') as EdithaAboutDialog).show();
       case 'history':
+        // Secondo clic: chiude, come gli altri pulsanti della barra.
+        if (this.history) return this.closeHistory();
         return void (this.focusedTab() && this.openHistory(this.focusedTab()!.path));
       case 'word-wrap':
         return void this.toggleWordWrap();
@@ -2910,6 +2888,7 @@ export class EdithaApp extends LitElement {
       split: this.split ?? false,
       searchOpen: this.searchOpen ?? false,
       outline: this.settings.outlineVisible,
+      historyOpen: !!this.history,
     };
   }
 
@@ -2959,6 +2938,11 @@ export class EdithaApp extends LitElement {
     handle.addEventListener('pointerup', up);
     // Trascinamento interrotto (es. il sistema prende il tocco): si chiude comunque.
     handle.addEventListener('pointercancel', up);
+  }
+
+  override willUpdate(changed: Map<PropertyKey, unknown>): void {
+    // Il pulsante Cronologia della barra mostra se la cronologia è aperta.
+    if (changed.has('history') && this.toolbar && this.toolbar.historyOpen !== !!this.history) this.refreshToolbar();
   }
 
   override render() {
@@ -3035,9 +3019,6 @@ export class EdithaApp extends LitElement {
           <div class="editors" @editha-link=${(e: CustomEvent<{ kind: LinkKind; target: string; file: string }>) => void this.followLink(e)}>
           <editha-editor-pane>
             <div class="welcome" slot="empty">
-              <div class="logo">E</div>
-              <h1>EDITHA</h1>
-              <p>${t('app.tagline')}</p>
               <div class="keys">
                 <span><kbd>Ctrl</kbd> + <kbd>S</kbd></span><span>${t('welcome.save')}</span>
                 <span><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd></span><span>${t('welcome.saveAll')}</span>
@@ -3115,7 +3096,7 @@ export class EdithaApp extends LitElement {
       />
       <editha-dialog></editha-dialog>
       <editha-context-menu></editha-context-menu>
-      <editha-about-dialog @history-space=${() => void this.openHistorySpace()}></editha-about-dialog>
+      <editha-about-dialog></editha-about-dialog>
       <editha-history-space @history-pruned=${() => void this.afterHistoryPruned()}></editha-history-space>
       <editha-folder-picker></editha-folder-picker>
       <editha-snippet-editor></editha-snippet-editor>

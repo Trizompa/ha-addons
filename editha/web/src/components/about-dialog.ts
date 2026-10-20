@@ -69,17 +69,8 @@ export class EdithaAboutDialog extends LitElement {
         color: var(--accent);
         text-decoration: none;
       }
-      a:hover,
-      button.link:hover {
+      a:hover {
         text-decoration: underline;
-      }
-      button.link {
-        padding: 0;
-        border: none;
-        background: none;
-        color: var(--accent);
-        font: inherit;
-        cursor: pointer;
       }
       .thanks {
         margin: 16px 0 0;
@@ -99,12 +90,6 @@ export class EdithaAboutDialog extends LitElement {
 
   show(): void {
     (this.renderRoot.querySelector('dialog') as HTMLDialogElement).showModal();
-  }
-
-  /** La finestra della cronologia si apre al posto di questa. */
-  private openSpace(): void {
-    this.close();
-    this.dispatchEvent(new CustomEvent('history-space', { bubbles: true, composed: true }));
   }
 
   private close(): void {
@@ -127,10 +112,6 @@ export class EdithaAboutDialog extends LitElement {
         <dd data-field="version">${VERSION}</dd>
         <dt>${t('about.license')}</dt>
         <dd>MIT</dd>
-        <dt>${t('about.history')}</dt>
-        <dd>
-          <button class="link" data-action="history-space" @click=${() => this.openSpace()}>${t('space.open')}</button>
-        </dd>
       </dl>
       <p class="thanks">${t('about.thanks')}</p>
       <div class="actions">

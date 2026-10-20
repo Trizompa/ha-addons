@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.33.0
+
+- L'anteprima template non è più nel menu di Home Assistant (che ora ha solo verifica, ricarica e riavvio): resta il pulsante `{}` nella barra e Alt+T.
+- Il pulsante **Cronologia del file** nella barra si comporta come gli altri: resta evidenziato mentre la cronologia è aperta e un secondo clic la chiude.
+- Pannello Git: la legenda sta in un riquadro, una voce per riga (spunta, lettere N/M/E, occhio barrato, confronto); tolta la frase sul repository che resta in locale.
+- Pagina iniziale: solo le scorciatoie, senza logo e nome ripetuti. Finestra Informazioni: tolta la riga Cronologia (lo spazio della cronologia si apre dal pannello Cronologia).
+- Il motto è tra virgolette: “Every Day I Tweak HA”.
+
 ## 0.32.0
 
 - **Git, Esclusi**: nel pannello Git una sezione elenca file e cartelle esclusi con l'occhio barrato; **Includi** li fa ricomparire, senza aprire il `.gitignore` a mano. Le righe aggiunte stanno sotto un titolo nel `.gitignore`.

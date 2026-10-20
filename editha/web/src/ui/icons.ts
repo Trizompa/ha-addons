@@ -7,6 +7,7 @@ import {
   mdiChevronDown,
   mdiChevronRight,
   mdiClose,
+  mdiCheckboxMarked,
   mdiCodeBraces,
   mdiSourceBranch,
   mdiCodeJson,
@@ -119,6 +120,7 @@ export const icons = {
   outline: mdiFormatListBulleted,
   template: mdiCodeBraces,
   git: mdiSourceBranch,
+  checkbox: mdiCheckboxMarked,
 };
 
 export function icon(path: string, size = 18): SVGTemplateResult {

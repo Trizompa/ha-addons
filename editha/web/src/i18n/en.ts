@@ -2,7 +2,7 @@ import type { Dictionary } from './it.js';
 
 /** English texts. The type requires every key of the Italian dictionary. */
 export const en: Record<keyof Dictionary, string> = {
-  'app.tagline': 'Every Day I Tweak HA',
+  'app.tagline': '“Every Day I Tweak HA”',
 
   'toolbar.sidebar': 'Show/hide file explorer',
   'toolbar.save': 'Save (Ctrl+S)',
@@ -179,7 +179,6 @@ export const en: Record<keyof Dictionary, string> = {
   'git.unavailable': 'The git program is not available in this version of the add-on.',
   'git.broken': 'There is a .git folder in /config, but git does not recognise it as a repository. EDITHA leaves it alone: check it or remove it from a terminal.',
   'git.noneIntro': 'There is no Git repository in /config yet. Git keeps the history of your files as «commits»: snapshots you decide when to take, each with a message, that you can compare and restore.',
-  'git.localOnly': 'The repository stays here, on your Home Assistant: EDITHA sends nothing outside (no GitHub or other servers).',
   'git.ignoredIntro': 'A .gitignore file will also be created, keeping out of the repository:',
   'git.ignoredSecrets': 'passwords and keys: secrets.yaml and its copies',
   'git.ignoredInternal': 'Home Assistant internal data (.storage, .cloud, deps, tts…)',
@@ -230,9 +229,10 @@ export const en: Record<keyof Dictionary, string> = {
   'git.ignore': 'Exclude from the repository (adds a line to .gitignore)',
   'git.ignored': 'Excluded from the repository: {path} (added to .gitignore)',
   'git.firstCommitHint': 'This is the first commit: it usually contains the whole configuration. Before making it, exclude with the crossed-out eye the folders you do not need (for example those downloaded by HACS or other add-ons\' copies).',
-  'git.legendCheck': 'the tick chooses what goes into this commit',
-  'git.legendEye': 'excludes for good (a line in .gitignore)',
-  'git.legendCompare': 'compares with the last commit',
+  'git.legend': 'Legend',
+  'git.legendCheck': 'Include in this commit',
+  'git.legendEye': 'Exclude for good (.gitignore)',
+  'git.legendCompare': 'Compare with the last commit',
   'git.ignoredList': 'Excluded ({n})',
   'git.ignoredListHint': 'Files and folders excluded from the repository (.gitignore lines). «Include» brings them back among the changes.',
   'git.unignore': 'Include',
@@ -250,7 +250,6 @@ export const en: Record<keyof Dictionary, string> = {
   'git.gitignoreDone': '.gitignore file created',
   'git.gitignoreKept': 'The .gitignore file already exists: it was not changed',
   'error.git_unavailable': 'the git program is not available',
-  'template.menu': 'Template preview',
   'template.title': 'Template preview',
   'template.source': '{file}, line {line}',
   'template.refresh': 'Render again (from the cursor or the selection)',
@@ -507,9 +506,7 @@ export const en: Record<keyof Dictionary, string> = {
   'space.unknown': '(unknown name)',
   'space.deleted': 'deleted',
   'space.more': '…and {n} more, smaller files and folders',
-  'space.open': 'Space and cleanup…',
   'space.openTitle': 'Space taken by the history',
-  'about.history': 'History',
   'about.developer': 'Developer',
   'about.repository': 'Repository',
   'about.version': 'Version',
