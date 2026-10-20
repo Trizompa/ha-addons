@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.35.0
+
+- **Git, cartelle apribili**: la freccetta accanto a una cartella nuova mostra i suoi file, ognuno con la sua spunta e il suo occhio barrato. Così puoi mettere nel commit, o escludere per sempre, solo alcuni file di una cartella. La spunta della cartella diventa "in parte" e il conteggio dice quanti file entrano (per esempio `3 di 8 file`). Si vedono al massimo 200 file per cartella: gli altri entrano solo con la cartella intera.
+- Barra dei pulsanti: senza un file aperto, i pulsanti **A capo automatico**, **Schema del file** e **Inserisci entità o snippet** sono spenti, come già ricerca e anteprima template.
+- Documentazione in inglese: ora si vedono anche le immagini.
+
 ## 0.34.0
 
 - **ZIP senza password**: scaricando una cartella come zip, `secrets.yaml` e le sue copie restano sempre fuori, ed EDITHA lo dice con un avviso. Il file da solo si scarica come prima.

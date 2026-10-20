@@ -320,6 +320,11 @@ fuori (niente GitHub né altri server).
   una cartella nuovi li **esclude** dal repository: aggiunge una riga al `.gitignore`, così non
   compaiono più. Al primo commit, che di solito contiene tutta la configurazione, conviene
   escludere prima le cartelle che non servono (scaricate da HACS, copie di altri add-on…).
+- La **freccetta** accanto a una cartella nuova la apre: i suoi file compaiono uno per uno, ognuno
+  con la sua spunta e il suo occhio barrato, così puoi metterne nel commit o escluderne solo
+  alcuni. La spunta della cartella diventa allora "in parte" e il conteggio, per esempio,
+  `3 di 8 file`; un clic sulla spunta della cartella la riprende intera. Si vedono al massimo
+  200 file: gli altri entrano solo con la cartella intera.
 - **Spunta o occhio barrato?** La spunta decide solo cosa entra nel commit che stai per fare: un
   file senza spunta resta tra le modifiche e lo ritrovi la volta dopo. L'occhio barrato invece
   esclude per sempre.

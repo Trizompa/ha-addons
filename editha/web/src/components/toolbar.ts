@@ -163,11 +163,11 @@ export class EdithaToolbar extends LitElement {
       ${this.button('redo', t('toolbar.redo'), icons.redo, { disabled: !s.canRedo })}
       ${this.button('search', t('toolbar.search'), icons.search, { disabled: !s.hasTab })}
       ${this.button('history', t('toolbar.history'), icons.history, { on: s.historyOpen, disabled: !s.hasTab && !s.historyOpen, cls: 'hide-narrow' })}
-      ${this.button('word-wrap', t('toolbar.wrap'), icons.wrap, { on: s.wordWrap, cls: 'hide-narrow' })}
+      ${this.button('word-wrap', t('toolbar.wrap'), icons.wrap, { on: s.wordWrap, disabled: !s.hasTab, cls: 'hide-narrow' })}
       ${this.button('split', t('toolbar.split'), icons.split, { on: s.split, disabled: !s.hasTab && !s.split, cls: 'hide-narrow' })}
-      ${this.button('outline', t('toolbar.outline'), icons.outline, { on: s.outline, cls: 'hide-narrow' })}
+      ${this.button('outline', t('toolbar.outline'), icons.outline, { on: s.outline, disabled: !s.hasTab && !s.outline, cls: 'hide-narrow' })}
       <span class="sep"></span>
-      ${this.button('insert', t('toolbar.insert'), icons.insert, { on: s.insertOpen })}
+      ${this.button('insert', t('toolbar.insert'), icons.insert, { on: s.insertOpen, disabled: !s.hasTab && !s.insertOpen })}
       ${this.button('template', t('toolbar.template'), icons.template, { disabled: !s.hasTab })}
       ${this.button('ha-menu', t('toolbar.ha'), icons.homeAssistant, { disabled: s.haBusy })}
       <span class="spacer"></span>

@@ -125,9 +125,9 @@ Solo il repository in `/config`, sul dispositivo: nessun comando di rete (niente
 | ID | Requisito | Pr. |
 | --- | --- | --- |
 | GIT-1 | Inizializzazione di un repository in `/config` (ramo `main`) con un `.gitignore` di base (segreti, dati interni di HA, database, registri, temporanei); un repository o un `.gitignore` esistenti si usano così come sono. | P2 |
-| GIT-2 | Stato dei file (modificati, nuovi, eliminati), calcolato su richiesta. | P2 |
+| GIT-2 | Stato dei file (modificati, nuovi, eliminati), calcolato su richiesta; una cartella nuova è una riga sola, apribile per vedere e scegliere i suoi file. | P2 |
 | GIT-3 | Differenze di un file rispetto all'ultimo commit, nella vista di confronto. | P2 |
-| GIT-4 | Commit con messaggio, di tutti i file o di quelli scelti; secrets.yaml e copie rifiutati sempre. | P2 |
+| GIT-4 | Commit con messaggio, di tutti i file o di quelli scelti (anche singoli file dentro una cartella nuova); secrets.yaml e copie rifiutati sempre. | P2 |
 | GIT-5 | Elenco dei commit; per ciascuno i file toccati. | P2 |
 | GIT-6 | Ripristino di un file da un commit, con conferma, passando dal salvataggio di EDITHA (quindi anche nella sua cronologia). | P2 |
 
@@ -272,6 +272,7 @@ editha/
 | 0.21.0 | Revisione del codice: SEC-7 (copie di secrets.yaml escluse da ricerca e sostituzione), HA-9 (template senza virgolette, chiavi complesse, alias senza ancora), scorciatoie per tasto fisico (anche su Mac), bozze non più salvabili scartate con un avviso. |
 | 0.22.0 | Seconda revisione: BK-1 (nessuna eliminazione senza copia senza conferma, versioni senza doppioni, id monotoni), SEC-3/SEC-4 (conflitto anche durante la scrittura), SEC-7 (copie di secrets.yaml in ogni forma), ED-14 (bozze ritentate, attesa massima, ricrea il file sparito), CRLF conservato, HA-9 (spazi invisibili, tag sconosciuti, errori da principiante), scorciatoie per lettera della tastiera. |
 | 0.22.3 | ED-14: bozze per finestra (più finestre o dispositivi non si scartano né sovrascrivono le bozze a vicenda), segnale di finestra aperta, proposta delle bozze di finestre chiuse; Esc sulla domanda rimanda davvero (0.22.2). |
+| 0.35.0 | GIT-2 e GIT-4: cartelle nuove apribili, file scelti o esclusi uno per uno (al massimo 200 per cartella); pulsanti della barra che servono solo con un file aperto (a capo, schema, Inserisci) spenti senza file; immagini della guida inglese visibili. |
 | 0.34.0 | SEC-7: secrets.yaml e copie mai negli ZIP delle cartelle, con avviso; requisiti riordinati (BK-8 per i backup del Supervisor); immagini della documentazione aggiornate. |
 | 0.33.0 | Ritocchi: anteprima template tolta dal menu di Home Assistant; pulsante Cronologia che si chiude al secondo clic; legenda Git in un riquadro, una voce per riga; pagina iniziale e Informazioni più essenziali; motto tra virgolette. |
 | 0.32.0 | GIT-2: sezione Esclusi con «Includi» (niente più .gitignore da modificare a mano), legenda di lettere, spunta e occhio; confronto solo se c'è un commit con cui confrontare. |

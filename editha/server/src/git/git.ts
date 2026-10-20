@@ -118,9 +118,10 @@ export interface GitChange {
   blocked: 'secret' | 'sensitive' | 'filter' | 'conflict' | 'nested' | null;
   /**
    * Cartella mai vista da git (una riga sola al posto di tutti i suoi file): quanti file entrerebbero
-   * nel commit e quanti ne restano fuori comunque (segreti, dati interni, filtri).
+   * nel commit e quanti ne restano fuori comunque (segreti, dati interni, filtri). `list`: i primi
+   * file che entrerebbero (al massimo MAX_FOLDER_LIST), da poter scegliere uno per uno.
    */
-  folder?: { files: number; excluded: number };
+  folder?: { files: number; excluded: number; list: string[] };
   /** Mai visto da git (??): solo questi si possono escludere con il .gitignore. */
   untracked: boolean;
 }
@@ -159,6 +160,8 @@ const REV_RE = /^[0-9a-f]{4,64}$/;
 
 /** Oltre questo numero di file lo stato si tronca (es. una cartella di immagini non ignorata). */
 const MAX_CHANGES = 2000;
+/** File di una cartella nuova mostrati uno per uno: oltre, la cartella si sceglie solo intera. */
+const MAX_FOLDER_LIST = 200;
 
 export interface GitInfo {
   /** Il programma git c'è. */
@@ -374,7 +377,7 @@ export class GitService {
           continue;
         }
         f.inner = inside.filter((u) => !u.endsWith('/'));
-        f.folder = { files: 0, excluded: inside.length - f.inner.length };
+        f.folder = { files: 0, excluded: inside.length - f.inner.length, list: [] };
       }
     }
     // File che passano da un filtro (.gitattributes): check-attr legge solo gli attributi.
@@ -396,7 +399,8 @@ export class GitService {
       if (f.blocked !== null) continue;
       if (f.inner && f.folder) {
         const ok = f.inner.filter((p) => !filtered.has(p) && GitService.blockedByName(p) === null);
-        f.folder = { files: ok.length, excluded: f.folder.excluded + f.inner.length - ok.length };
+        ok.sort((a, b) => a.localeCompare(b));
+        f.folder = { files: ok.length, excluded: f.folder.excluded + f.inner.length - ok.length, list: ok.slice(0, MAX_FOLDER_LIST) };
         f.inner = ok;
         // Dentro c'è solo roba che non può entrare: la cartella intera resta fuori.
         if (ok.length === 0) f.blocked = 'sensitive';
@@ -448,13 +452,18 @@ export class GitService {
         );
       }
       const byPath = new Map(changed.map((c) => [c.path, c]));
+      // Anche un file solo di una cartella nuova (solo quelli che possono entrare nel commit).
+      const inFolder = new Set(changed.flatMap((c) => (c.blocked === null && c.inner ? c.inner : [])));
       let chosen: Change[];
       if (paths === 'all') chosen = changed;
       else {
         chosen = [];
         for (const p of new Set(paths)) {
-          const c = byPath.get(p);
-          if (!c) throw new EdithaError('invalid_request', `Il file non ha modifiche da salvare in un commit: ${p}`);
+          const c = byPath.get(p) ?? (inFolder.has(p) ? { path: p, status: 'added' as const, blocked: null, xy: '??', untracked: true } : undefined);
+          if (!c) {
+            if (GitService.blockedByName(p) !== null) throw new EdithaError('forbidden_path', `Questi file non possono entrare in un commit da EDITHA: ${p}`);
+            throw new EdithaError('invalid_request', `Il file non ha modifiche da salvare in un commit: ${p}`);
+          }
           chosen.push(c);
         }
       }
@@ -469,7 +478,7 @@ export class GitService {
         }
       }
       // Una cartella nuova entra con i suoi file uno per uno: mai quelli esclusi che contiene.
-      const list = ok.flatMap((c) => c.inner ?? [c.path]);
+      const list = [...new Set(ok.flatMap((c) => c.inner ?? [c.path]))];
       if (list.length === 0) throw new EdithaError('invalid_request', 'Nessun file da salvare nel commit');
       // Chi è l'autore: quello configurato nel repository, altrimenti EDITHA.
       const name = (await this.run(['config', 'user.name']).catch(() => '')).trim();
@@ -481,7 +490,7 @@ export class GitService {
       const nul = (items: string[]) => items.join('\0') + '\0';
       await this.runOnFiles(['add', '--all', '--pathspec-from-file=-', '--pathspec-file-nul'], nul(list));
       // Aggiunto da un terminale e poi eliminato (AD): dopo "add" non c'è più niente da salvare.
-      const commitList = ok.filter((c) => c.xy !== 'AD').flatMap((c) => c.inner ?? [c.path]);
+      const commitList = [...new Set(ok.filter((c) => c.xy !== 'AD').flatMap((c) => c.inner ?? [c.path]))];
       if (commitList.length === 0) throw new EdithaError('invalid_request', 'Nessun file da salvare nel commit');
       await this.runOnFiles(
         [...identity, 'commit', '--quiet', '--no-verify', '--no-gpg-sign', '--cleanup=whitespace', '-m', message, '--only', '--pathspec-from-file=-', '--pathspec-file-nul'],

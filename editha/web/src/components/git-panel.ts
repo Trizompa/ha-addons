@@ -1,4 +1,5 @@
 import { LitElement, css, html, nothing } from 'lit';
+import { live } from 'lit/directives/live.js';
 import { api, errorText, type GitChange, type GitCommit, type GitInfo } from '../api/client.js';
 import { t } from '../i18n/index.js';
 import { icon, icons } from '../ui/icons.js';
@@ -27,6 +28,7 @@ export class EdithaGitPanel extends LitElement {
     expanded: { state: true },
     ignoredList: { state: true },
     showIgnored: { state: true },
+    openFolders: { state: true },
   };
 
   declare info: GitInfo | null;
@@ -49,6 +51,8 @@ export class EdithaGitPanel extends LitElement {
   /** Esclusioni di percorsi precisi nel .gitignore (quelle dell'occhio barrato), da poter annullare. */
   declare ignoredList: { line: string; path: string }[];
   declare showIgnored: boolean;
+  /** Cartelle nuove aperte per scegliere i file uno per uno. */
+  declare openFolders: Set<string>;
   /** Caricamento in corso: una risposta vecchia non sostituisce quella nuova. */
   private loadToken = 0;
 
@@ -68,6 +72,7 @@ export class EdithaGitPanel extends LitElement {
     this.expanded = new Map();
     this.ignoredList = [];
     this.showIgnored = false;
+    this.openFolders = new Set();
   }
 
   static override styles = [
@@ -222,6 +227,18 @@ export class EdithaGitPanel extends LitElement {
       .path .count {
         font-size: 12px;
       }
+      .open-folder {
+        flex: none;
+        margin-left: -4px;
+      }
+      /* File di una cartella nuova aperta: rientrati sotto la cartella. */
+      ul.changes li.inner {
+        padding-left: 22px;
+      }
+      ul.changes li.more {
+        padding-left: 48px;
+        font-size: 12px;
+      }
       .legend {
         display: flex;
         flex-direction: column;
@@ -356,8 +373,17 @@ export class EdithaGitPanel extends LitElement {
         // Solo se c'era già un elenco da scegliere: dopo un commit (elenco vuoto) i file arrivano spuntati.
         if (auto && this.changes && this.selectable().length > 0) {
           // Anche una cartella nuova che nel frattempo contiene altri file torna senza spunta.
-          const seen = new Map(this.changes.map((c) => [c.path, c.folder?.files]));
-          const fresh = status.files.filter((c) => !seen.has(c.path) || seen.get(c.path) !== c.folder?.files).map((c) => c.path);
+          const seen = new Map(this.changes.map((c) => [c.path, c]));
+          const fresh: string[] = [];
+          for (const c of status.files) {
+            const old = seen.get(c.path);
+            if (old && old.folder?.files === c.folder?.files) continue;
+            // Una cartella scelta solo in parte resta così: i file nuovi dentro arrivano senza spunta.
+            if (old?.folder && c.folder && this.folderState(old) === 'some') {
+              const known = new Set(old.folder.list);
+              fresh.push(...c.folder.list.filter((p) => !known.has(p)));
+            } else fresh.push(c.path);
+          }
           if (fresh.length > 0) this.unchecked = new Set([...this.unchecked, ...fresh]);
         }
         this.changes = status.files;
@@ -502,17 +528,55 @@ export class EdithaGitPanel extends LitElement {
     return this.merging ? [] : (this.changes ?? []).filter((c) => c.blocked === null);
   }
 
-  private selected(): string[] {
-    return this.selectable()
-      .filter((c) => !this.unchecked.has(c.path))
-      .map((c) => c.path);
+  /**
+   * Una cartella nuova entra intera (all), con solo alcuni file (some) o per niente (none).
+   * Tolta la spunta alla cartella, conta solo quella; altrimenti i suoi file senza spunta.
+   */
+  private folderState(c: GitChange): 'all' | 'some' | 'none' {
+    if (this.unchecked.has(c.path)) return 'none';
+    return c.folder?.list.some((p) => this.unchecked.has(p)) ? 'some' : 'all';
   }
 
-  private toggle(path: string, on: boolean): void {
+  /** Percorsi da mandare al commit: la cartella intera, oppure i suoi file spuntati uno per uno. */
+  private selected(): string[] {
+    return this.selectable().flatMap((c) => {
+      if (!c.folder) return this.unchecked.has(c.path) ? [] : [c.path];
+      const state = this.folderState(c);
+      return state === 'all' ? [c.path] : state === 'some' ? c.folder.list.filter((p) => !this.unchecked.has(p)) : [];
+    });
+  }
+
+  /** Spunta di un file o di una cartella intera (i file della cartella seguono la cartella). */
+  private toggle(c: GitChange, on: boolean): void {
     const next = new Set(this.unchecked);
-    if (on) next.delete(path);
-    else next.add(path);
+    for (const p of c.folder?.list ?? []) next.delete(p);
+    if (on) next.delete(c.path);
+    else next.add(c.path);
     this.unchecked = next;
+  }
+
+  /** Spunta di un file dentro una cartella nuova. */
+  private toggleInner(c: GitChange, path: string, on: boolean): void {
+    const list = c.folder!.list;
+    const next = new Set(this.unchecked);
+    if (on && next.has(c.path)) {
+      // Dalla cartella senza spunta: entra solo questo file.
+      next.delete(c.path);
+      for (const p of list) if (p !== path) next.add(p);
+    } else if (on) next.delete(path);
+    else next.add(path);
+    // Tolti tutti i file (e non ce ne sono altri oltre l'elenco): è la cartella senza spunta.
+    if (!next.has(c.path) && c.folder!.files === list.length && list.every((p) => next.has(p))) {
+      for (const p of list) next.delete(p);
+      next.add(c.path);
+    }
+    this.unchecked = next;
+  }
+
+  private toggleFolderOpen(path: string): void {
+    const next = new Set(this.openFolders);
+    if (!next.delete(path)) next.add(path);
+    this.openFolders = next;
   }
 
   private toggleAll(on: boolean): void {
@@ -719,6 +783,42 @@ export class EdithaGitPanel extends LitElement {
     nested: 'git.nestedExcluded',
   };
 
+  /** I file di una cartella nuova aperta, ognuno con la sua spunta e il suo occhio barrato. */
+  private renderFolderFiles(c: GitChange, blocked: boolean) {
+    const folder = c.folder!;
+    const whole = this.unchecked.has(c.path);
+    const added = t('git.statusAdded');
+    return html`${folder.list.map(
+        (p) => html`<li class="inner ${blocked ? 'blocked' : ''}">
+          <input
+            type="checkbox"
+            data-path=${p}
+            aria-label=${`${p}, ${added}`}
+            .checked=${live(!blocked && !whole && !this.unchecked.has(p))}
+            ?disabled=${blocked || this.busy}
+            @change=${(e: Event) => this.toggleInner(c, p, (e.target as HTMLInputElement).checked)}
+          />
+          <span class="badge added" title=${added}>${added.slice(0, 1)}</span>
+          <button class="path" title=${p} @click=${() => this.emit('git-open', { path: p })}>${p.slice(c.path.length)}</button>
+          ${blocked
+            ? nothing
+            : html`<button
+                class="icon-btn small"
+                data-action="git-ignore"
+                title=${t('git.ignore')}
+                aria-label=${`${t('git.ignore')}: ${p}`}
+                ?disabled=${this.busy}
+                @click=${() => void this.ignore(p)}
+              >
+                ${icon(icons.hide, 15)}
+              </button>`}
+        </li>`,
+      )}
+      ${folder.files > folder.list.length
+        ? html`<li class="more muted">${t('git.folderMore', { n: folder.files - folder.list.length })}</li>`
+        : nothing}`;
+  }
+
   /** GIT-2 e GIT-4: elenco dei file cambiati con le caselle, messaggio e pulsante Commit. */
   private renderChanges() {
     const changes = this.changes;
@@ -726,7 +826,7 @@ export class EdithaGitPanel extends LitElement {
     if (changes.length === 0) return html`<p class="muted">${t('git.clean')}</p>`;
     const selectable = this.selectable();
     const selected = this.selected();
-    const allOn = selected.length === selectable.length && selectable.length > 0;
+    const allOn = selectable.length > 0 && selectable.every((c) => (c.folder ? this.folderState(c) === 'all' : !this.unchecked.has(c.path)));
     const someOn = selected.length > 0 && !allOn;
     const canCommit = selected.length > 0 && this.message.trim() !== '' && !this.busy && !this.truncated;
     const count = this.fileCount(selected);
@@ -735,8 +835,8 @@ export class EdithaGitPanel extends LitElement {
         <label>
           <input
             type="checkbox"
-            .checked=${allOn}
-            .indeterminate=${someOn}
+            .checked=${live(allOn)}
+            .indeterminate=${live(someOn)}
             ?disabled=${selectable.length === 0 || this.busy}
             @change=${(e: Event) => this.toggleAll((e.target as HTMLInputElement).checked)}
           />
@@ -761,21 +861,40 @@ export class EdithaGitPanel extends LitElement {
         ${changes.map((c) => {
           const blocked = c.blocked !== null || this.merging;
           const statusText = t(EdithaGitPanel.BADGE[c.status]);
+          const state = c.folder && !blocked ? this.folderState(c) : null;
+          const canOpen = !!c.folder && c.blocked === null && c.folder.list.length > 0;
+          const open = canOpen && this.openFolders.has(c.path);
           return html`<li class=${blocked ? 'blocked' : ''}>
+            <!-- In parte: come la casella in alto, un clic include tutta la cartella. -->
             <input
               type="checkbox"
               data-path=${c.path}
               aria-label=${`${c.path}, ${statusText}${c.blocked ? `, ${t(EdithaGitPanel.REASON[c.blocked])}` : ''}`}
-              .checked=${!blocked && !this.unchecked.has(c.path)}
+              .checked=${live(!blocked && (state ? state === 'all' : !this.unchecked.has(c.path)))}
+              .indeterminate=${live(state === 'some')}
               ?disabled=${blocked || this.busy}
-              @change=${(e: Event) => this.toggle(c.path, (e.target as HTMLInputElement).checked)}
+              @change=${(e: Event) => this.toggle(c, (e.target as HTMLInputElement).checked)}
             />
             <span class="badge ${c.status}" title=${t(EdithaGitPanel.BADGE[c.status])}>${t(EdithaGitPanel.BADGE[c.status]).slice(0, 1)}</span>
+            ${canOpen
+              ? html`<button
+                  class="icon-btn small open-folder"
+                  data-action="git-folder"
+                  aria-expanded=${String(open)}
+                  title=${t(open ? 'git.folderHide' : 'git.folderShow')}
+                  aria-label=${`${t(open ? 'git.folderHide' : 'git.folderShow')}: ${c.path}`}
+                  @click=${() => this.toggleFolderOpen(c.path)}
+                >
+                  ${icon(open ? icons.chevronDown : icons.chevronRight, 14)}
+                </button>`
+              : nothing}
             ${c.folder
               ? html`<span class="path folder" title=${c.path}
                   >${icon(icons.folder, 14)} ${c.path}
                   <span class="muted count"
-                    >${t(c.folder.files === 1 ? 'git.folderOne' : 'git.folderMany', { n: c.folder.files })}${c.folder.excluded
+                    >${state === 'some'
+                      ? t('git.folderPartial', { n: c.folder.list.filter((p) => !this.unchecked.has(p)).length, total: c.folder.files })
+                      : t(c.folder.files === 1 ? 'git.folderOne' : 'git.folderMany', { n: c.folder.files })}${c.folder.excluded
                       ? ` · ${t('git.folderExcluded', { n: c.folder.excluded })}`
                       : ''}</span
                   ></span
@@ -809,7 +928,8 @@ export class EdithaGitPanel extends LitElement {
             ${c.blocked && c.blocked !== 'conflict'
               ? html`<span class="lock" title=${t(EdithaGitPanel.REASON[c.blocked])}>${icon(icons.lock, 14)}</span>`
               : nothing}
-          </li>`;
+          </li>
+          ${open ? this.renderFolderFiles(c, blocked) : nothing}`;
         })}
       </ul>
       ${this.truncated ? html`<p class="warn small">${t('git.truncated')}</p>` : nothing}

@@ -410,7 +410,12 @@ describe('Git locale (GIT-1)', () => {
     await writeFile(path.join(sb.configDir, '.gitignore'), '*.db');
 
     const st = (await call('GET', '/api/git/status')).json();
-    const rows = Object.fromEntries(st.files.map((f: { path: string; folder?: unknown; blocked: unknown }) => [f.path, [f.folder ?? null, f.blocked]]));
+    const rows = Object.fromEntries(
+      st.files.map((f: { path: string; folder?: { files: number; excluded: number }; blocked: unknown }) => [
+        f.path,
+        [f.folder ? { files: f.folder.files, excluded: f.folder.excluded } : null, f.blocked],
+      ]),
+    );
     // secrets.yaml è escluso già dal .gitignore? No: il .gitignore qui è "*.db", quindi conta tra gli esclusi.
     assert.deepEqual(rows, {
       '.gitignore': [null, null],
@@ -460,7 +465,7 @@ describe('Git locale (GIT-1)', () => {
     await writeFile(path.join(sb.configDir, 'esphome/secrets.yaml'), 'wifi: x\n');
     await writeFile(path.join(sb.configDir, 'esphome/nodo.yaml'), 'esphome: {}\n');
     const st = (await call('GET', '/api/git/status')).json();
-    assert.deepEqual(st.files.find((f: { path: string }) => f.path === 'esphome/').folder, { files: 1, excluded: 1 });
+    assert.deepEqual(st.files.find((f: { path: string }) => f.path === 'esphome/').folder, { files: 1, excluded: 1, list: ['esphome/nodo.yaml'] });
     await commit({ message: 'ESPHome', paths: ['esphome/'] });
     assert.equal(gitOut('ls-files', 'esphome'), 'esphome/nodo.yaml');
   });
@@ -478,7 +483,7 @@ describe('Git locale (GIT-1)', () => {
 
     const st = (await call('GET', '/api/git/status')).json();
     const row = (p: string) => st.files.find((f: { path: string }) => f.path === p);
-    assert.deepEqual(row('.ha_mcp/').folder, { files: 1, excluded: 2 });
+    assert.deepEqual(row('.ha_mcp/').folder, { files: 1, excluded: 2, list: ['.ha_mcp/backups/1/automations.yaml'] });
     assert.equal(row('.ha_mcp/').untracked, true);
     assert.equal(row('dentro/').blocked, 'nested');
 
@@ -489,6 +494,39 @@ describe('Git locale (GIT-1)', () => {
     const ok = await commit({ message: 'Backup', paths: ['.ha_mcp/'], folders: { '.ha_mcp/': 2 } });
     assert.equal(ok.statusCode, 200, ok.body);
     assert.equal(gitOut('ls-files'), '.ha_mcp/backups/1/automations.yaml\n.ha_mcp/backups/1/scripts.yaml');
+  });
+
+  it('cartelle nuove: i file uno per uno (elenco limitato, commit di alcuni, mai gli esclusi)', async () => {
+    await call('POST', '/api/git/init');
+    await writeFile(path.join(sb.configDir, '.gitignore'), '');
+    await mkdir(path.join(sb.configDir, 'www/sotto'), { recursive: true });
+    await writeFile(path.join(sb.configDir, 'www/b.js'), 'b\n');
+    await writeFile(path.join(sb.configDir, 'www/a.js'), 'a\n');
+    await writeFile(path.join(sb.configDir, 'www/sotto/c.js'), 'c\n');
+    await writeFile(path.join(sb.configDir, 'www/secrets.yaml'), 'pw: x\n');
+    await mkdir(path.join(sb.configDir, 'grande'));
+    for (let i = 0; i < 250; i++) await writeFile(path.join(sb.configDir, `grande/f${String(i).padStart(3, '0')}.js`), `${i}\n`);
+
+    const st = (await call('GET', '/api/git/status')).json();
+    const row = (p: string) => st.files.find((f: { path: string }) => f.path === p);
+    assert.deepEqual(row('www/').folder, { files: 3, excluded: 1, list: ['www/a.js', 'www/b.js', 'www/sotto/c.js'] });
+    assert.equal(row('grande/').folder.files, 250);
+    assert.equal(row('grande/').folder.list.length, 200);
+    assert.equal(row('grande/').folder.list[0], 'grande/f000.js');
+
+    // Un file dentro una cartella nuova non si può scegliere se è escluso, o se non esiste.
+    assert.equal((await commit({ message: 'No', paths: ['www/secrets.yaml'] })).statusCode, 403);
+    assert.equal((await commit({ message: 'No', paths: ['www/nessuno.js'] })).statusCode, 400);
+    // Solo alcuni file, anche oltre i primi 200 mostrati.
+    const res = await commit({ message: 'Alcuni', paths: ['grande/f000.js', 'grande/f249.js'] });
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(res.json().files, 2);
+    assert.equal(gitOut('ls-files'), 'grande/f000.js\ngrande/f249.js');
+    // La cartella e un suo file insieme non si contano due volte.
+    const both = await commit({ message: 'Www', paths: ['www/', 'www/a.js'] });
+    assert.equal(both.statusCode, 200, both.body);
+    assert.equal(both.json().files, 3);
+    assert.equal(gitOut('ls-files', 'www'), 'www/a.js\nwww/b.js\nwww/sotto/c.js');
   });
 
   it('Includi di nuovo: l\'ultima esclusione toglie anche il titolo', async () => {

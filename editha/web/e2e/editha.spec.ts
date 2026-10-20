@@ -1194,19 +1194,36 @@ test('GIT-1…6 – pannello Git: inizializza, modifiche, commit dei file scelti
   await expect(page.locator('editha-toasts')).toContainText('Di nuovo nel repository: tabs/');
   await expect(panel.locator('ul.changes').first()).toContainText('tabs/');
   expect(await disk('.gitignore')).not.toContain('/tabs/');
+  // Una cartella si apre: i suoi file uno per uno, ognuno con la sua spunta.
+  const tabsAgain = panel.locator('ul.changes li', { hasText: 'tabs/' }).first();
+  await tabsAgain.locator('button[data-action="git-folder"]').click();
+  const inner = panel.locator('ul.changes li.inner');
+  await expect(inner).toHaveCount(3);
+  await inner.nth(0).locator('input[type="checkbox"]').uncheck();
+  await expect(tabsAgain).toContainText('2 di 3 file');
+  expect(await tabsAgain.locator('input[type="checkbox"]').evaluate((el: HTMLInputElement) => el.indeterminate)).toBe(true);
+  // La spunta della cartella le rimette tutte.
+  await tabsAgain.locator('input[type="checkbox"]').check();
+  await expect(tabsAgain).toContainText('3 file');
+  await expect(inner.nth(0).locator('input[type="checkbox"]')).toBeChecked();
   // secrets.yaml è escluso dal .gitignore: non compare nemmeno.
   await expect(panel.locator('ul.changes')).not.toContainText('secrets.yaml');
   await panel.locator('.changes-head input[type="checkbox"]').uncheck();
+  await expect(inner.nth(0).locator('input[type="checkbox"]')).not.toBeChecked();
+  // Dalla cartella senza spunta: un file solo.
+  const onlyTab = (await inner.nth(1).locator('input[type="checkbox"]').getAttribute('data-path'))!;
+  await inner.nth(1).locator('input[type="checkbox"]').check();
+  await expect(tabsAgain).toContainText('1 di 3 file');
   await expect(panel.locator('button[data-action="git-commit"]')).toBeDisabled();
   await panel.locator('ul.changes input[data-path="configuration.yaml"]').check();
   await panel.locator('textarea.message').fill('Prima fotografia');
-  await expect(panel.locator('button[data-action="git-commit"]')).toHaveText(/Commit \(1 file\)/);
+  await expect(panel.locator('button[data-action="git-commit"]')).toHaveText(/Commit \(2 file\)/);
   await panel.locator('textarea.message').press('Control+Enter');
-  await expect(page.locator('editha-toasts')).toContainText('Commit creato: «Prima fotografia» (1 file)');
+  await expect(page.locator('editha-toasts')).toContainText('Commit creato: «Prima fotografia» (2 file)');
   await expect(panel.locator('.card')).toContainText('Prima fotografia');
   await expect(panel.locator('ul.changes')).not.toContainText('configuration.yaml');
   const git = (...args: string[]) => execFileSync('git', ['-C', configDir, ...args], { encoding: 'utf8' }).trim();
-  expect(git('show', '--name-only', '--format=', 'HEAD')).toBe('configuration.yaml');
+  expect(git('show', '--name-only', '--format=', 'HEAD')).toBe(['configuration.yaml', onlyTab].sort().join('\n'));
 
   // Un file salvato mentre il pannello è aperto ricompare tra le modifiche.
   await panel.locator('ul.changes button.path', { hasText: 'automations.yaml' }).click();
@@ -1237,10 +1254,10 @@ test('GIT-1…6 – pannello Git: inizializza, modifiche, commit dei file scelti
   const first = panel.locator('ul.log > li', { hasText: 'Prima fotografia' });
   await first.locator('button.commit-row').click();
   await expect(first.locator('ul.files')).toContainText('configuration.yaml');
-  await first.locator('button[data-action="git-rev-diff"]').click();
+  await first.locator('ul.files li', { hasText: 'configuration.yaml' }).locator('button[data-action="git-rev-diff"]').click();
   await expect(compare.locator('.labels')).toContainText(/configuration\.yaml \(commit [0-9a-f]{7}\)/);
   await compare.locator('button[title="Chiudi"]').click();
-  await first.locator('button[data-action="git-restore"]').click();
+  await first.locator('ul.files li', { hasText: 'configuration.yaml' }).locator('button[data-action="git-restore"]').click();
   await expect(page.locator('editha-dialog dialog[open]')).toContainText('Prima fotografia');
   await dialogButton(page, 'Ripristina').click();
   await expect(page.locator('editha-toasts')).toContainText('ripristinato');

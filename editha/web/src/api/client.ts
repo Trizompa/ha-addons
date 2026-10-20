@@ -180,7 +180,8 @@ export interface GitChange {
   /** Perché non può entrare in un commit da EDITHA (null: può). */
   blocked: 'secret' | 'sensitive' | 'filter' | 'conflict' | 'nested' | null;
   /** Cartella mai vista da git: quanti file entrerebbero nel commit e quanti restano fuori. */
-  folder?: { files: number; excluded: number };
+  /** `list`: i primi file della cartella (al massimo 200), da scegliere uno per uno. */
+  folder?: { files: number; excluded: number; list: string[] };
   /** Mai visto da git: si può escludere con il .gitignore. */
   untracked: boolean;
 }

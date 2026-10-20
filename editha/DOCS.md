@@ -306,6 +306,10 @@ sends nothing outside (no GitHub or other servers).
   folder **excludes** it from the repository: it adds a line to `.gitignore`, so it no longer
   shows up. Before the first commit, which usually contains the whole configuration, exclude the
   folders you do not need (downloaded by HACS, other add-ons' copies…).
+- The **arrow** next to a new folder opens it: its files show one by one, each with its own tick
+  and crossed-out eye, so you can commit or exclude only some of them. The folder tick then shows
+  "in part" and the count becomes, for example, `3 of 8 files`; clicking the folder tick takes the
+  whole folder again. Up to 200 files are listed: the others go in only with the whole folder.
 - **Tick or crossed-out eye?** The tick only decides what goes into the commit you are about to
   make: an unticked file stays among the changes and you find it next time. The crossed-out eye
   excludes for good.
