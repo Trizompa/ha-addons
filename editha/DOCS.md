@@ -296,7 +296,22 @@ sends nothing outside (no GitHub or other servers).
   (`secrets.yaml` and copies), Home Assistant internal data (`.storage`, `.cloud`, `deps`,
   `tts`…), databases, logs and temporary files. You can edit it like any other file.
 - An existing repository or `.gitignore` is used as it is.
-- The panel shows the branch and the last commit.
+- The panel shows the branch, the last commit and the **changes** since the last commit: each file
+  with a letter (**M** modified, **N** new, **D** deleted, **C** in conflict) and a checkbox. Clicking the name opens
+  the file. The list updates when you save a file with the panel open, or with the refresh button.
+- To make a **commit** (a «snapshot» of the files, with a message): keep the files to include
+  ticked (all of them at first), write what you changed and press **Commit** (or Ctrl+Enter in the
+  message).
+- Some files never go into a commit from EDITHA, even if `.gitignore` was changed or is missing:
+  they appear with a padlock and cannot be ticked. They are `secrets.yaml` and its copies, Home
+  Assistant internal data and credentials (`.storage`, `.cloud`, tokens, databases), files that go
+  through a git filter (`.gitattributes`, for example Git LFS or git-crypt: EDITHA runs no external
+  programs, so it would store them unfiltered; commit them from a terminal) and other repositories inside `/config`.
+- New files that appear by themselves while the panel is open (after a save or a file operation)
+  arrive unticked: you decide whether to include
+  them.
+- During a merge, rebase or cherry-pick started from a terminal, commits from EDITHA are paused: complete or abort it from
+  the terminal.
 
 EDITHA's history (the automatic copies on every save) stays separate and keeps working as before.
 

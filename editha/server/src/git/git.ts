@@ -3,6 +3,7 @@ import { lstat, mkdir, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { EdithaError } from '../errors.js';
 import { KeyedLock } from '../fs/lock.js';
+import { isSecretsFile } from '../fs/search.js';
 
 /** GIT-1: .gitignore di base, scritto solo se non ce n'è già uno. */
 export const DEFAULT_GITIGNORE = `# Creato da EDITHA: file e cartelle che non entrano nel repository Git.
@@ -92,7 +93,42 @@ const HARDENING = [
   'gpg.x509.program=false',
   'gpg.ssh.program=false',
   'protocol.allow=never',
+  'commit.gpgSign=false',
+  'tag.gpgSign=false',
+  'gc.auto=0',
+  'maintenance.auto=false',
 ].flatMap((setting) => ['-c', setting]);
+
+/** GIT-2: un file cambiato rispetto all'ultimo commit. */
+export interface GitChange {
+  path: string;
+  /** modified: modificato; added: nuovo (anche mai visto da git); deleted: eliminato; conflict: in conflitto. */
+  status: 'modified' | 'added' | 'deleted' | 'conflict';
+  /**
+   * Perché non può entrare in un commit da EDITHA (null: può):
+   * secret: secrets.yaml o una sua copia (SEC-7); sensitive: dati interni o credenziali di Home
+   * Assistant (.storage, .cloud, token, database…); filter: il file passa da un filtro di git
+   * (.gitattributes), che EDITHA non esegue, quindi finirebbe nel commit così com'è, segreti
+   * compresi; conflict: in conflitto; nested: un altro repository dentro /config.
+   */
+  blocked: 'secret' | 'sensitive' | 'filter' | 'conflict' | 'nested' | null;
+}
+
+/** Dati interni e credenziali di Home Assistant: mai in un commit, anche senza .gitignore. */
+function isSensitive(p: string): boolean {
+  const top = p.split('/')[0]!;
+  const name = path.posix.basename(p);
+  return (
+    top === '.storage' ||
+    top === '.cloud' ||
+    /\.token$/i.test(name) ||
+    name === 'ip_bans.yaml' ||
+    /\.(db|db-shm|db-wal|sqlite|sqlite3)$/i.test(name)
+  );
+}
+
+/** Oltre questo numero di file lo stato si tronca (es. una cartella di immagini non ignorata). */
+const MAX_CHANGES = 2000;
 
 export interface GitInfo {
   /** Il programma git c'è. */
@@ -121,15 +157,33 @@ export class GitService {
     private readonly home: string,
   ) {}
 
-  private async run(args: string[]): Promise<string> {
+  /**
+   * Comando che legge o scrive i file di /config (status, add, commit, diff): i filtri
+   * (filter.<nome>.clean/smudge/process, attivati da .gitattributes) farebbero partire programmi
+   * scritti in .git/config. Non si possono spegnere tutti insieme: si azzerano uno per uno.
+   */
+  private async runOnFiles(args: string[], input?: string): Promise<string> {
+    const names = await this.run(['config', '--name-only', '--get-regexp', '^filter\\.']).catch(() => '');
+    const overrides: string[] = [];
+    for (const key of new Set(names.split('\n').filter(Boolean))) {
+      const name = /^filter\.(.*)\.[^.]+$/s.exec(key)?.[1];
+      if (name === undefined) continue;
+      // Un nome con "=" non si può azzerare con -c: meglio non toccare niente.
+      if (name.includes('=')) throw new EdithaError('git_error', 'Configurazione dei filtri di git non sicura in .git/config');
+      for (const part of ['clean', 'smudge', 'process']) overrides.push('-c', `filter.${name}.${part}=`);
+    }
+    return this.run([...overrides, ...args], input);
+  }
+
+  private async run(args: string[], input?: string): Promise<string> {
     await mkdir(this.home, { recursive: true });
     return new Promise((resolve, reject) => {
-      execFile(
+      const child = execFile(
         'git',
         ['-c', `safe.directory=${this.root}`, ...HARDENING, '-C', this.root, ...args],
         {
           timeout: TIMEOUT_MS,
-          maxBuffer: 16 * 1024 * 1024,
+          maxBuffer: 64 * 1024 * 1024,
           env: {
             PATH: process.env.PATH ?? '/usr/bin:/bin',
             HOME: this.home,
@@ -140,6 +194,8 @@ export class GitService {
             // Il repository è sempre e solo /config/.git (non un file "gitdir:" che porta altrove).
             GIT_DIR: path.join(this.root, '.git'),
             GIT_WORK_TREE: this.root,
+            // I percorsi passati sono nomi di file, mai modelli (*, :(glob)…).
+            GIT_LITERAL_PATHSPECS: '1',
           },
         },
         (err, stdout, stderr) => {
@@ -147,10 +203,20 @@ export class GitService {
           if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
             return reject(new EdithaError('git_unavailable', 'Il programma git non è installato'));
           }
+          // Troppi file o troppo tempo: di solito una cartella enorme non esclusa dal .gitignore.
+          const code = (err as NodeJS.ErrnoException).code;
+          if (code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' || (err as { killed?: boolean }).killed) {
+            return reject(
+              new EdithaError('git_error', 'git ci mette troppo o elenca troppi file: aggiungi al .gitignore le cartelle da non conservare'),
+            );
+          }
           const message = (stderr || err.message).trim().split('\n').slice(-3).join('\n').slice(0, 500);
           reject(new EdithaError('git_error', message || 'git ha risposto con un errore', { args: args[0] }));
         },
       );
+      // Elenchi di percorsi da stdin: niente limiti di lunghezza della riga di comando.
+      child.stdin?.on('error', () => undefined);
+      child.stdin?.end(input ?? '');
     });
   }
 
@@ -204,6 +270,132 @@ export class GitService {
         // nessun commit ancora
       }
       return { ...base, repo: 'ready', branch, head };
+    });
+  }
+
+  /** Il repository c'è ed è proprio /config/.git; altrimenti un errore chiaro. */
+  private async requireRepo(): Promise<void> {
+    if ((await this.gitVersion()) === null) throw new EdithaError('git_unavailable', 'Il programma git non è installato');
+    if (!(await this.gitDirIsReal())) throw new EdithaError('not_found', 'In /config non c\'è un repository Git');
+  }
+
+  private async changes(): Promise<{ files: (GitChange & { xy: string })[]; truncated: boolean }> {
+    const out = await this.runOnFiles(['status', '--porcelain=v1', '-z', '--untracked-files=all', '--no-renames', '--ignore-submodules=all']);
+    const files: (GitChange & { xy: string })[] = [];
+    let total = 0;
+    for (const entry of out.split('\0')) {
+      if (entry.length < 4) continue;
+      const xy = entry.slice(0, 2);
+      const p = entry.slice(3);
+      total++;
+      if (files.length >= MAX_CHANGES) continue;
+      const status: GitChange['status'] =
+        xy.includes('U') || xy === 'AA' || xy === 'DD'
+          ? 'conflict'
+          : xy.includes('D')
+            ? 'deleted'
+            : xy === '??' || xy.includes('A')
+              ? 'added'
+              : 'modified';
+      const blocked: GitChange['blocked'] =
+        status === 'conflict'
+          ? 'conflict'
+          : isSecretsFile(path.posix.basename(p.replace(/\/$/, '')))
+            ? 'secret'
+            : isSensitive(p)
+              ? 'sensitive'
+              : p.endsWith('/')
+                ? 'nested'
+                : null;
+      files.push({ path: p, status, blocked, xy });
+    }
+    // File che passano da un filtro (.gitattributes): check-attr legge solo gli attributi.
+    const candidates = files.filter((f) => f.blocked === null);
+    if (candidates.length > 0) {
+      const attrs = (await this.run(['check-attr', '--stdin', '-z', 'filter'], candidates.map((f) => f.path).join('\0') + '\0')).split('\0');
+      const filtered = new Set<string>();
+      for (let i = 0; i + 2 < attrs.length; i += 3) {
+        const value = attrs[i + 2]!;
+        if (value !== 'unspecified' && value !== 'unset') filtered.add(attrs[i]!);
+      }
+      for (const f of candidates) if (filtered.has(f.path)) f.blocked = 'filter';
+    }
+    files.sort((a, b) => a.path.localeCompare(b.path));
+    return { files, truncated: total > files.length };
+  }
+
+  /** Unione, rebase, cherry-pick o revert lasciati a metà da un terminale. */
+  private async operationInProgress(): Promise<boolean> {
+    for (const name of ['MERGE_HEAD', 'CHERRY_PICK_HEAD', 'REVERT_HEAD', 'rebase-merge', 'rebase-apply']) {
+      if (await this.exists(`.git/${name}`)) return true;
+    }
+    return false;
+  }
+
+  /** GIT-2: file modificati, nuovi ed eliminati rispetto all'ultimo commit (calcolato a richiesta). */
+  async status(): Promise<{ files: GitChange[]; truncated: boolean; merging: boolean }> {
+    await this.requireRepo();
+    return this.lock.run('git', async () => {
+      const { files, truncated } = await this.changes();
+      return { files: files.map(({ xy: _xy, ...f }) => f), truncated, merging: await this.operationInProgress() };
+    });
+  }
+
+  /**
+   * GIT-4: commit dei file indicati (o di tutti quelli cambiati) con un messaggio. secrets.yaml e
+   * le sue copie non entrano mai: con "tutti" si saltano, se indicati per nome la richiesta è
+   * rifiutata. Solo i file scelti: quello che era già pronto da un terminale resta com'è.
+   */
+  async commit(message: string, paths: string[] | 'all'): Promise<{ hash: string; subject: string; files: number; skipped: string[] }> {
+    if (message.includes('\0')) throw new EdithaError('invalid_request', 'Messaggio non valido');
+    await this.requireRepo();
+    return this.lock.run('git', async () => {
+      if (await this.operationInProgress()) {
+        throw new EdithaError('conflict', 'C\'è un\'operazione di git in corso (merge, rebase, cherry-pick…): completala o annullala da un terminale');
+      }
+      const { files: changed, truncated } = await this.changes();
+      if (paths === 'all' && truncated) {
+        throw new EdithaError(
+          'invalid_request',
+          `Più di ${MAX_CHANGES} file cambiati: aggiungi al .gitignore le cartelle da non conservare, oppure scegli i file`,
+        );
+      }
+      const byPath = new Map(changed.map((c) => [c.path, c]));
+      let chosen: (GitChange & { xy: string })[];
+      if (paths === 'all') chosen = changed;
+      else {
+        chosen = [];
+        for (const p of new Set(paths)) {
+          const c = byPath.get(p);
+          if (!c) throw new EdithaError('invalid_request', `Il file non ha modifiche da salvare in un commit: ${p}`);
+          chosen.push(c);
+        }
+      }
+      const blocked = chosen.filter((c) => c.blocked !== null).map((c) => c.path);
+      if (paths !== 'all' && blocked.length > 0) {
+        throw new EdithaError('forbidden_path', `Questi file non possono entrare in un commit da EDITHA: ${blocked.join(', ')}`);
+      }
+      const ok = chosen.filter((c) => c.blocked === null);
+      const list = ok.map((c) => c.path);
+      if (list.length === 0) throw new EdithaError('invalid_request', 'Nessun file da salvare nel commit');
+      // Chi è l'autore: quello configurato nel repository, altrimenti EDITHA.
+      const name = (await this.run(['config', 'user.name']).catch(() => '')).trim();
+      const email = (await this.run(['config', 'user.email']).catch(() => '')).trim();
+      const identity = [
+        ...(name ? [] : ['-c', 'user.name=EDITHA']),
+        ...(email ? [] : ['-c', 'user.email=editha@homeassistant.local']),
+      ];
+      const nul = (items: string[]) => items.join('\0') + '\0';
+      await this.runOnFiles(['add', '--all', '--pathspec-from-file=-', '--pathspec-file-nul'], nul(list));
+      // Aggiunto da un terminale e poi eliminato (AD): dopo "add" non c'è più niente da salvare.
+      const commitList = ok.filter((c) => c.xy !== 'AD').map((c) => c.path);
+      if (commitList.length === 0) throw new EdithaError('invalid_request', 'Nessun file da salvare nel commit');
+      await this.runOnFiles(
+        [...identity, 'commit', '--quiet', '--no-verify', '--no-gpg-sign', '--cleanup=whitespace', '-m', message, '--only', '--pathspec-from-file=-', '--pathspec-file-nul'],
+        nul(commitList),
+      );
+      const [hash, subject] = (await this.run(['log', '-1', '--no-show-signature', '--format=%H%x00%s'])).trim().split('\0');
+      return { hash: hash ?? '', subject: subject ?? '', files: commitList.length, skipped: paths === 'all' ? blocked : [] };
     });
   }
 

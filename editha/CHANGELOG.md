@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.29.0
+
+- **Git locale: modifiche e commit.** Il pannello Git ora mostra i file cambiati dall'ultimo commit (**M** modificato, **N** nuovo, **E** eliminato), ognuno con una casella. Scrivi un messaggio e premi **Commit** per salvare una «fotografia» dei file spuntati. L'elenco si aggiorna da solo quando salvi un file con il pannello aperto; un clic sul nome apre il file.
+- Non entrano mai in un commit, anche se il `.gitignore` è stato cambiato o manca: `secrets.yaml` e copie, dati interni e credenziali di Home Assistant (`.storage`, `.cloud`, token, database), file con un filtro di git e altri repository dentro `/config`. Compaiono con un lucchetto e il motivo.
+- I file nuovi che compaiono mentre il pannello è aperto arrivano senza spunta. L'elenco si aggiorna anche dopo aver creato, eliminato, spostato o caricato file.
+- Sicurezza: EDITHA lancia git con i programmi esterni spenti (filtri, hook, firme, pager…), anche se `.git/config` ne indica.
+
 ## 0.28.0
 
 - **Git locale, primo passo**: nuovo pulsante **Git** in alto nell'esplora file. Apre un pannello che, se in `/config` non c'è ancora un repository, lo crea con **Inizializza repository Git** (ramo `main`) insieme a un `.gitignore` di base che tiene fuori `secrets.yaml` e copie, i dati interni di Home Assistant, database, registri e file temporanei. Un repository o un `.gitignore` esistenti si usano così come sono. Tutto resta sul tuo Home Assistant: niente push né pull. Stato, differenze, commit, storia e ripristino arrivano nei prossimi passi.

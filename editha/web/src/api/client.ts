@@ -165,6 +165,14 @@ export interface GitInfo {
   gitignore: boolean;
 }
 
+/** GIT-2: un file cambiato rispetto all'ultimo commit. */
+export interface GitChange {
+  path: string;
+  status: 'modified' | 'added' | 'deleted' | 'conflict';
+  /** Perché non può entrare in un commit da EDITHA (null: può). */
+  blocked: 'secret' | 'sensitive' | 'filter' | 'conflict' | 'nested' | null;
+}
+
 /** HA-7: esito dell'anteprima; gli errori del template non sono errori della richiesta. */
 export type TemplateResult =
   | { ok: true; result: string }
@@ -263,6 +271,13 @@ export const api = {
     info: () => request<GitInfo>('GET', 'api/git/info'),
     init: () => request<{ info: GitInfo; gitignoreCreated: boolean }>('POST', 'api/git/init'),
     gitignore: () => request<{ info: GitInfo; created: boolean }>('POST', 'api/git/gitignore'),
+    status: () => request<{ files: GitChange[]; truncated: boolean; merging: boolean }>('GET', 'api/git/status'),
+    commit: (message: string, paths: string[] | 'all') =>
+      request<{ hash: string; subject: string; files: number; skipped: string[] }>(
+        'POST',
+        'api/git/commit',
+        paths === 'all' ? { message, all: true } : { message, paths },
+      ),
   },
   ha: {
     status: () => request<{ available: boolean }>('GET', 'api/ha/status'),

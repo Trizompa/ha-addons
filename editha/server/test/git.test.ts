@@ -26,6 +26,9 @@ describe('Git locale (GIT-1)', () => {
   });
 
   const call = (method: 'GET' | 'POST', url: string) => app.inject({ method, url, remoteAddress: INGRESS });
+  const commit = (payload: Record<string, unknown>) =>
+    app.inject({ method: 'POST', url: '/api/git/commit', payload, remoteAddress: INGRESS });
+  const gitOut = (...args: string[]) => execFileSync('git', ['-C', sb.configDir, ...args], { encoding: 'utf8' }).trim();
 
   it('senza repository: lo dice; dopo l\'inizializzazione è pronto, sul ramo main, con il .gitignore di base', async () => {
     const before = (await call('GET', '/api/git/info')).json();
@@ -144,5 +147,156 @@ describe('Git locale (GIT-1)', () => {
     await writeFile(path.join(sb.configDir, '.git'), `gitdir: ${path.join(sb.outsideDir, 'repo', '.git')}\n`);
     assert.equal((await call('GET', '/api/git/info')).json().repo, 'broken');
     assert.equal((await call('POST', '/api/git/init')).statusCode, 409);
+  });
+
+  it('GIT-2 e GIT-4: stato, commit dei file scelti e di tutti; secrets.yaml mai', async () => {
+    await call('POST', '/api/git/init');
+    await writeFile(path.join(sb.configDir, 'configuration.yaml'), 'a: 1\n');
+    await writeFile(path.join(sb.configDir, 'automations.yaml'), '[]\n');
+    // Una copia di secrets.yaml che il .gitignore (cambiato a mano) non esclude più.
+    await writeFile(path.join(sb.configDir, '.gitignore'), '*.db\n');
+    await writeFile(path.join(sb.configDir, 'secrets.yaml'), 'pw: x\n');
+
+    const st = (await call('GET', '/api/git/status')).json();
+    assert.deepEqual(
+      st.files.map((f: { path: string; status: string; blocked: string | null }) => [f.path, f.status, f.blocked]),
+      [
+        ['.gitignore', 'added', null],
+        ['automations.yaml', 'added', null],
+        ['configuration.yaml', 'added', null],
+        ['secrets.yaml', 'added', 'secret'],
+      ],
+    );
+    assert.equal(st.merging, false);
+
+    // Indicato per nome, secrets.yaml è rifiutato e non si committa niente.
+    const refused = await commit({ message: 'Con segreti', paths: ['configuration.yaml', 'secrets.yaml'] });
+    assert.equal(refused.statusCode, 403);
+    assert.throws(() => gitOut('rev-parse', 'HEAD'));
+
+    // Solo il file scelto.
+    const one = await commit({ message: 'Primo commit', paths: ['configuration.yaml'] });
+    assert.equal(one.statusCode, 200);
+    assert.equal(one.json().files, 1);
+    assert.equal(gitOut('log', '-1', '--format=%s %an'), 'Primo commit EDITHA');
+    assert.equal(gitOut('show', '--name-only', '--format=', 'HEAD'), 'configuration.yaml');
+
+    // Tutti: secrets.yaml saltato e segnalato.
+    await writeFile(path.join(sb.configDir, 'configuration.yaml'), 'a: 2\n');
+    const all = (await commit({ message: '#2 tutto il resto', all: true })).json();
+    assert.equal(all.files, 3);
+    assert.deepEqual(all.skipped, ['secrets.yaml']);
+    assert.equal(gitOut('log', '-1', '--format=%s'), '#2 tutto il resto');
+    assert.equal(gitOut('ls-files'), '.gitignore\nautomations.yaml\nconfiguration.yaml');
+
+    // Eliminato.
+    await import('node:fs/promises').then((fs) => fs.rm(path.join(sb.configDir, 'automations.yaml')));
+    const st2 = (await call('GET', '/api/git/status')).json();
+    assert.deepEqual(st2.files.map((f: { path: string; status: string }) => [f.path, f.status]), [
+      ['automations.yaml', 'deleted'],
+      ['secrets.yaml', 'added'],
+    ]);
+    assert.equal((await commit({ message: 'Via', paths: ['automations.yaml'] })).statusCode, 200);
+    assert.equal(gitOut('ls-files'), '.gitignore\nconfiguration.yaml');
+
+    // Richieste non valide: file senza modifiche, messaggio vuoto, niente da salvare.
+    assert.equal((await commit({ message: 'x', paths: ['configuration.yaml'] })).statusCode, 400);
+    assert.equal((await commit({ message: '   ', all: true })).statusCode, 400);
+    assert.equal((await commit({ message: 'solo segreti', all: true })).statusCode, 400);
+  });
+
+  it('nomi di file con caratteri speciali e trattini restano nomi, non opzioni o modelli', async () => {
+    await call('POST', '/api/git/init');
+    await writeFile(path.join(sb.configDir, '-n.yaml'), 'a\n');
+    await writeFile(path.join(sb.configDir, '*.yaml'), 'b\n');
+    await writeFile(path.join(sb.configDir, 'altro.yaml'), 'c\n');
+    const res = await commit({ message: 'Strani', paths: ['-n.yaml', '*.yaml'] });
+    assert.equal(res.statusCode, 200);
+    assert.equal(gitOut('ls-files'), '*.yaml\n-n.yaml');
+  });
+
+  it('i filtri di .gitattributes scritti in .git/config non partono con stato e commit', async () => {
+    await call('POST', '/api/git/init');
+    const marker = path.join(sb.base, 'eseguito');
+    const script = path.join(sb.base, 'filtro.sh');
+    await writeFile(script, `#!/bin/sh\ntouch ${marker}\ncat\n`);
+    await chmod(script, 0o755);
+    gitOut('config', 'filter.x.clean', script);
+    gitOut('config', 'filter.x.process', script);
+    // Il filtro vale per tutti i file tranne .gitattributes e b.yaml: anche così niente deve partire.
+    await writeFile(path.join(sb.configDir, '.gitattributes'), '* filter=x\n.gitattributes -filter\nb.yaml -filter\n');
+    await writeFile(path.join(sb.configDir, 'a.yaml'), 'a: 1\n');
+    await writeFile(path.join(sb.configDir, 'b.yaml'), 'b: 1\n');
+    assert.equal((await call('GET', '/api/git/status')).statusCode, 200);
+    assert.equal((await commit({ message: 'Con filtro', all: true })).statusCode, 200);
+    // Anche .gitignore passa dal filtro: resta fuori.
+    assert.equal(gitOut('ls-files'), '.gitattributes\nb.yaml');
+    await writeFile(path.join(sb.configDir, 'a.yaml'), 'a: 2\n');
+    assert.equal((await call('GET', '/api/git/status')).statusCode, 200);
+    await assert.rejects(access(marker));
+  });
+
+  it('senza repository stato e commit danno un errore chiaro', async () => {
+    assert.equal((await call('GET', '/api/git/status')).statusCode, 404);
+    assert.equal((await commit({ message: 'x', all: true })).statusCode, 404);
+  });
+
+  it('file con un filtro di git, dati interni di HA, repository annidati: mai in un commit', async () => {
+    await call('POST', '/api/git/init');
+    await writeFile(path.join(sb.configDir, '.gitignore'), '');
+    // Un filtro che toglie il token: EDITHA non lo esegue, quindi il file non deve partire così com'è.
+    gitOut('config', 'filter.redact.clean', "sed 's/token: .*/token: X/'");
+    await writeFile(path.join(sb.configDir, '.gitattributes'), 'a.yaml filter=redact\n');
+    await writeFile(path.join(sb.configDir, 'a.yaml'), 'token: SEGRETO\n');
+    await mkdir(path.join(sb.configDir, '.storage'));
+    await writeFile(path.join(sb.configDir, '.storage/auth'), '{}');
+    await writeFile(path.join(sb.configDir, 'google.token'), 'x');
+    await writeFile(path.join(sb.configDir, 'home-assistant_v2.db'), 'x');
+    execFileSync('git', ['init', '--quiet', path.join(sb.configDir, 'annidato')]);
+    await writeFile(path.join(sb.configDir, 'annidato/x.yaml'), 'x\n');
+    await writeFile(path.join(sb.configDir, 'ok.yaml'), 'ok\n');
+
+    const st = (await call('GET', '/api/git/status')).json();
+    const blocked = Object.fromEntries(st.files.map((f: { path: string; blocked: string | null }) => [f.path, f.blocked]));
+    assert.deepEqual(blocked, {
+      '.gitattributes': null,
+      '.gitignore': null,
+      '.storage/auth': 'sensitive',
+      'a.yaml': 'filter',
+      'annidato/': 'nested',
+      'google.token': 'sensitive',
+      'home-assistant_v2.db': 'sensitive',
+      'ok.yaml': null,
+    });
+    assert.equal((await commit({ message: 'x', paths: ['a.yaml'] })).statusCode, 403);
+    const all = (await commit({ message: 'Tutto', all: true })).json();
+    assert.equal(all.files, 3);
+    assert.deepEqual(all.skipped.sort(), ['.storage/auth', 'a.yaml', 'annidato/', 'google.token', 'home-assistant_v2.db']);
+    assert.equal(gitOut('ls-files'), '.gitattributes\n.gitignore\nok.yaml');
+  });
+
+  it('un file aggiunto da un terminale e poi eliminato non blocca il commit; durante un merge si rifiuta', async () => {
+    await call('POST', '/api/git/init');
+    await writeFile(path.join(sb.configDir, 'b.yaml'), 'b\n');
+    await writeFile(path.join(sb.configDir, 'ad.yaml'), 'x\n');
+    gitOut('add', 'ad.yaml');
+    await import('node:fs/promises').then((fs) => fs.rm(path.join(sb.configDir, 'ad.yaml')));
+    const st = (await call('GET', '/api/git/status')).json();
+    assert.equal(st.files.find((f: { path: string }) => f.path === 'ad.yaml').status, 'deleted');
+    const res = await commit({ message: 'Con AD', paths: ['ad.yaml', 'b.yaml'] });
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(res.json().files, 1);
+    assert.equal(gitOut('ls-files'), 'b.yaml');
+
+    await writeFile(path.join(sb.configDir, '.git/MERGE_HEAD'), gitOut('rev-parse', 'HEAD') + '\n');
+    await writeFile(path.join(sb.configDir, 'b.yaml'), 'b2\n');
+    assert.equal((await call('GET', '/api/git/status')).json().merging, true);
+    assert.equal((await commit({ message: 'Durante merge', all: true })).statusCode, 409);
+  });
+
+  it('un messaggio con un carattere nullo è rifiutato senza errori interni', async () => {
+    await call('POST', '/api/git/init');
+    await writeFile(path.join(sb.configDir, 'c.yaml'), 'c\n');
+    assert.equal((await commit({ message: 'a\u0000b', all: true })).statusCode, 400);
   });
 });

@@ -272,6 +272,7 @@ editha/
 | 0.21.0 | Revisione del codice: SEC-7 (copie di secrets.yaml escluse da ricerca e sostituzione), HA-9 (template senza virgolette, chiavi complesse, alias senza ancora), scorciatoie per tasto fisico (anche su Mac), bozze non più salvabili scartate con un avviso. |
 | 0.22.0 | Seconda revisione: BK-1 (nessuna eliminazione senza copia senza conferma, versioni senza doppioni, id monotoni), SEC-3/SEC-4 (conflitto anche durante la scrittura), SEC-7 (copie di secrets.yaml in ogni forma), ED-14 (bozze ritentate, attesa massima, ricrea il file sparito), CRLF conservato, HA-9 (spazi invisibili, tag sconosciuti, errori da principiante), scorciatoie per lettera della tastiera. |
 | 0.22.3 | ED-14: bozze per finestra (più finestre o dispositivi non si scartano né sovrascrivono le bozze a vicenda), segnale di finestra aperta, proposta delle bozze di finestre chiuse; Esc sulla domanda rimanda davvero (0.22.2). |
+| 0.29.0 | GIT-2 e GIT-4: modifiche dall'ultimo commit con le caselle, commit dei file scelti con un messaggio; secrets.yaml e copie mai. |
 | 0.28.0 | GIT-1: pannello Git nella barra laterale, inizializzazione del repository in /config con il .gitignore di base; git nell'immagine dell'add-on. |
 | 0.27.1 | HA-7: l'anteprima segue il cursore su un altro template, senza bisogno di Alt+T. |
 | 0.27.0 | HA-7 (2/2): pulsante nella barra, aggiornamento automatico mentre si scrive, Copia, avviso per le entità inesistenti, riga dell'errore di sintassi trovata da EDITHA. |

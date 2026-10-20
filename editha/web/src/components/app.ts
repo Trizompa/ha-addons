@@ -898,6 +898,17 @@ export class EdithaApp extends LitElement {
     await panel.load();
   }
 
+  private gitTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /** Con il pannello Git aperto, dopo un salvataggio lo stato dei file si rilegge (una volta sola). */
+  private scheduleGitRefresh(): void {
+    if (!this.gitOpen) return;
+    clearTimeout(this.gitTimer);
+    this.gitTimer = setTimeout(() => {
+      if (this.gitOpen) void (this.renderRoot.querySelector('editha-git-panel') as EdithaGitPanel).load(true);
+    }, 400);
+  }
+
   private closeGit(): void {
     this.gitOpen = false;
     this.refreshToolbar();
@@ -1225,12 +1236,14 @@ export class EdithaApp extends LitElement {
       this.toasts.show(t('save.failed', { name: tab.name, error: this.errorText(err) }), 'error');
       return false;
     }
+    this.scheduleGitRefresh();
     await this.tree.refresh(dirname(tab.path));
     this.flash(t('save.done', { name: tab.name }));
     return true;
   }
 
   private markSaved(tab: EditorTab, doc: Text, etag: string): void {
+    this.scheduleGitRefresh();
     tab.etag = etag;
     this.saved.set(tab, doc);
     tab.dirty = !this.pane.stateOf(tab).doc.eq(doc);
@@ -1672,6 +1685,7 @@ export class EdithaApp extends LitElement {
       return null;
     }
     await api.deleteDraft(draft.path).catch(() => undefined);
+    this.scheduleGitRefresh();
     await this.tree.refresh(dirname(draft.path));
     const tab = await this.loadTab(draft.path, undefined, true);
     if (tab) {
@@ -1767,6 +1781,7 @@ export class EdithaApp extends LitElement {
       this.toasts.show(t('create.failed', { name, error: this.errorText(err) }), 'error');
       return;
     }
+    this.scheduleGitRefresh();
     await this.tree.refresh(dir);
     await this.tree.reveal(path, type);
     if (type === 'file') await this.openFile(path);
@@ -1823,6 +1838,7 @@ export class EdithaApp extends LitElement {
       return;
     }
     await this.afterMove(entry, to);
+    this.scheduleGitRefresh();
     await this.tree.refresh(dest);
     await this.tree.reveal(to, entry.type as 'file' | 'directory');
     this.flash(t('move.done', { name, where: dest ? `/config/${dest}` : '/config' }));
@@ -1869,6 +1885,7 @@ export class EdithaApp extends LitElement {
       this.preview = to + this.preview.slice(entry.path.length);
     }
     this.tree.forget(entry.path);
+    this.scheduleGitRefresh();
     await this.tree.refresh(dirname(entry.path));
     await this.tree.reveal(to, entry.type as 'file' | 'directory');
     this.refreshTabs();
@@ -1927,6 +1944,7 @@ export class EdithaApp extends LitElement {
       this.closePreview();
     }
     this.tree.forget(entry.path);
+    this.scheduleGitRefresh();
     await this.tree.refresh(dirname(entry.path));
     this.flash(t('delete.done', { name }));
   }
@@ -1971,6 +1989,7 @@ export class EdithaApp extends LitElement {
       this.toasts.show(t('duplicate.failed', { name: old, error: this.errorText(err) }), 'error');
       return;
     }
+    this.scheduleGitRefresh();
     await this.tree.refresh(dir);
     await this.tree.reveal(to, 'file');
     await this.openFile(to);
@@ -2100,6 +2119,7 @@ export class EdithaApp extends LitElement {
 
   private async afterUpload(dir: string, done: string[]): Promise<void> {
     if (done.length === 0) return;
+    this.scheduleGitRefresh();
     await this.tree.refresh(dir);
     // Le tab aperte sui file sostituiti mostrano subito il nuovo contenuto, se non hanno modifiche.
     for (const name of done) {
@@ -2853,6 +2873,7 @@ export class EdithaApp extends LitElement {
           <editha-git-panel
             ?hidden=${!this.gitOpen}
             @git-close=${() => this.closeGit()}
+            @git-open=${(e: CustomEvent<{ path: string }>) => void this.openFile(e.detail.path)}
             @git-changed=${(e: CustomEvent<{ message: string }>) => void this.afterGitChange(e.detail.message)}
             @git-error=${(e: CustomEvent<{ message: string }>) => this.toasts.show(e.detail.message, 'error')}
           ></editha-git-panel>

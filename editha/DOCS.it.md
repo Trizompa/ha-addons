@@ -308,7 +308,23 @@ fuori (niente GitHub né altri server).
   (`secrets.yaml` e copie), i dati interni di Home Assistant (`.storage`, `.cloud`, `deps`,
   `tts`…), database, registri e file temporanei. Puoi modificarlo come ogni altro file.
 - Un repository o un `.gitignore` che esistono già si usano così come sono.
-- Il pannello mostra il ramo e l'ultimo commit.
+- Il pannello mostra il ramo, l'ultimo commit e le **modifiche** dall'ultimo commit: ogni file con
+  una lettera (**M** modificato, **N** nuovo, **E** eliminato, **C** in conflitto) e una casella. Un clic sul nome apre
+  il file. L'elenco si aggiorna quando salvi un file con il pannello aperto, o con il pulsante di
+  aggiornamento.
+- Per fare un **commit** (una «fotografia» dei file, con un messaggio): lascia spuntati i file da
+  includere (all'inizio ci sono tutti), scrivi cosa hai cambiato e premi **Commit** (o
+  Ctrl+Invio nel messaggio).
+- Alcuni file non entrano mai in un commit da EDITHA, anche se il `.gitignore` è stato cambiato o
+  manca: compaiono con un lucchetto e non si possono spuntare. Sono `secrets.yaml` e le sue copie, i
+  dati interni e le credenziali di Home Assistant (`.storage`, `.cloud`, token, database), i file
+  che passano da un filtro di git (`.gitattributes`, per esempio Git LFS o git-crypt: EDITHA non
+  esegue programmi esterni, quindi li salverebbe senza filtro; vanno committati da un terminale) e gli altri repository dentro `/config`.
+- I file nuovi che compaiono da soli mentre il pannello è aperto (dopo un salvataggio o
+  un'operazione sui file) arrivano senza spunta: decidi tu se
+  includerli.
+- Durante un'unione (merge), un rebase o un cherry-pick avviati da un terminale i commit da EDITHA sono sospesi: completala o
+  annullala dal terminale.
 
 La cronologia di EDITHA (le copie automatiche a ogni salvataggio) resta separata e continua a
 funzionare come prima.

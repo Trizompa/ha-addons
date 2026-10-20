@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const configDir = path.join(process.env.EDITHA_E2E_ROOT!, 'config');
 const disk = (rel: string) => readFile(path.join(configDir, rel), 'utf8');
@@ -1158,7 +1159,7 @@ test('HA-7 – pulsante nella barra, aggiornamento mentre si scrive, entità ine
   await expect(panel.locator('.render pre')).toHaveText('ZeroDivisionError: division by zero');
 });
 
-test('GIT-1 – pannello Git: inizializza il repository in /config con il .gitignore di base', async ({ page }) => {
+test('GIT-1, GIT-2, GIT-4 – pannello Git: inizializza il repository, mostra le modifiche, fa il commit dei file scelti', async ({ page }) => {
   await page.locator('editha-file-tree button[data-action="git"]').click();
   const panel = page.locator('editha-git-panel');
   await expect(panel).toContainText('non c\'è ancora un repository Git');
@@ -1168,6 +1169,37 @@ test('GIT-1 – pannello Git: inizializza il repository in /config con il .gitig
   await expect(panel).toContainText('main');
   await expect(panel).toContainText('Nessun commit ancora');
   expect(await disk('.gitignore')).toContain('[Ss][Ee][Cc][Rr][Ee][Tt][Ss].[Yy]*[Mm][Ll]*');
+
+  // GIT-2 e GIT-4: elenco delle modifiche, scelta di un solo file, commit.
+  await expect(panel.locator('.changes-head')).toContainText('Modifiche');
+  await expect(panel.locator('ul.changes')).toContainText('configuration.yaml');
+  // secrets.yaml è escluso dal .gitignore: non compare nemmeno.
+  await expect(panel.locator('ul.changes')).not.toContainText('secrets.yaml');
+  await panel.locator('.changes-head input[type="checkbox"]').uncheck();
+  await expect(panel.locator('button[data-action="git-commit"]')).toBeDisabled();
+  await panel.locator('ul.changes input[data-path="configuration.yaml"]').check();
+  await panel.locator('textarea.message').fill('Prima fotografia');
+  await expect(panel.locator('button[data-action="git-commit"]')).toHaveText(/Commit \(1 file\)/);
+  await panel.locator('textarea.message').press('Control+Enter');
+  await expect(page.locator('editha-toasts')).toContainText('Commit creato: «Prima fotografia» (1 file)');
+  await expect(panel.locator('.card')).toContainText('Prima fotografia');
+  await expect(panel.locator('ul.changes')).not.toContainText('configuration.yaml');
+  const git = (...args: string[]) => execFileSync('git', ['-C', configDir, ...args], { encoding: 'utf8' }).trim();
+  expect(git('show', '--name-only', '--format=', 'HEAD')).toBe('configuration.yaml');
+
+  // Un file salvato mentre il pannello è aperto ricompare tra le modifiche.
+  await panel.locator('ul.changes button.path', { hasText: 'tabs/a.yaml' }).click();
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'tabs/a.yaml');
+  await page.locator('editha-git-panel button[aria-label="Chiudi"]').click();
+  await openFile(page, 'configuration.yaml');
+  await editor(page).click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('# git\n');
+  await page.keyboard.press('Control+s');
+  await expect(activeTab(page)).not.toHaveClass(/dirty/);
+  await page.locator('editha-file-tree button[data-action="git"]').click();
+  await expect(panel.locator('ul.changes')).toContainText('configuration.yaml');
+
   // Chiuso il pannello torna l'albero, con il .gitignore nuovo.
   await panel.locator('button[aria-label="Chiudi"]').click();
   await expect(row(page, '.gitignore')).toBeVisible();

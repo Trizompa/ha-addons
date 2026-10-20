@@ -126,6 +126,8 @@ Per provare l'interfaccia a mano: `npm run build`, poi avviare il server come so
 | `GET /api/ha/entities` / `GET /api/ha/services` | `?fresh=true` per saltare la cache | Entità e azioni di HA |
 | `GET /api/git/info` | | `{ available, version, repo: 'none' \| 'ready' \| 'broken', branch, head: { hash, subject, date } \| null, gitignore }`: GIT-1, repository in /config (non nelle cartelle sopra) |
 | `POST /api/git/init` | | `{ info, gitignoreCreated }`: `git init` (ramo main) e `.gitignore` di base se manca; 409 se c'è già `.git` |
+| `GET /api/git/status` | | `{ files: [{ path, status: 'modified' \| 'added' \| 'deleted' \| 'conflict', blocked: 'secret' \| 'sensitive' \| 'filter' \| 'conflict' \| 'nested' \| null }], truncated, merging }`: GIT-2, al massimo 2000 file |
+| `POST /api/git/commit` | `{ message, paths: [...] }` oppure `{ message, all: true }` | `{ hash, subject, files, skipped }`: GIT-4, solo i file indicati (`--only`); file bloccati (`blocked`): 403 se indicati, saltati con `all`; 409 durante un merge; percorsi passati da stdin; autore EDITHA se il repository non ne ha uno. Filtri di `.gitattributes`, hook, firme e programmi esterni sempre spenti |
 | `POST /api/git/gitignore` | | `{ info, created }`: `.gitignore` di base, mai sopra uno esistente |
 | `POST /api/ha/check` | | `{ valid, errors, warnings }` |
 | `POST /api/ha/template` | `{ template, path? }` | `{ ok: true, result }` oppure `{ ok: false, kind: 'syntax' \| 'render', message }`: HA-7, rende il template con `POST /api/template` di Core. Serve `{{`, `{%` o `{#`; 403 per secrets.yaml e copie (anche tramite link); HA non indica la riga dell'errore |
