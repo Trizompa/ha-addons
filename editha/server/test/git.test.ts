@@ -261,7 +261,7 @@ describe('Git locale (GIT-1)', () => {
     assert.deepEqual(blocked, {
       '.gitattributes': null,
       '.gitignore': null,
-      '.storage/auth': 'sensitive',
+      '.storage/': 'sensitive',
       'a.yaml': 'filter',
       'annidato/': 'nested',
       'google.token': 'sensitive',
@@ -271,7 +271,7 @@ describe('Git locale (GIT-1)', () => {
     assert.equal((await commit({ message: 'x', paths: ['a.yaml'] })).statusCode, 403);
     const all = (await commit({ message: 'Tutto', all: true })).json();
     assert.equal(all.files, 3);
-    assert.deepEqual(all.skipped.sort(), ['.storage/auth', 'a.yaml', 'annidato/', 'google.token', 'home-assistant_v2.db']);
+    assert.deepEqual(all.skipped.sort(), ['.storage/', 'a.yaml', 'annidato/', 'google.token', 'home-assistant_v2.db']);
     assert.equal(gitOut('ls-files'), '.gitattributes\n.gitignore\nok.yaml');
   });
 
@@ -313,7 +313,7 @@ describe('Git locale (GIT-1)', () => {
     // Una cartella non è un file.
     await mkdir(path.join(sb.configDir, 'cartella'));
     await writeFile(path.join(sb.configDir, 'cartella/x.yaml'), 'x\n');
-    await commit({ message: 'Cartella', paths: ['cartella/x.yaml'] });
+    assert.equal((await commit({ message: 'Cartella', paths: ['cartella/'] })).statusCode, 200);
     assert.deepEqual((await head('cartella')).json(), { path: 'cartella', content: null });
     for (const p of ['secrets.yaml', 'pacchetti/secrets_old.yaml', '.storage/auth']) assert.equal((await head(p)).statusCode, 403, p);
     for (const p of ['../fuori', '/etc/passwd', 'a//b']) assert.equal((await head(p)).statusCode, 400, p);
@@ -396,5 +396,82 @@ describe('Git locale (GIT-1)', () => {
     await get('/api/git/log');
     await get(`/api/git/commit-files?rev=${gitOut('rev-parse', 'HEAD')}`);
     await assert.rejects(access(marker));
+  });
+
+  it('cartelle nuove: una riga sola con il conteggio, commit dei file dentro tranne gli esclusi; Escludi', async () => {
+    await call('POST', '/api/git/init');
+    await mkdir(path.join(sb.configDir, 'custom_components/hacs/frontend'), { recursive: true });
+    for (let i = 0; i < 30; i++) await writeFile(path.join(sb.configDir, `custom_components/hacs/frontend/f${i}.js`), `${i}\n`);
+    await writeFile(path.join(sb.configDir, 'custom_components/hacs/secrets.yaml'), 'pw: x\n');
+    await writeFile(path.join(sb.configDir, 'custom_components/hacs/cache.token'), 'x');
+    await mkdir(path.join(sb.configDir, 'pacchetti'));
+    await writeFile(path.join(sb.configDir, 'pacchetti/luci.yaml'), 'a\n');
+    await writeFile(path.join(sb.configDir, 'pacchetti/[strano] #1.yaml'), 'b\n');
+    await writeFile(path.join(sb.configDir, '.gitignore'), '*.db');
+
+    const st = (await call('GET', '/api/git/status')).json();
+    const rows = Object.fromEntries(st.files.map((f: { path: string; folder?: unknown; blocked: unknown }) => [f.path, [f.folder ?? null, f.blocked]]));
+    // secrets.yaml è escluso già dal .gitignore? No: il .gitignore qui è "*.db", quindi conta tra gli esclusi.
+    assert.deepEqual(rows, {
+      '.gitignore': [null, null],
+      'custom_components/': [{ files: 30, excluded: 2 }, null],
+      'pacchetti/': [{ files: 2, excluded: 0 }, null],
+    });
+
+    // Escludi: la riga va nel .gitignore, ancorata e con i caratteri speciali protetti.
+    const ignore = (p: string) => app.inject({ method: 'POST', url: '/api/git/ignore', payload: { path: p }, remoteAddress: INGRESS });
+    assert.equal((await ignore('custom_components/')).statusCode, 200);
+    assert.equal((await ignore('pacchetti/[strano] #1.yaml')).statusCode, 200);
+    assert.equal((await ignore('custom_components/')).statusCode, 200);
+    assert.equal(await readFile(path.join(sb.configDir, '.gitignore'), 'utf8'), '*.db\n/custom_components/\n/pacchetti/\\[strano\\] \\#1.yaml\n');
+    for (const p of ['../x', '/etc', 'a\nb', './a']) assert.equal((await ignore(p)).statusCode, 400, p);
+    const st2 = (await call('GET', '/api/git/status')).json();
+    assert.deepEqual(st2.files.map((f: { path: string; folder?: { files: number } }) => [f.path, f.folder?.files ?? null]), [
+      ['.gitignore', null],
+      ['pacchetti/', 1],
+    ]);
+
+    // Commit della cartella: entrano i suoi file uno per uno.
+    const res = (await commit({ message: 'Pacchetti', paths: ['pacchetti/', '.gitignore'] })).json();
+    assert.equal(res.files, 2);
+    assert.equal(gitOut('ls-files'), '.gitignore\npacchetti/luci.yaml');
+  });
+
+  it('una cartella nuova con dentro segreti: i segreti restano fuori dal commit', async () => {
+    await call('POST', '/api/git/init');
+    await writeFile(path.join(sb.configDir, '.gitignore'), '');
+    await mkdir(path.join(sb.configDir, 'esphome'));
+    await writeFile(path.join(sb.configDir, 'esphome/secrets.yaml'), 'wifi: x\n');
+    await writeFile(path.join(sb.configDir, 'esphome/nodo.yaml'), 'esphome: {}\n');
+    const st = (await call('GET', '/api/git/status')).json();
+    assert.deepEqual(st.files.find((f: { path: string }) => f.path === 'esphome/').folder, { files: 1, excluded: 1 });
+    await commit({ message: 'ESPHome', paths: ['esphome/'] });
+    assert.equal(gitOut('ls-files', 'esphome'), 'esphome/nodo.yaml');
+  });
+
+  it('cartelle nuove: .storage più in basso, copie di secrets con altri nomi, repository annidati più in basso', async () => {
+    await call('POST', '/api/git/init');
+    await writeFile(path.join(sb.configDir, '.gitignore'), '');
+    await mkdir(path.join(sb.configDir, '.ha_mcp/backups/1/.storage'), { recursive: true });
+    await writeFile(path.join(sb.configDir, '.ha_mcp/backups/1/.storage/core.config_entries'), 'TOKEN');
+    await writeFile(path.join(sb.configDir, '.ha_mcp/backups/1/20240101_secrets.yaml'), 'pw: x\n');
+    await writeFile(path.join(sb.configDir, '.ha_mcp/backups/1/automations.yaml'), '[]\n');
+    await mkdir(path.join(sb.configDir, 'dentro/sotto'), { recursive: true });
+    execFileSync('git', ['init', '--quiet', path.join(sb.configDir, 'dentro/sotto')]);
+    await writeFile(path.join(sb.configDir, 'dentro/sotto/x.yaml'), 'x\n');
+
+    const st = (await call('GET', '/api/git/status')).json();
+    const row = (p: string) => st.files.find((f: { path: string }) => f.path === p);
+    assert.deepEqual(row('.ha_mcp/').folder, { files: 1, excluded: 2 });
+    assert.equal(row('.ha_mcp/').untracked, true);
+    assert.equal(row('dentro/').blocked, 'nested');
+
+    // Il numero di file visto non torna più: il commit si ferma.
+    await writeFile(path.join(sb.configDir, '.ha_mcp/backups/1/scripts.yaml'), '{}\n');
+    const stale = await commit({ message: 'Vecchio', paths: ['.ha_mcp/'], folders: { '.ha_mcp/': 1 } });
+    assert.equal(stale.statusCode, 409);
+    const ok = await commit({ message: 'Backup', paths: ['.ha_mcp/'], folders: { '.ha_mcp/': 2 } });
+    assert.equal(ok.statusCode, 200, ok.body);
+    assert.equal(gitOut('ls-files'), '.ha_mcp/backups/1/automations.yaml\n.ha_mcp/backups/1/scripts.yaml');
   });
 });

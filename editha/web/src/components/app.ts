@@ -1024,6 +1024,9 @@ export class EdithaApp extends LitElement {
   private async afterGitChange(message: string): Promise<void> {
     this.flash(message);
     await this.tree.refresh('');
+    // Un .gitignore aperto (senza modifiche) mostra subito le righe aggiunte da Escludi.
+    const ignore = this.tabs.find('.gitignore');
+    if (ignore && !ignore.dirty) await this.reloadFromDisk(ignore, true);
   }
 
   private closeSearch(): void {

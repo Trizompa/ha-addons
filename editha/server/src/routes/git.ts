@@ -16,7 +16,7 @@ export function registerGitRoutes(app: FastifyInstance, git: GitService): void {
   app.get('/api/git/status', async () => git.status());
 
   // GIT-4: commit di tutti i file cambiati o di quelli scelti (mai secrets.yaml e copie).
-  app.post<{ Body: { message: string; paths?: string[]; all?: boolean } }>(
+  app.post<{ Body: { message: string; paths?: string[]; all?: boolean; folders?: Record<string, number> } }>(
     '/api/git/commit',
     {
       schema: {
@@ -27,6 +27,7 @@ export function registerGitRoutes(app: FastifyInstance, git: GitService): void {
             message: { type: 'string', minLength: 1, maxLength: 5000, pattern: '\\S' },
             paths: { type: 'array', minItems: 1, maxItems: 5000, items: { type: 'string', minLength: 1, maxLength: 4096 } },
             all: { type: 'boolean', const: true },
+            folders: { type: 'object', additionalProperties: { type: 'integer', minimum: 0 }, maxProperties: 5000 },
           },
           additionalProperties: false,
           oneOf: [{ required: ['paths'] }, { required: ['all'] }],
@@ -34,7 +35,7 @@ export function registerGitRoutes(app: FastifyInstance, git: GitService): void {
       },
     },
     async (req) => {
-      const res = await git.commit(req.body.message, req.body.all ? 'all' : req.body.paths!);
+      const res = await git.commit(req.body.message, req.body.all ? 'all' : req.body.paths!, req.body.folders);
       req.log.info({ hash: res.hash.slice(0, 12), files: res.files, skipped: res.skipped }, 'git: commit creato');
       return res;
     },
@@ -73,6 +74,16 @@ export function registerGitRoutes(app: FastifyInstance, git: GitService): void {
     '/api/git/commit-files',
     { schema: { querystring: { type: 'object', required: ['rev'], properties: { rev: { type: 'string', pattern: '^[0-9a-f]{4,64}$' } } } } },
     async (req) => git.commitFiles(req.query.rev),
+  );
+
+  // Esclude dal repository un file o una cartella nuovi (una riga nel .gitignore).
+  app.post<{ Body: { path: string } }>(
+    '/api/git/ignore',
+    { schema: { body: { type: 'object', required: ['path'], properties: { path: { type: 'string', minLength: 1, maxLength: 4096 } }, additionalProperties: false } } },
+    async (req) => {
+      await git.ignore(req.body.path);
+      return { ok: true };
+    },
   );
 
   // .gitignore di base in un repository che non ce l'ha; quello esistente non si tocca.

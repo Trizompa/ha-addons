@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.31.0
+
+- **Git, primo commit più semplice**: una cartella che git non ha mai visto è ora una riga sola con il numero di file (per esempio `custom_components/ · 1450 file`), invece di migliaia di righe. Il commit di una cartella include i suoi file, tranne segreti e dati interni.
+- **Escludi**: l'occhio barrato accanto a un file o una cartella nuovi li aggiunge al `.gitignore`, così spariscono dall'elenco e da tutti i commit.
+- Al primo commit un avviso suggerisce di escludere prima le cartelle che non servono; con più di 2000 righe il commit è bloccato finché non si escludono cartelle.
+- Sul telefono il pannello Git non è più trasparente.
+
 ## 0.30.0
 
 - **Git locale completo.** Nel pannello Git:

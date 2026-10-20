@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { lstat, mkdir, realpath, writeFile } from 'node:fs/promises';
+import { appendFile, lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { EdithaError } from '../errors.js';
 import { KeyedLock } from '../fs/lock.js';
@@ -115,15 +115,27 @@ export interface GitChange {
    * compresi; conflict: in conflitto; nested: un altro repository dentro /config.
    */
   blocked: 'secret' | 'sensitive' | 'filter' | 'conflict' | 'nested' | null;
+  /**
+   * Cartella mai vista da git (una riga sola al posto di tutti i suoi file): quanti file entrerebbero
+   * nel commit e quanti ne restano fuori comunque (segreti, dati interni, filtri).
+   */
+  folder?: { files: number; excluded: number };
+  /** Mai visto da git (??): solo questi si possono escludere con il .gitignore. */
+  untracked: boolean;
 }
+
+/** Riga dello stato con quello che serve al commit (non va al browser). */
+type Change = GitChange & { xy: string; inner?: string[] };
 
 /** Dati interni e credenziali di Home Assistant: mai in un commit, anche senza .gitignore. */
 function isSensitive(p: string): boolean {
-  const top = p.split('/')[0]!;
-  const name = path.posix.basename(p);
+  const parts = p.replace(/\/$/, '').split('/');
+  const name = parts[parts.length - 1]!;
   return (
-    top === '.storage' ||
-    top === '.cloud' ||
+    // Anche più in basso: le copie di backup di altri add-on contengono .storage interi.
+    parts.some((part) => part === '.storage' || part === '.cloud') ||
+    // Copie di secrets.yaml con un nome qualsiasi (20240101_secrets.yaml, old-secrets.yaml…).
+    /secrets.*\.ya?ml/i.test(name) ||
     /\.token$/i.test(name) ||
     name === 'ip_bans.yaml' ||
     /\.(db|db-shm|db-wal|sqlite|sqlite3)$/i.test(name)
@@ -305,9 +317,15 @@ export class GitService {
     if (!(await this.gitDirIsReal())) throw new EdithaError('not_found', 'In /config non c\'è un repository Git');
   }
 
-  private async changes(): Promise<{ files: (GitChange & { xy: string })[]; truncated: boolean }> {
-    const out = await this.runOnFiles(['status', '--porcelain=v1', '-z', '--untracked-files=all', '--no-renames', '--ignore-submodules=all']);
-    const files: (GitChange & { xy: string })[] = [];
+  /** Perché un singolo file non può entrare in un commit (per nome; i filtri si guardano dopo). */
+  private static blockedByName(p: string): 'secret' | 'sensitive' | null {
+    return isSecretsFile(path.posix.basename(p.replace(/\/$/, ''))) ? 'secret' : isSensitive(p) ? 'sensitive' : null;
+  }
+
+  private async changes(): Promise<{ files: Change[]; truncated: boolean }> {
+    // Le cartelle mai viste da git restano una riga sola (-unormal): al primo commit sono tante.
+    const out = await this.runOnFiles(['status', '--porcelain=v1', '-z', '--untracked-files=normal', '--no-renames', '--ignore-submodules=all']);
+    const files: Change[] = [];
     let total = 0;
     for (const entry of out.split('\0')) {
       if (entry.length < 4) continue;
@@ -323,28 +341,62 @@ export class GitService {
             : xy === '??' || xy.includes('A')
               ? 'added'
               : 'modified';
-      const blocked: GitChange['blocked'] =
-        status === 'conflict'
-          ? 'conflict'
-          : isSecretsFile(path.posix.basename(p.replace(/\/$/, '')))
-            ? 'secret'
-            : isSensitive(p)
-              ? 'sensitive'
-              : p.endsWith('/')
-                ? 'nested'
-                : null;
-      files.push({ path: p, status, blocked, xy });
+      const blocked: GitChange['blocked'] = status === 'conflict' ? 'conflict' : GitService.blockedByName(p);
+      files.push({ path: p, status, blocked, xy, untracked: xy === '??' });
+    }
+    // Cartelle nuove: i file che contengono (rispettando il .gitignore), da contare e da controllare.
+    const folders = files.filter((f) => f.path.endsWith('/') && f.blocked === null);
+    if (folders.length > 0) {
+      const untracked = (await this.run(['ls-files', '--others', '--exclude-standard', '-z'])).split('\0').filter(Boolean);
+      // Ogni file alla sua cartella, risalendo le cartelle sopra di lui (non tutti i file per ogni cartella).
+      const byFolder = new Map<string, string[]>(folders.map((f) => [f.path, []]));
+      for (const u of untracked) {
+        let i = u.indexOf('/');
+        while (i !== -1 && i < u.length - 1) {
+          const list = byFolder.get(u.slice(0, i + 1));
+          if (list) {
+            list.push(u);
+            break;
+          }
+          i = u.indexOf('/', i + 1);
+        }
+        if (byFolder.has(u)) byFolder.get(u)!.push(u);
+      }
+      for (const f of folders) {
+        const inside = byFolder.get(f.path) ?? [];
+        // Un altro repository: git lo vede come una cartella sola, senza file dentro.
+        if (inside.length === 0 || inside.every((u) => u.endsWith('/')) || (await this.exists(path.posix.join(f.path, '.git')))) {
+          f.blocked = 'nested';
+          continue;
+        }
+        f.inner = inside.filter((u) => !u.endsWith('/'));
+        f.folder = { files: 0, excluded: inside.length - f.inner.length };
+      }
     }
     // File che passano da un filtro (.gitattributes): check-attr legge solo gli attributi.
-    const candidates = files.filter((f) => f.blocked === null);
-    if (candidates.length > 0) {
-      const attrs = (await this.run(['check-attr', '--stdin', '-z', 'filter'], candidates.map((f) => f.path).join('\0') + '\0')).split('\0');
-      const filtered = new Set<string>();
+    const candidates = new Set<string>();
+    for (const f of files) {
+      if (f.blocked !== null) continue;
+      if (f.inner) f.inner.forEach((p) => candidates.add(p));
+      else candidates.add(f.path);
+    }
+    const filtered = new Set<string>();
+    if (candidates.size > 0) {
+      const attrs = (await this.run(['check-attr', '--stdin', '-z', 'filter'], [...candidates].join('\0') + '\0')).split('\0');
       for (let i = 0; i + 2 < attrs.length; i += 3) {
         const value = attrs[i + 2]!;
         if (value !== 'unspecified' && value !== 'unset') filtered.add(attrs[i]!);
       }
-      for (const f of candidates) if (filtered.has(f.path)) f.blocked = 'filter';
+    }
+    for (const f of files) {
+      if (f.blocked !== null) continue;
+      if (f.inner && f.folder) {
+        const ok = f.inner.filter((p) => !filtered.has(p) && GitService.blockedByName(p) === null);
+        f.folder = { files: ok.length, excluded: f.folder.excluded + f.inner.length - ok.length };
+        f.inner = ok;
+        // Dentro c'è solo roba che non può entrare: la cartella intera resta fuori.
+        if (ok.length === 0) f.blocked = 'sensitive';
+      } else if (filtered.has(f.path)) f.blocked = 'filter';
     }
     files.sort((a, b) => a.path.localeCompare(b.path));
     return { files, truncated: total > files.length };
@@ -363,7 +415,7 @@ export class GitService {
     await this.requireRepo();
     return this.lock.run('git', async () => {
       const { files, truncated } = await this.changes();
-      return { files: files.map(({ xy: _xy, ...f }) => f), truncated, merging: await this.operationInProgress() };
+      return { files: files.map(({ xy: _xy, inner: _inner, ...f }) => f), truncated, merging: await this.operationInProgress() };
     });
   }
 
@@ -372,7 +424,12 @@ export class GitService {
    * le sue copie non entrano mai: con "tutti" si saltano, se indicati per nome la richiesta è
    * rifiutata. Solo i file scelti: quello che era già pronto da un terminale resta com'è.
    */
-  async commit(message: string, paths: string[] | 'all'): Promise<{ hash: string; subject: string; files: number; skipped: string[] }> {
+  async commit(
+    message: string,
+    paths: string[] | 'all',
+    /** File che l'utente ha visto in ogni cartella nuova scelta: se sono cambiati, si ricontrolla. */
+    expected: Record<string, number> = {},
+  ): Promise<{ hash: string; subject: string; files: number; skipped: string[] }> {
     if (message.includes('\0')) throw new EdithaError('invalid_request', 'Messaggio non valido');
     await this.requireRepo();
     return this.lock.run('git', async () => {
@@ -387,7 +444,7 @@ export class GitService {
         );
       }
       const byPath = new Map(changed.map((c) => [c.path, c]));
-      let chosen: (GitChange & { xy: string })[];
+      let chosen: Change[];
       if (paths === 'all') chosen = changed;
       else {
         chosen = [];
@@ -402,7 +459,13 @@ export class GitService {
         throw new EdithaError('forbidden_path', `Questi file non possono entrare in un commit da EDITHA: ${blocked.join(', ')}`);
       }
       const ok = chosen.filter((c) => c.blocked === null);
-      const list = ok.map((c) => c.path);
+      for (const c of ok) {
+        if (c.folder && expected[c.path] !== undefined && expected[c.path] !== c.folder.files) {
+          throw new EdithaError('conflict', `Nel frattempo è cambiato il contenuto di ${c.path}: ricontrolla l'elenco e riprova`);
+        }
+      }
+      // Una cartella nuova entra con i suoi file uno per uno: mai quelli esclusi che contiene.
+      const list = ok.flatMap((c) => c.inner ?? [c.path]);
       if (list.length === 0) throw new EdithaError('invalid_request', 'Nessun file da salvare nel commit');
       // Chi è l'autore: quello configurato nel repository, altrimenti EDITHA.
       const name = (await this.run(['config', 'user.name']).catch(() => '')).trim();
@@ -414,7 +477,7 @@ export class GitService {
       const nul = (items: string[]) => items.join('\0') + '\0';
       await this.runOnFiles(['add', '--all', '--pathspec-from-file=-', '--pathspec-file-nul'], nul(list));
       // Aggiunto da un terminale e poi eliminato (AD): dopo "add" non c'è più niente da salvare.
-      const commitList = ok.filter((c) => c.xy !== 'AD').map((c) => c.path);
+      const commitList = ok.filter((c) => c.xy !== 'AD').flatMap((c) => c.inner ?? [c.path]);
       if (commitList.length === 0) throw new EdithaError('invalid_request', 'Nessun file da salvare nel commit');
       await this.runOnFiles(
         [...identity, 'commit', '--quiet', '--no-verify', '--no-gpg-sign', '--cleanup=whitespace', '-m', message, '--only', '--pathspec-from-file=-', '--pathspec-file-nul'],
@@ -523,6 +586,37 @@ export class GitService {
         });
       }
       return { hash, files };
+    });
+  }
+
+  /**
+   * Esclude un file o una cartella non ancora nel repository: aggiunge una riga al .gitignore
+   * (creato se manca), ancorata a /config e con i caratteri speciali protetti.
+   */
+  async ignore(rel: string): Promise<void> {
+    const dir = rel.endsWith('/');
+    const p = dir ? rel.slice(0, -1) : rel;
+    if (p === '' || /[\0\r\n]/.test(p) || p.startsWith('/') || p.split('/').some((part) => part === '..' || part === '.' || part === '')) {
+      throw new EdithaError('invalid_request', `Percorso non valido: ${rel}`);
+    }
+    await this.requireRepo();
+    await this.lock.run('git', async () => {
+      // Nel .gitignore \ * ? [ ! # e gli spazi in fondo hanno un significato: si proteggono.
+      const escaped = p.replace(/[\\*?[\]!#]/g, (c) => `\\${c}`).replace(/ $/, '\\ ');
+      const line = `/${escaped}${dir ? '/' : ''}`;
+      const file = path.join(this.root, '.gitignore');
+      // Solo un file vero dentro /config (un link porterebbe a scrivere altrove).
+      const st = await lstat(file).catch(() => null);
+      if (st && !st.isFile()) throw new EdithaError('not_a_file', 'Il .gitignore non è un file normale');
+      let current = '';
+      try {
+        current = await readFile(file, 'utf8');
+      } catch {
+        // non c'è ancora
+      }
+      if (current.split(/\r?\n/).includes(line)) return;
+      const sep = current === '' || current.endsWith('\n') ? '' : '\n';
+      await appendFile(file, `${sep}${line}\n`);
     });
   }
 

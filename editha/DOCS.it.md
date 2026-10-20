@@ -312,6 +312,11 @@ fuori (niente GitHub né altri server).
   una lettera (**M** modificato, **N** nuovo, **E** eliminato, **C** in conflitto) e una casella. Un clic sul nome apre
   il file. L'elenco si aggiorna quando salvi un file con il pannello aperto, o con il pulsante di
   aggiornamento.
+- Una cartella che git non ha mai visto è **una riga sola**, con il numero di file che contiene
+  (per esempio `custom_components/ · 1450 file`). L'**occhio barrato** accanto a un file o a
+  una cartella nuovi li **esclude** dal repository: aggiunge una riga al `.gitignore`, così non
+  compaiono più. Al primo commit, che di solito contiene tutta la configurazione, conviene
+  escludere prima le cartelle che non servono (scaricate da HACS, copie di altri add-on…).
 - Per fare un **commit** (una «fotografia» dei file, con un messaggio): lascia spuntati i file da
   includere (all'inizio ci sono tutti), scrivi cosa hai cambiato e premi **Commit** (o
   Ctrl+Invio nel messaggio).

@@ -299,6 +299,11 @@ sends nothing outside (no GitHub or other servers).
 - The panel shows the branch, the last commit and the **changes** since the last commit: each file
   with a letter (**M** modified, **N** new, **D** deleted, **C** in conflict) and a checkbox. Clicking the name opens
   the file. The list updates when you save a file with the panel open, or with the refresh button.
+- A folder git has never seen is **a single row**, with the number of files it contains (for
+  example `custom_components/ · 1450 files`). The **crossed-out eye** next to a new file or
+  folder **excludes** it from the repository: it adds a line to `.gitignore`, so it no longer
+  shows up. Before the first commit, which usually contains the whole configuration, exclude the
+  folders you do not need (downloaded by HACS, other add-ons' copies…).
 - To make a **commit** (a «snapshot» of the files, with a message): keep the files to include
   ticked (all of them at first), write what you changed and press **Commit** (or Ctrl+Enter in the
   message).

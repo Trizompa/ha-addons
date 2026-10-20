@@ -1173,6 +1173,14 @@ test('GIT-1…6 – pannello Git: inizializza, modifiche, commit dei file scelti
   // GIT-2 e GIT-4: elenco delle modifiche, scelta di un solo file, commit.
   await expect(panel.locator('.changes-head')).toContainText('Modifiche');
   await expect(panel.locator('ul.changes')).toContainText('configuration.yaml');
+  await expect(panel.locator('.hint')).toContainText('primo commit');
+  // Una cartella nuova è una riga sola, con il numero di file; con l'occhio barrato si esclude.
+  const tabsRow = panel.locator('ul.changes li', { hasText: 'tabs/' }).first();
+  await expect(tabsRow).toContainText('3 file');
+  await tabsRow.locator('button[data-action="git-ignore"]').click();
+  await expect(page.locator('editha-toasts')).toContainText('Escluso dal repository: tabs/');
+  await expect(panel.locator('ul.changes')).not.toContainText('tabs/');
+  expect(await disk('.gitignore')).toContain('\n/tabs/\n');
   // secrets.yaml è escluso dal .gitignore: non compare nemmeno.
   await expect(panel.locator('ul.changes')).not.toContainText('secrets.yaml');
   await panel.locator('.changes-head input[type="checkbox"]').uncheck();
@@ -1188,8 +1196,8 @@ test('GIT-1…6 – pannello Git: inizializza, modifiche, commit dei file scelti
   expect(git('show', '--name-only', '--format=', 'HEAD')).toBe('configuration.yaml');
 
   // Un file salvato mentre il pannello è aperto ricompare tra le modifiche.
-  await panel.locator('ul.changes button.path', { hasText: 'tabs/a.yaml' }).click();
-  await expect(activeTab(page)).toHaveAttribute('data-path', 'tabs/a.yaml');
+  await panel.locator('ul.changes button.path', { hasText: 'automations.yaml' }).click();
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'automations.yaml');
   await page.locator('editha-git-panel button[aria-label="Chiudi"]').click();
   await openFile(page, 'configuration.yaml');
   await editor(page).click();

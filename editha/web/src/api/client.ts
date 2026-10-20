@@ -179,6 +179,10 @@ export interface GitChange {
   status: 'modified' | 'added' | 'deleted' | 'conflict';
   /** Perché non può entrare in un commit da EDITHA (null: può). */
   blocked: 'secret' | 'sensitive' | 'filter' | 'conflict' | 'nested' | null;
+  /** Cartella mai vista da git: quanti file entrerebbero nel commit e quanti restano fuori. */
+  folder?: { files: number; excluded: number };
+  /** Mai visto da git: si può escludere con il .gitignore. */
+  untracked: boolean;
 }
 
 /** HA-7: esito dell'anteprima; gli errori del template non sono errori della richiesta. */
@@ -288,12 +292,14 @@ export const api = {
         'GET',
         `api/git/commit-files?rev=${encodeURIComponent(rev)}`,
       ),
+    ignore: (path: string) => request<{ ok: true }>('POST', 'api/git/ignore', { path }),
     status: () => request<{ files: GitChange[]; truncated: boolean; merging: boolean }>('GET', 'api/git/status'),
-    commit: (message: string, paths: string[] | 'all') =>
+    /** `folders`: quanti file si sono visti in ogni cartella nuova scelta (se cambiano, il commit si ferma). */
+    commit: (message: string, paths: string[] | 'all', folders: Record<string, number> = {}) =>
       request<{ hash: string; subject: string; files: number; skipped: string[] }>(
         'POST',
         'api/git/commit',
-        paths === 'all' ? { message, all: true } : { message, paths },
+        paths === 'all' ? { message, all: true, folders } : { message, paths, folders },
       ),
   },
   ha: {
