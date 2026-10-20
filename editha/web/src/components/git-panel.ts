@@ -377,12 +377,15 @@ export class EdithaGitPanel extends LitElement {
           const fresh: string[] = [];
           for (const c of status.files) {
             const old = seen.get(c.path);
-            if (old && old.folder?.files === c.folder?.files) continue;
-            // Una cartella scelta solo in parte resta così: i file nuovi dentro arrivano senza spunta.
+            // Una cartella scelta solo in parte resta così: i file nuovi dentro arrivano senza spunta,
+            // anche se il numero non cambia (un file rinominato non deve entrare a sorpresa).
             if (old?.folder && c.folder && this.folderState(old) === 'some') {
               const known = new Set(old.folder.list);
               fresh.push(...c.folder.list.filter((p) => !known.has(p)));
-            } else fresh.push(c.path);
+              continue;
+            }
+            if (old && old.folder?.files === c.folder?.files) continue;
+            fresh.push(c.path);
           }
           if (fresh.length > 0) this.unchecked = new Set([...this.unchecked, ...fresh]);
         }
@@ -534,7 +537,10 @@ export class EdithaGitPanel extends LitElement {
    */
   private folderState(c: GitChange): 'all' | 'some' | 'none' {
     if (this.unchecked.has(c.path)) return 'none';
-    return c.folder?.list.some((p) => this.unchecked.has(p)) ? 'some' : 'all';
+    const list = c.folder?.list ?? [];
+    const off = list.filter((p) => this.unchecked.has(p)).length;
+    // Senza nessun file spuntato (anche con altri file oltre l'elenco) non entra niente.
+    return off === 0 ? 'all' : off === list.length ? 'none' : 'some';
   }
 
   /** Percorsi da mandare al commit: la cartella intera, oppure i suoi file spuntati uno per uno. */
