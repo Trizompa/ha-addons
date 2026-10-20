@@ -377,9 +377,10 @@ export class EdithaGitPanel extends LitElement {
           const fresh: string[] = [];
           for (const c of status.files) {
             const old = seen.get(c.path);
-            // Una cartella scelta solo in parte resta così: i file nuovi dentro arrivano senza spunta,
-            // anche se il numero non cambia (un file rinominato non deve entrare a sorpresa).
-            if (old?.folder && c.folder && this.folderState(old) === 'some') {
+            // Una cartella scelta file per file (anche con nessun file spuntato) resta così: i file
+            // nuovi dentro arrivano senza spunta, anche se il numero non cambia (un file rinominato
+            // non deve entrare a sorpresa).
+            if (old?.folder && c.folder && !this.unchecked.has(old.path) && this.folderState(old) !== 'all') {
               const known = new Set(old.folder.list);
               fresh.push(...c.folder.list.filter((p) => !known.has(p)));
               continue;
