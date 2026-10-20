@@ -3,7 +3,7 @@ import type { JsonStore } from '../state/json-store.js';
 import { sessionSchema, type Session } from '../state/session.js';
 import { settingsSchema, type Settings } from '../state/settings.js';
 import { snippetsSchema, type SnippetList } from '../state/snippets.js';
-import { aliveSchema, draftSchema, type DraftStore } from '../state/drafts.js';
+import { aliveSchema, claimSchema, draftSchema, type DraftStore } from '../state/drafts.js';
 import { EdithaError } from '../errors.js';
 
 export function registerStateRoutes(
@@ -63,6 +63,16 @@ export function registerStateRoutes(
     async (req) => {
       await drafts.remove(req.query.path, req.query.client);
       return { path: req.query.path };
+    },
+  );
+
+  // Recupero della bozza di un'altra finestra: una sola finestra la ottiene.
+  app.post<{ Body: { path: string; from?: string; client: string } }>(
+    '/api/draft/claim',
+    { schema: { body: claimSchema } },
+    async (req) => {
+      const draft = await drafts.claim(req.body.path, req.body.from, req.body.client);
+      return draft ? { claimed: true, draft } : { claimed: false };
     },
   );
 

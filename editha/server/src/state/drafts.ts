@@ -42,6 +42,18 @@ export const draftSchema = {
   additionalProperties: false,
 } as const;
 
+export const claimSchema = {
+  type: 'object',
+  required: ['path', 'client'],
+  properties: {
+    path: { type: 'string', minLength: 1, maxLength: 4096 },
+    /** Finestra che ha scritto la bozza; assente per quelle di versioni precedenti. */
+    from: { type: 'string', minLength: 1, maxLength: 64 },
+    client: { type: 'string', minLength: 1, maxLength: 64 },
+  },
+  additionalProperties: false,
+} as const;
+
 export const aliveSchema = {
   type: 'object',
   required: ['client'],
@@ -169,5 +181,31 @@ export class DraftStore {
   async remove(rel: string, client?: string): Promise<void> {
     const file = this.fileOf(rel, client);
     await this.lock.run(file, () => rm(file, { force: true }));
+  }
+
+  /**
+   * Una finestra recupera la bozza di un'altra (`from`; assente per le bozze di versioni
+   * precedenti): la bozza passa a lei e sparisce dall'originale, tutto sotto lo stesso blocco.
+   * Se due finestre la chiedono insieme, solo la prima la ottiene; l'altra riceve null.
+   */
+  async claim(rel: string, from: string | undefined, to: string): Promise<Draft | null> {
+    const source = this.fileOf(rel, from);
+    const target = this.fileOf(rel, to);
+    // Origine e destinazione insieme, sempre nello stesso ordine: niente stalli.
+    return this.lock.runAll([source, target], async () => {
+      let raw: unknown;
+      try {
+        raw = JSON.parse(await readFile(source, 'utf8'));
+      } catch {
+        return null;
+      }
+      if (!isDraft(raw) || raw.path !== rel) return null;
+      const draft: Draft = { ...raw, client: to };
+      if (source !== target) {
+        await writeFileAtomic(target, Buffer.from(JSON.stringify(draft)));
+        await rm(source, { force: true });
+      }
+      return draft;
+    });
   }
 }

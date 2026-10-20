@@ -582,6 +582,33 @@ test.describe('Bozze (ED-14)', () => {
     await other.close();
   });
 
+  test('due finestre recuperano insieme la stessa bozza: la ottiene una sola', async ({ page, request }) => {
+    const p = 'drafts/conteso.yaml';
+    const etag = (await (await request.get(`api/file?path=${encodeURIComponent(p)}`)).json()).etag;
+    // Bozza lasciata da una finestra che si è chiusa.
+    await request.post('api/drafts/alive', { data: { client: 'chiusa', closing: true } });
+    await request.put('api/draft', { data: { path: p, content: 'stato: salvato\nrecuperata: si\n', etag, client: 'chiusa' } });
+
+    const second = await page.context().newPage();
+    await Promise.all([page.goto('./'), second.goto('./')]);
+    for (const w of [page, second]) await expect(w.locator('editha-dialog dialog[open]')).toContainText(p);
+    await Promise.all([dialogButton(page, 'Recupera').click(), dialogButton(second, 'Recupera').click()]);
+
+    const recovered = async (w: Page) => (await w.locator(`editha-tab-bar .tab.dirty[data-path="${p}"]`).count()) > 0;
+    await expect.poll(async () => [await recovered(page), await recovered(second)].filter(Boolean).length).toBe(1);
+    const loser = (await recovered(page)) ? second : page;
+    await expect(loser.locator('editha-toasts')).toContainText('già state recuperate o scartate');
+    const drafts = (await (await request.get('api/drafts')).json()).drafts as { client: string }[];
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0]!.client).not.toBe('chiusa');
+
+    // Pulizia.
+    const winner = loser === page ? second : page;
+    await winner.keyboard.press('Control+s');
+    await expect.poll(async () => (await (await request.get('api/drafts')).json()).drafts.length).toBe(0);
+    await second.close();
+  });
+
   test('la bozza di un file cancellato nel frattempo si può ricreare', async ({ page, request }) => {
     // Cancellato da fuori mentre la pagina è chiusa.
     const again = await typeAndLeave(page, request, 'drafts/sparisce.yaml', () =>

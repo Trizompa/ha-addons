@@ -115,6 +115,7 @@ Per provare l'interfaccia a mano: `npm run build`, poi avviare il server come so
 | `GET /api/secrets?path=` | | `{ secrets: [{ key, path, line }] }`: chiavi di !secret visibili dal file, mai i valori |
 | `GET /api/drafts` | | `{ drafts: [{ path, content, etag, savedAt, client?, live, idleMs }] }`: modifiche non salvate; `live` = la finestra che le ha scritte si è fatta sentire negli ultimi 90 s |
 | `PUT /api/draft` / `DELETE /api/draft?path=&client=` | `{ path, content, etag, client? }` | Conserva o scarta la bozza di un file per una finestra (`client`, tenuto in sessionStorage); senza `client` la bozza di versioni precedenti |
+| `POST /api/draft/claim` | `{ path, from?, client }` | Prende per `client` la bozza scritta da `from` (assente: versione precedente), in un'unica operazione: `{ claimed: true, draft }`, oppure `{ claimed: false }` se un'altra finestra l'ha già presa o scartata |
 | `POST /api/drafts/alive` | `{ client, closing? }` | La finestra è aperta (ogni 20 s e al ritorno in primo piano) o si sta chiudendo (`pagehide`) |
 | `GET /api/version?path=&id=` | | Testo di una versione conservata |
 | `POST /api/restore` | `{ path, id }` | `{ path, etag, size, mtime }`: ripristina una versione, anche di un file eliminato (ricreato con i permessi della copia; quella sostituita resta nella cronologia). 413 se la versione o il file attuale superano `EDITHA_MAX_TRANSFER`; 409 `conflict` se il file cambia durante il ripristino; le versioni di cartelle danno `not_a_file` |

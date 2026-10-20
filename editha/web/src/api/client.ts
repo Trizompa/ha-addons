@@ -10,6 +10,7 @@ import type {
   SnippetList,
   SecretKey,
   SearchResult,
+  Draft,
   ListedDraft,
   Version,
 } from './types.js';
@@ -200,6 +201,13 @@ export const api = {
   /** Senza `client` si elimina la bozza di questa finestra; `null`: bozza di una versione precedente. */
   deleteDraft: (path: string, client: string | null | undefined = CLIENT_ID) =>
     request<{ path: string }>('DELETE', `api/draft${q(path)}${client ? `&client=${encodeURIComponent(client)}` : ''}`),
+  /** Prende per questa finestra la bozza di un'altra: `claimed` false se l'ha già presa un'altra. */
+  claimDraft: (path: string, from: string | undefined) =>
+    request<{ claimed: boolean; draft?: Draft }>('POST', 'api/draft/claim', {
+      path,
+      ...(from ? { from } : {}),
+      client: CLIENT_ID,
+    }),
   /** Questa finestra è ancora aperta (`closing`: si sta chiudendo). */
   draftsAlive: (closing = false) =>
     request<{ ok: true }>('POST', 'api/drafts/alive', { client: CLIENT_ID, ...(closing ? { closing } : {}) }),

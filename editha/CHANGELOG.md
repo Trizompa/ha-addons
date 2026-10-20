@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.4
+
+- Se due finestre recuperano nello stesso momento le modifiche lasciate da una terza finestra chiusa, ora le ottiene una sola: l'altra non apre niente e avvisa che sono già state recuperate (o scartate) altrove. Prima finivano in entrambe.
+
 ## 0.22.3
 
 - **Più finestre o dispositivi aperti insieme**: ognuno tiene le sue bozze delle modifiche non salvate. Una finestra non propone, non scarta e non sovrascrive più le bozze di un'altra ancora aperta (per esempio EDITHA sul PC e sul telefono). Ricaricando la pagina le proprie bozze vengono riconosciute e proposte come prima.

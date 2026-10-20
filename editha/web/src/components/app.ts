@@ -1292,14 +1292,18 @@ export class EdithaApp extends LitElement {
       return;
     }
     // Recupera: il testo appena scritto torna indietro con Annulla.
+    const mine = await this.claimDraft(draft);
+    if (!mine) {
+      if (tab.dirty) this.scheduleDraft(tab);
+      return;
+    }
     const diskEtag = tab.etag;
-    this.replaceDoc(tab, draft.content);
-    tab.etag = draft.etag;
-    if (diskEtag !== draft.etag) this.toasts.show(t('drafts.changedOnDisk', { name: tab.name }), 'warning');
+    this.replaceDoc(tab, mine.content);
+    tab.etag = mine.etag;
+    if (diskEtag !== mine.etag) this.toasts.show(t('drafts.changedOnDisk', { name: tab.name }), 'warning');
     const saved = this.saved.get(tab);
     tab.dirty = !saved || !this.pane.stateOf(tab).doc.eq(saved);
     this.drafted.add(tab.path);
-    void this.adoptDraft(draft);
     this.refreshTabs();
     if (this.tabs.active !== tab && this.side?.shown !== tab) this.activate(tab.path);
     this.flash(t('drafts.recovered'));
@@ -1502,20 +1506,30 @@ export class EdithaApp extends LitElement {
   }
 
   /**
-   * Bozza recuperata da un'altra finestra (o da una versione precedente): diventa di questa
-   * finestra, prima scrivendola a suo nome e poi togliendo l'originale, che altrimenti verrebbe
-   * riproposta alla prossima apertura.
+   * Prima di recuperare la bozza di un'altra finestra (o di una versione precedente) la si prende
+   * dal server: passa a questa finestra in un colpo solo, e se un'altra finestra l'ha già presa
+   * non la si apre una seconda volta. Null: già presa altrove, o server non raggiungibile.
    */
-  private async adoptDraft(draft: Draft): Promise<void> {
-    if (draft.client === CLIENT_ID) return this.dropSuperseded(draft.path);
-    try {
-      await api.saveDraft(draft.path, draft.content, draft.etag);
-    } catch {
-      return;
+  private async claimDraft(draft: Draft): Promise<Draft | null> {
+    let claimed: Draft | undefined;
+    if (draft.client === CLIENT_ID) claimed = draft;
+    else {
+      try {
+        const res = await api.claimDraft(draft.path, draft.client);
+        if (!res.claimed) {
+          this.toasts.show(t('drafts.takenElsewhere', { name: draft.path }), 'info');
+          return null;
+        }
+        claimed = res.draft;
+      } catch {
+        // Server non raggiungibile: la bozza resta dov'è, per la prossima volta.
+        this.toasts.show(t('drafts.cannotOpen', { name: draft.path }), 'warning');
+        return null;
+      }
     }
-    // L'originale e quelle più vecchie dello stesso file: ora la bozza è di questa finestra.
-    await api.deleteDraft(draft.path, draft.client ?? null).catch(() => undefined);
-    await this.dropSuperseded(draft.path, true);
+    // Le bozze più vecchie dello stesso file seguono questa (quella di questa finestra è appena stata riscritta).
+    void this.dropSuperseded(draft.path, true);
+    return claimed ?? draft;
   }
 
   /** Questa finestra è ancora aperta: le sue bozze non vanno proposte altrove. */
@@ -1566,14 +1580,15 @@ export class EdithaApp extends LitElement {
         await this.discardDraft(draft);
         continue;
       }
-      this.replaceDoc(tab, draft.content);
+      const mine = await this.claimDraft(draft);
+      if (!mine) continue;
+      this.replaceDoc(tab, mine.content);
       // L'etag di partenza: se il file è cambiato su disco, il salvataggio chiederà cosa fare (SEC-4).
-      tab.etag = draft.etag;
+      tab.etag = mine.etag;
       const saved = this.saved.get(tab);
       tab.dirty = !saved || !this.pane.stateOf(tab).doc.eq(saved);
       this.drafted.add(tab.path);
-      void this.adoptDraft(draft);
-      if (diskEtag !== draft.etag) this.toasts.show(t('drafts.changedOnDisk', { name: tab.name }), 'warning');
+      if (diskEtag !== mine.etag) this.toasts.show(t('drafts.changedOnDisk', { name: tab.name }), 'warning');
       first ??= tab;
     }
     this.refreshTabs();
@@ -1599,14 +1614,17 @@ export class EdithaApp extends LitElement {
       return null;
     }
     if (choice !== 'recreate') return null;
+    const mine = await this.claimDraft(draft);
+    if (!mine) return null;
     try {
       // create non sovrascrive mai: se nel frattempo il file è ricomparso, lo si dice.
-      await api.create(draft.path, 'file', draft.content);
+      await api.create(draft.path, 'file', mine.content);
     } catch (err) {
+      // La bozza (ora di questa finestra) resta per la prossima volta.
       this.toasts.show(t('drafts.recreateFailed', { name: draft.path, error: this.errorText(err) }), 'error');
       return null;
     }
-    await this.discardDraft(draft);
+    await api.deleteDraft(draft.path).catch(() => undefined);
     await this.tree.refresh(dirname(draft.path));
     const tab = await this.loadTab(draft.path, undefined, true);
     if (tab) {

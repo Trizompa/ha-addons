@@ -165,6 +165,26 @@ describe('API', () => {
     await call({ method: 'DELETE', url: '/api/draft?path=a.yaml&client=w2' });
   });
 
+  it('una bozza recuperata insieme da due finestre va a una sola', async () => {
+    await call({ method: 'PUT', url: '/api/draft', payload: { path: 'b.yaml', content: 'chiusa\n', etag: 'e', client: 'w0' } });
+    const claim = (client: string) =>
+      call({ method: 'POST', url: '/api/draft/claim', payload: { path: 'b.yaml', from: 'w0', client } });
+    const [a, b] = await Promise.all([claim('w1'), claim('w2')]);
+    const results = [a.json(), b.json()];
+    assert.equal(results.filter((r) => r.claimed).length, 1);
+    const winner = results.find((r) => r.claimed);
+    assert.equal(winner.draft.content, 'chiusa\n');
+    const list = (await call({ method: 'GET', url: '/api/drafts' })).json().drafts;
+    assert.deepEqual(list.map((d: { client: string }) => d.client), [winner.draft.client]);
+    // Bozza di una versione precedente (senza finestra).
+    await call({ method: 'PUT', url: '/api/draft', payload: { path: 'c.yaml', content: 'vecchia\n', etag: 'e' } });
+    const legacy = await call({ method: 'POST', url: '/api/draft/claim', payload: { path: 'c.yaml', client: 'w1' } });
+    assert.equal(legacy.json().claimed, true);
+    for (const d of (await call({ method: 'GET', url: '/api/drafts' })).json().drafts) {
+      await call({ method: 'DELETE', url: `/api/draft?path=${d.path}&client=${d.client}` });
+    }
+  });
+
   it('crea, rinomina ed elimina', async () => {
     const created = await call({
       method: 'POST',

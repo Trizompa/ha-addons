@@ -330,6 +330,7 @@ export const en: Record<keyof Dictionary, string> = {
   'drafts.messageMany': 'Editha kept unsaved changes to {n} files, left pending when the page was closed. Recover them? They will go back to their tabs, to save or discard.',
   'drafts.otherOne': 'Another Editha window was closed leaving unsaved changes to one file. Recover them here? They will go back to its tab, to save or discard.',
   'drafts.otherMany': 'Another Editha window was closed leaving unsaved changes to {n} files. Recover them here? They will go back to their tabs, to save or discard.',
+  'drafts.takenElsewhere': 'The changes to {name} were already recovered or discarded in another Editha window.',
   'drafts.recover': 'Recover',
   'drafts.discard': 'Discard',
   'drafts.recovered': 'Changes recovered: save to keep them',
