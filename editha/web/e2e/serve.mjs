@@ -38,6 +38,20 @@ const files = {
   'move/dest/.keep': '',
   'move/cartella/dentro.yaml': 'x: 1\n',
   'links/sensori/a.yaml': '- platform: template\n',
+  'template/auto.yaml': [
+    '- alias: Prova',
+    '  conditions:',
+    '    - condition: template',
+    '      value_template: "{{ states(\'light.cucina\') }}"',
+    '  actions:',
+    '    - action: notify.x',
+    '      data:',
+    '        message: |',
+    '          Luce: {{ states(\'light.cucina\') }}',
+    '          {% if true %}',
+    '        title: "{{ 1 / 0 }}"',
+    '',
+  ].join('\n'),
   'links/secrets.yaml': 'chiave_uno: valore_segreto_1\nchiave_due: valore_segreto_2\n',
   'lint/problemi.yaml': 'trigger:\n  - platform: state\n    to: on\naction:\n  - service:light.turn_on\n',
   'drafts/scarta.yaml': 'stato: salvato\n',
@@ -107,6 +121,19 @@ const fakeHa = http.createServer(async (req, res) => {
     return json(broken ? { result: 'invalid', errors: 'Invalid config for [light] at check/rotto.yaml, line 1' } : { result: 'valid', errors: null });
   }
   if (req.url?.startsWith('/api/services/homeassistant/')) return json([]);
+  if (req.method === 'POST' && req.url === '/api/template') {
+    let raw = '';
+    for await (const chunk of req) raw += chunk;
+    const { template } = JSON.parse(raw);
+    const fail = (message) => res.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ message }));
+    if (template.includes('{% if') && !template.includes('endif')) {
+      return fail("Error rendering template: TemplateSyntaxError: Unexpected end of template. Jinja was looking for the following tags: 'endif'.");
+    }
+    if (template.includes('1 / 0')) return fail('Error rendering template: ZeroDivisionError: division by zero');
+    const states = { 'light.cucina': 'on' };
+    const out = template.replace(/\{\{\s*states\('([^']+)'\)\s*\}\}/g, (_m, id) => states[id] ?? 'unknown');
+    return res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }).end(out);
+  }
   res.writeHead(404).end();
 });
 await new Promise((r) => fakeHa.listen(Number(process.env.EDITHA_FAKE_HA_PORT ?? 8097), '127.0.0.1', r));

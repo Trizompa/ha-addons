@@ -10,9 +10,9 @@ import type { Draft, Entry, ListedDraft, Session, Settings, ThemeMode } from '..
 import { createEditorState, docText, reconfigureEffects } from '../editor/setup.js';
 import { languageOf } from '../editor/languages.js';
 import { LINT_MAX_CHARS } from '../editor/yaml-lint.js';
-import { basename, dirname, extension, join, resolvePath, validateName } from '../state/paths.js';
+import { basename, dirname, extension, isSecretsFile, join, resolvePath, validateName } from '../state/paths.js';
 import { previewKind } from '../state/preview.js';
-import { shortcutKey } from '../state/keys.js';
+import { shortcutKey, shortcutLabel } from '../state/keys.js';
 import { forgetSecrets, secretKeys } from '../state/secrets.js';
 import type { LinkKind } from '../editor/links.js';
 import { TabsModel } from '../state/tabs.js';
@@ -40,6 +40,9 @@ import './toasts.js';
 import './toolbar.js';
 import './insert-panel.js';
 import './history-panel.js';
+import './template-panel.js';
+import type { TemplateView } from './template-panel.js';
+import { templateAt } from '../editor/jinja-template.js';
 import './side-pane.js';
 import './about-dialog.js';
 import './history-space.js';
@@ -97,6 +100,7 @@ export class EdithaApp extends LitElement {
     narrow: { state: true },
     drawerOpen: { state: true },
     insertOpen: { state: true },
+    template: { state: true },
     insertTab: { state: true },
     userSnippets: { state: true },
     haBusy: { state: true },
@@ -121,6 +125,8 @@ export class EdithaApp extends LitElement {
   declare narrow: boolean;
   declare drawerOpen: boolean;
   declare insertOpen: boolean;
+  /** HA-7: anteprima di un template aperta (file e prima riga del template). */
+  declare template: { view: TemplateView; file: string; line: number } | null;
   declare insertTab: InsertTab;
   declare userSnippets: Snippet[];
   /** Un'operazione su HA è in corso: il menu resta disabilitato. */
@@ -178,6 +184,7 @@ export class EdithaApp extends LitElement {
     this.narrow = this.narrowQuery.matches;
     this.drawerOpen = false;
     this.insertOpen = false;
+    this.template = null;
     this.insertTab = 'entities';
     this.userSnippets = [];
     this.haBusy = false;
@@ -2293,6 +2300,8 @@ export class EdithaApp extends LitElement {
     // Fuori da Home Assistant (sviluppo) le voci restano visibili ma disattivate.
     const off = !haData.available;
     const items: MenuEntry[] = [
+      { id: 'template', label: t('template.menu'), icon: icons.template, hint: shortcutLabel('Alt+T'), disabled: off },
+      'separator',
       { id: 'check', label: t('ha.check'), icon: icons.check, disabled: off },
       { id: 'reload', label: t('ha.reload'), icon: icons.reload, disabled: off },
       'separator',
@@ -2301,9 +2310,47 @@ export class EdithaApp extends LitElement {
     const x = rect ? rect.left : 16;
     const y = rect ? rect.bottom + 4 : 56;
     const choice = await this.menu.show(items, x, y);
-    if (choice === 'check') await this.haCheck();
+    if (choice === 'template') await this.previewTemplate();
+    else if (choice === 'check') await this.haCheck();
     else if (choice === 'reload') await this.haReload();
     else if (choice === 'restart') await this.haRestart();
+  }
+
+  // ——— anteprima dei template (HA-7) ———
+
+  /** Anteprima in corso: una risposta arrivata dopo un'altra richiesta (o dopo la chiusura) si ignora. */
+  private templateRun = 0;
+
+  /** Manda a Home Assistant il template selezionato o sotto il cursore e ne mostra il risultato. */
+  private async previewTemplate(): Promise<void> {
+    // Con cronologia o confronto aperti il pannello resterebbe nascosto sotto di loro.
+    if (this.history || this.compare) return void this.toasts.show(t('template.covered'), 'warning');
+    const tab = this.focusedTab();
+    if (!tab) return void this.toasts.show(t('template.noFile'), 'warning');
+    if (isSecretsFile(tab.path)) return void this.toasts.show(t('template.secrets'), 'warning');
+    const onSide = tab !== this.tabs.active || (this.split && this.sideFocused);
+    const s = (onSide ? this.side?.viewState : null) ?? this.pane.stateOf(tab);
+    const sel = s.selection.main;
+    const src = templateAt(s.doc.toString(), sel.from, sel.to, languageOf(tab.path).id);
+    if (!src) return void this.toasts.show(t('template.none'), 'warning');
+    const run = ++this.templateRun;
+    this.template = { view: { status: 'loading' }, file: tab.path, line: src.line };
+    let view: TemplateView;
+    if (!haData.available) view = { status: 'failed', message: t('template.noHa') };
+    else {
+      try {
+        const res = await api.ha.template(src.template, tab.path);
+        view = res.ok ? { status: 'ok', result: res.result } : { status: res.kind, message: res.message };
+      } catch (err) {
+        view = { status: 'failed', message: this.errorText(err) };
+      }
+    }
+    if (run === this.templateRun && this.template) this.template = { ...this.template, view };
+  }
+
+  private closeTemplate(): void {
+    this.templateRun++;
+    this.template = null;
   }
 
   private async withHa<T>(label: string, task: () => Promise<T>): Promise<T | null> {
@@ -2445,6 +2492,13 @@ export class EdithaApp extends LitElement {
       if (modal()) return;
       if (e.altKey) void this.saveAll();
       else void this.save();
+    } else if (e.altKey && !mod && key === 't') {
+      // In un campo di testo Alt+T resta un carattere (su Mac Option+T scrive †).
+      const target = e.composedPath()[0];
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+      e.preventDefault();
+      if (modal()) return;
+      void this.previewTemplate();
     } else if (e.altKey && !mod && key === 'w') {
       e.preventDefault();
       if (modal()) return;
@@ -2467,6 +2521,7 @@ export class EdithaApp extends LitElement {
     if (this.history) this.closeHistory();
     else if (this.compare) this.compare = null;
     else if (this.previewShown) this.closePreview();
+    else if (this.template) this.closeTemplate();
     else return;
     e.preventDefault();
   };
@@ -2702,6 +2757,7 @@ export class EdithaApp extends LitElement {
                 <span><kbd>Tab</kbd> / <kbd>Shift</kbd> + <kbd>Tab</kbd></span><span>${t('welcome.indent')}</span>
                 <span><kbd>Ctrl</kbd> + <kbd>Space</kbd></span><span>${t('welcome.complete')}</span>
                 <span><kbd>F2</kbd></span><span>${t('welcome.rename')}</span>
+                <span><kbd>Alt</kbd> + <kbd>T</kbd></span><span>${t('welcome.template')}</span>
               </div>
             </div>
           </editha-editor-pane>
@@ -2723,6 +2779,15 @@ export class EdithaApp extends LitElement {
               ></editha-preview-panel>`
             : null}
           </div>
+          ${this.template
+            ? html`<editha-template-panel
+                .view=${this.template.view}
+                .file=${this.template.file}
+                .line=${this.template.line}
+                @template-refresh=${() => void this.previewTemplate()}
+                @template-close=${() => this.closeTemplate()}
+              ></editha-template-panel>`
+            : null}
           ${this.insertOpen
             ? html`<editha-insert-panel
                 .tab=${this.insertTab}

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.26.0
+
+- **Anteprima dei template Jinja**: con il cursore su un template (o selezionandolo) premi **Alt+T**, oppure scegli **Anteprima template** nel menu di Home Assistant. EDITHA manda a Home Assistant solo quel template, letto come lo legge HA (anche blocchi `|` e `>` e testo tra virgolette su più righe), e mostra il risultato in un pannello sotto l'editor: verde il risultato, rosso un errore di sintassi, arancione un errore di valutazione. Da `secrets.yaml` e dalle sue copie l'anteprima non parte mai.
+
 ## 0.25.0
 
 - **Cancellare tutta la cronologia**: nel menu delle versioni da eliminare c'è la voce **tutte**. L'anteprima mostra quante versioni e quanto spazio, poi per confermare bisogna scrivere **CANCELLA** (il messaggio avvisa che è irreversibile). Vengono eliminati anche gli avanzi di salvataggi interrotti. Le versioni create dopo l'anteprima, i file in `/config` e le modifiche non salvate non vengono toccati; il registro dell'add-on annota la cancellazione.

@@ -66,3 +66,15 @@ export function validateName(name: string): string | null {
   if (new TextEncoder().encode(n).length > 255) return t('name.tooLong');
   return null;
 }
+
+/**
+ * SEC-7: secrets.yaml e le sue copie (secrets_copia.yaml, secrets.yaml.bak, secret_old.yaml…).
+ * Stessa regola del server (fs/search.ts).
+ */
+export function isSecretsFile(path: string): boolean {
+  const name = basename(path);
+  return (
+    /^[.#~]?secrets(?![a-z])[^/]*\.ya?ml/i.test(name) ||
+    /^[.#~]?secret(?:[._~ -]?(?:\d+|bak|backup|old|orig|copy|copia|new|\(\d+\)))*\.ya?ml/i.test(name)
+  );
+}

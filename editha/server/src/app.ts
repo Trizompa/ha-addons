@@ -80,7 +80,7 @@ export async function buildApp(config: Config, options: AppOptions = {}): Promis
     new DraftStore(path.join(config.dataDir, 'drafts')),
     config.maxFileSize,
   );
-  registerHaRoutes(app, new HaClient(config.haUrl, config.haToken));
+  registerHaRoutes(app, new HaClient(config.haUrl, config.haToken), (p) => files.isSecrets(p));
   await registerWebRoutes(app, config.webDir);
   return app;
 }

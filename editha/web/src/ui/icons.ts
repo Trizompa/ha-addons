@@ -7,6 +7,7 @@ import {
   mdiChevronDown,
   mdiChevronRight,
   mdiClose,
+  mdiCodeBraces,
   mdiCodeJson,
   mdiCollapseAllOutline,
   mdiContentCopy,
@@ -115,6 +116,7 @@ export const icons = {
   about: mdiInformationVariantCircleOutline,
   keyboardClose: mdiKeyboardClose,
   outline: mdiFormatListBulleted,
+  template: mdiCodeBraces,
 };
 
 export function icon(path: string, size = 18): SVGTemplateResult {

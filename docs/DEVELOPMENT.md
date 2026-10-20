@@ -125,6 +125,7 @@ Per provare l'interfaccia a mano: `npm run build`, poi avviare il server come so
 | `GET /api/ha/status` | | `{ available }` |
 | `GET /api/ha/entities` / `GET /api/ha/services` | `?fresh=true` per saltare la cache | Entità e azioni di HA |
 | `POST /api/ha/check` | | `{ valid, errors, warnings }` |
+| `POST /api/ha/template` | `{ template, path? }` | `{ ok: true, result }` oppure `{ ok: false, kind: 'syntax' \| 'render', message }`: HA-7, rende il template con `POST /api/template` di Core. Serve `{{`, `{%` o `{#`; 403 per secrets.yaml e copie (anche tramite link); HA non indica la riga dell'errore |
 | `POST /api/ha/reload` / `POST /api/ha/restart` | | `{ ok, warnings }`: verifica e poi ricarica / riavvia; 409 `config_invalid` con gli errori |
 | `GET /api/session` | | `{ tabs, active, side? }` |
 | `PUT /api/session` | `{ tabs: [{ path, anchor, head, scrollTop }], active, side? }` | La sessione salvata; `side` è il file nella colonna destra della vista divisa |

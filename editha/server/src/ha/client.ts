@@ -14,6 +14,11 @@ export interface ServiceInfo {
   description: string;
 }
 
+/** HA-7: esito dell'anteprima di un template. */
+export type TemplateResult =
+  | { ok: true; result: string }
+  | { ok: false; kind: 'syntax' | 'render'; message: string };
+
 export interface CheckResult {
   valid: boolean;
   errors: string | null;
@@ -32,6 +37,8 @@ interface HaServiceDomain {
 }
 
 const TIMEOUT_MS = 15_000;
+/** Un template che non finisce (cicli enormi) non deve tenere ferma l'anteprima. */
+const TEMPLATE_TIMEOUT_MS = 10_000;
 /** Il controllo della configurazione può richiedere più tempo su installazioni grandi. */
 const CHECK_TIMEOUT_MS = 120_000;
 
@@ -50,6 +57,26 @@ export class HaClient {
   }
 
   private async call<T>(method: 'GET' | 'POST', path: string, body?: unknown, timeout = TIMEOUT_MS): Promise<T> {
+    const { res, text } = await this.send(method, path, body, timeout);
+    if (!res.ok) {
+      throw new EdithaError('ha_error', `Home Assistant ha risposto con un errore (${res.status})`, {
+        status: res.status,
+        message: text.slice(0, 500),
+      });
+    }
+    try {
+      return (text ? JSON.parse(text) : null) as T;
+    } catch {
+      throw new EdithaError('ha_error', 'Risposta di Home Assistant non valida');
+    }
+  }
+
+  private async send(
+    method: 'GET' | 'POST',
+    path: string,
+    body: unknown,
+    timeout: number,
+  ): Promise<{ res: Response; text: string }> {
     if (!this.available) {
       throw new EdithaError('ha_unavailable', 'Home Assistant non è raggiungibile da questa installazione');
     }
@@ -71,18 +98,49 @@ export class HaClient {
         timedOut ? 'Home Assistant non ha risposto in tempo' : 'Impossibile contattare Home Assistant',
       );
     }
-    const text = await res.text();
-    if (!res.ok) {
+    let text: string;
+    try {
+      text = await res.text();
+    } catch {
+      throw new EdithaError('ha_unavailable', 'Home Assistant non ha risposto in tempo');
+    }
+    return { res, text };
+  }
+
+  /**
+   * HA-7: rende un template con lo stato attuale delle entità (POST /api/template, come in
+   * Strumenti per sviluppatori). Gli errori del template tornano come esito, non come eccezione.
+   */
+  async renderTemplate(template: string): Promise<TemplateResult> {
+    const { res, text } = await this.send('POST', '/template', { template }, TEMPLATE_TIMEOUT_MS);
+    if (res.ok) return { ok: true, result: text };
+    if (res.status !== 400) {
       throw new EdithaError('ha_error', `Home Assistant ha risposto con un errore (${res.status})`, {
         status: res.status,
         message: text.slice(0, 500),
       });
     }
+    // Un 400 senza il messaggio di HA (es. una pagina del proxy) non è un errore del template.
+    let message: string | null = null;
     try {
-      return (text ? JSON.parse(text) : null) as T;
+      const m = (JSON.parse(text) as { message?: unknown } | null)?.message;
+      if (typeof m === 'string') message = m;
     } catch {
-      throw new EdithaError('ha_error', 'Risposta di Home Assistant non valida');
+      // non è JSON
     }
+    if (message === null) {
+      throw new EdithaError('ha_error', 'Home Assistant ha risposto con un errore (400)', {
+        status: 400,
+        message: text.slice(0, 500),
+      });
+    }
+    // HA non indica la riga dell'errore: Jinja la toglie dal messaggio prima che arrivi qui.
+    message = message.replace(/^Error rendering template:\s*/, '').trim();
+    return {
+      ok: false,
+      kind: /^TemplateSyntaxError\b/.test(message) ? 'syntax' : 'render',
+      message: message.slice(0, 2000),
+    };
   }
 
   async entities(): Promise<EntityInfo[]> {

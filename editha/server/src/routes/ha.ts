@@ -23,7 +23,11 @@ async function requireValidConfig(ha: HaClient): Promise<CheckResult> {
   return check;
 }
 
-export function registerHaRoutes(app: FastifyInstance, ha: HaClient): void {
+export function registerHaRoutes(
+  app: FastifyInstance,
+  ha: HaClient,
+  isSecrets: (path: string) => Promise<boolean> = async () => false,
+): void {
   const entities = cached<EntityInfo[]>(20_000, () => ha.entities());
   const services = cached<ServiceInfo[]>(300_000, () => ha.services());
   // Nell'URL i valori sono testo: "true" o "false".
@@ -41,6 +45,33 @@ export function registerHaRoutes(app: FastifyInstance, ha: HaClient): void {
   app.get<{ Querystring: { fresh: string } }>('/api/ha/services', { schema: { querystring: freshQuery } }, async (req) => ({
     services: await services(req.query.fresh === 'true'),
   }));
+
+  // HA-7: anteprima di un template. Arriva solo il testo del template, mai il file intero
+  // (salvo i file .jinja); da secrets.yaml e dalle sue copie non parte niente (SEC-7), e un testo
+  // senza {{ }}, {% %} o {# #} non è un template: non si manda.
+  app.post<{ Body: { template: string; path?: string } }>(
+    '/api/ha/template',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['template'],
+          properties: {
+            template: { type: 'string', minLength: 1, maxLength: 50_000 },
+            path: { type: 'string', maxLength: 4096 },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (req) => {
+      if (!/\{\{|\{%|\{#/.test(req.body.template)) throw new EdithaError('invalid_request', 'Nessun template');
+      if (req.body.path !== undefined && (await isSecrets(req.body.path))) {
+        throw new EdithaError('forbidden_path', 'Anteprima non disponibile per secrets.yaml');
+      }
+      return ha.renderTemplate(req.body.template);
+    },
+  );
 
   // ACT-1
   app.post('/api/ha/check', async () => ha.checkConfig());

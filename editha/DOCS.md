@@ -208,6 +208,20 @@ whether to **Save all and continue** or **Continue without saving**.
 
 ![Home Assistant menu](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/ha-menu.png)
 
+### Template preview
+
+Put the cursor on a template (or select it) and press **Alt+T**, or choose **Template preview** in
+the Home Assistant menu. Without a selection EDITHA takes the value under the cursor, read the way
+Home Assistant reads it: also across several lines (`value_template: >`, `|`, quoted text that
+wraps). In `.jinja` files it takes the whole file.
+
+Home Assistant renders it with the current state of the entities, as in Developer tools, and the
+result appears in a panel below the editor: green for the result, red for a syntax error, orange
+for an evaluation error (for example a division by zero). The refresh button renders again from
+where the cursor is; Esc closes the panel. Variables such as `trigger`, `this` or those of an
+automation only exist while the automation runs: here they are empty. The preview never starts
+from `secrets.yaml` or its copies.
+
 ## Search and replace in all files
 
 The magnifier above the file explorer (Ctrl+Shift+F) opens **Search in files**: it searches every
@@ -291,6 +305,7 @@ and suggestions stay Ctrl+Space.
 | F8 | Next problem |
 | F2 | Rename (in the file explorer) |
 | Del | Delete (in the file explorer) |
+| Alt+T | Preview the template under the cursor (Option+T on Mac) |
 | Esc | Close the history, the comparison or the image preview |
 
 ## Safety and privacy

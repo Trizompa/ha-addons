@@ -1074,6 +1074,45 @@ test('a capo di Windows (CRLF) conservati al salvataggio; un file misto si vede 
   await expect(editor(page).locator('.cm-line')).toHaveCount(4);
 });
 
+test('HA-7 – anteprima del template sotto il cursore: risultato, errore di sintassi, errore di valutazione', async ({ page }) => {
+  await openFile(page, 'template/auto.yaml');
+  const panel = page.locator('editha-template-panel');
+  const lineOf = (n: number) => editor(page).locator('.cm-line').nth(n - 1);
+
+  // Cursore sul valore tra virgolette, dalla voce del menu Home Assistant.
+  await lineOf(4).click();
+  await page.locator('editha-toolbar button[title^="Home Assistant"]').click();
+  await menuItem(page, 'Anteprima template').click();
+  await expect(panel.locator('.ok pre')).toHaveText('on');
+  await expect(panel.locator('.source')).toHaveText('auto.yaml, riga 4');
+
+  // Blocco "|" con un {% if %} non chiuso, cursore sulla riga dell'if: errore di sintassi.
+  await lineOf(10).click();
+  await page.keyboard.press('Alt+t');
+  await expect(panel.locator('.syntax .badge')).toHaveText(/Errore di sintassi/);
+  await expect(panel.locator('.syntax pre')).toContainText('endif');
+  await expect(panel.locator('.source')).toHaveText('auto.yaml, riga 9');
+
+  // Errore di valutazione.
+  await lineOf(11).click();
+  await page.keyboard.press('Alt+t');
+  await expect(panel.locator('.render pre')).toHaveText('ZeroDivisionError: division by zero');
+
+  // Nessun template sulla riga: avviso, il pannello resta com'era. Esc lo chiude.
+  await lineOf(1).click();
+  await page.keyboard.press('Alt+t');
+  await expect(page.locator('editha-toasts')).toContainText('Nessun template qui');
+  await page.keyboard.press('Escape');
+  await expect(panel).toHaveCount(0);
+
+  // In secrets.yaml non parte niente.
+  await openFile(page, 'links/secrets.yaml');
+  await editor(page).click();
+  await page.keyboard.press('Alt+t');
+  await expect(page.locator('editha-toasts')).toContainText('non è disponibile in secrets.yaml');
+  await expect(panel).toHaveCount(0);
+});
+
 // In fondo: tocca la cronologia, che altri test usano.
 test('BK-7 – elimina le versioni più vecchie: anteprima, conferma, spazio liberato', async ({ page, request }) => {
   // spazio/pulisci.yaml ha una versione di due anni fa (serve.mjs); ne aggiungiamo una di oggi.

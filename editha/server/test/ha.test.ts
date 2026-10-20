@@ -1,6 +1,8 @@
 import { after, before, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import path from 'node:path';
+import { symlink, writeFile } from 'node:fs/promises';
 import type { AddressInfo } from 'node:net';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.js';
@@ -13,12 +15,13 @@ interface FakeHa {
   url: string;
   calls: { method: string; path: string; auth: string | undefined }[];
   checkResult: { result: string; errors: string | null };
+  templates: string[];
   close(): Promise<void>;
 }
 
 /** Finto Home Assistant Core con le poche API usate da Editha. */
 async function startFakeHa(): Promise<FakeHa> {
-  const fake: Omit<FakeHa, 'url' | 'close'> = { calls: [], checkResult: { result: 'valid', errors: null } };
+  const fake: Omit<FakeHa, 'url' | 'close'> = { calls: [], checkResult: { result: 'valid', errors: null }, templates: [] };
   const server = http.createServer((req, res) => {
     fake.calls.push({ method: req.method!, path: req.url!, auth: req.headers.authorization });
     if (req.headers.authorization !== `Bearer ${TOKEN}`) {
@@ -36,6 +39,25 @@ async function startFakeHa(): Promise<FakeHa> {
       return json([{ domain: 'light', services: { turn_on: { name: 'Accendi', description: 'Accende' } } }]);
     }
     if (req.method === 'POST' && req.url === '/api/config/core/check_config') return json(fake.checkResult);
+    if (req.method === 'POST' && req.url === '/api/template') {
+      let raw = '';
+      req.on('data', (c: Buffer) => (raw += c.toString()));
+      req.on('end', () => {
+        const { template } = JSON.parse(raw) as { template: string };
+        fake.templates.push(template);
+        const fail = (message: string) =>
+          res.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ message }));
+        // Come HA: errori nel JSON con "message", risultato come testo semplice.
+        if (template.includes('{% if') && !template.includes('endif')) {
+          return fail(
+            "Error rendering template: TemplateSyntaxError: Unexpected end of template. Jinja was looking for the following tags: 'endif'.",
+          );
+        }
+        if (template.includes('1 / 0')) return fail('Error rendering template: ZeroDivisionError: division by zero');
+        res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }).end(template.replace('{{ 1 + 1 }}', '2'));
+      });
+      return;
+    }
     if (req.method === 'POST' && req.url?.startsWith('/api/services/homeassistant/')) return json([]);
     res.writeHead(404).end();
   });
@@ -70,6 +92,42 @@ describe('integrazione con Home Assistant', () => {
   });
 
   const call = (method: 'GET' | 'POST', url: string) => app.inject({ method, url, remoteAddress: INGRESS });
+  const template = (payload: Record<string, unknown>) =>
+    app.inject({ method: 'POST', url: '/api/ha/template', payload, remoteAddress: INGRESS });
+
+  it('HA-7: rende un template e distingue errori di sintassi e di valutazione', async () => {
+    const ok = await template({ template: 'Totale: {{ 1 + 1 }}\n', path: 'automations.yaml' });
+    assert.equal(ok.statusCode, 200);
+    assert.deepEqual(ok.json(), { ok: true, result: 'Totale: 2\n' });
+    assert.equal(ha.calls.at(-1)!.auth, `Bearer ${TOKEN}`);
+
+    const syntax = await template({ template: '{% if true %}\nsì' });
+    assert.equal(syntax.statusCode, 200);
+    assert.equal(syntax.json().ok, false);
+    assert.equal(syntax.json().kind, 'syntax');
+    assert.match(syntax.json().message, /^TemplateSyntaxError: Unexpected end of template/);
+
+    const render = (await template({ template: '{{ 1 / 0 }}' })).json();
+    assert.deepEqual(render, { ok: false, kind: 'render', message: 'ZeroDivisionError: division by zero' });
+  });
+
+  it('HA-7: niente anteprima da secrets.yaml e dalle sue copie', async () => {
+    ha.templates.length = 0;
+    // Anche un link con un altro nome che punta a secrets.yaml.
+    await writeFile(path.join(sb.configDir, 'secrets.yaml'), 'chiave: valore\n');
+    await symlink('secrets.yaml', path.join(sb.configDir, 'innocuo.yaml'));
+    for (const p of ['secrets.yaml', 'pacchetti/secrets_copia.yaml', 'secrets.yaml.bak', 'innocuo.yaml']) {
+      const res = await template({ template: '{{ 1 + 1 }}', path: p });
+      assert.equal(res.statusCode, 403, p);
+    }
+    assert.deepEqual(ha.templates, []);
+    const empty = await template({ template: '' });
+    assert.equal(empty.statusCode, 400);
+    // Senza {{ }}, {% %} o {# #} non è un template: non parte.
+    const plain = await template({ template: 'chiave: valore', path: 'automations.yaml' });
+    assert.equal(plain.statusCode, 400);
+    assert.deepEqual(ha.templates, []);
+  });
 
   it('elenca le entità con nome, stato e unità, usando il token solo lato server', async () => {
     const res = await call('GET', '/api/ha/entities?fresh=true');

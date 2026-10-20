@@ -214,6 +214,20 @@ se **Salva tutto e continua** o **Continua senza salvare**.
 
 ![Menu di Home Assistant](../docs/images/ha-menu.png)
 
+### Anteprima dei template
+
+Metti il cursore su un template (o selezionalo) e premi **Alt+T**, oppure scegli **Anteprima
+template** nel menu di Home Assistant. Senza selezione EDITHA prende il valore sotto il cursore,
+letto come lo legge Home Assistant: anche su più righe (`value_template: >`, `|`, virgolette che
+vanno a capo). Nei file `.jinja` prende il file intero.
+
+Il risultato lo calcola Home Assistant con lo stato attuale delle entità, come in Strumenti per
+sviluppatori, e compare in un pannello sotto l'editor: in verde il risultato, in rosso un errore di
+sintassi, in arancione un errore di valutazione (per esempio una divisione per zero). Il pulsante
+di aggiornamento ricalcola dal punto in cui si trova il cursore; Esc chiude il pannello. Variabili
+come `trigger`, `this` o quelle di un'automazione esistono solo mentre l'automazione gira: qui
+risultano vuote. Da `secrets.yaml` e dalle sue copie l'anteprima non parte mai.
+
 ## Cerca e sostituisci in tutti i file
 
 La lente sopra l'esplora file (Ctrl+Maiusc+F) apre **Cerca nei file**: cerca in tutti i file di
@@ -302,6 +316,7 @@ Cmd+Maiusc+Z e i suggerimenti restano Ctrl+Spazio.
 | F8 | Problema successivo |
 | F2 | Rinomina (nell'esplora file) |
 | Canc | Elimina (nell'esplora file) |
+| Alt+T | Anteprima del template sotto il cursore (Opzione+T su Mac) |
 | Esc | Chiudi la cronologia, il confronto o l'anteprima |
 
 ## Sicurezza e privacy

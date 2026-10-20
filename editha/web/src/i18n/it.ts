@@ -87,6 +87,7 @@ export const it = {
   'welcome.closeTab': 'Chiudi la tab',
   'welcome.indent': 'Indenta / riduci',
   'welcome.rename': "Rinomina (nell'albero)",
+  'welcome.template': 'Anteprima del template sotto il cursore',
   'welcome.complete': 'Suggerimenti (entità, azioni)',
 
   // Connessione
@@ -184,6 +185,22 @@ export const it = {
   'snippet.deleted': 'Snippet eliminato',
 
   // Home Assistant
+  'template.menu': 'Anteprima template',
+  'template.title': 'Anteprima template',
+  'template.source': '{file}, riga {line}',
+  'template.refresh': 'Calcola di nuovo (dal cursore o dalla selezione)',
+  'template.loading': 'Home Assistant sta calcolando il template…',
+  'template.result': 'Risultato',
+  'template.emptyResult': '(risultato vuoto)',
+  'template.syntaxError': 'Errore di sintassi',
+  'template.renderError': 'Errore di valutazione',
+  'template.failed': 'Anteprima non riuscita',
+  'template.note': 'Calcolato da Home Assistant con lo stato attuale delle entità. Variabili come trigger, this o quelle di un\'automazione esistono solo mentre gira: qui risultano vuote.',
+  'template.covered': 'Chiudi prima la cronologia o il confronto.',
+  'template.noFile': 'Apri un file e metti il cursore su un template.',
+  'template.none': 'Nessun template qui: seleziona il template oppure metti il cursore su un valore con {{ }} o {% %}.',
+  'template.secrets': 'L\'anteprima dei template non è disponibile in secrets.yaml.',
+  'template.noHa': 'Home Assistant non è raggiungibile da EDITHA.',
   'ha.check': 'Verifica configurazione',
   'ha.reload': 'Ricarica configurazione YAML',
   'ha.restart': 'Riavvia Home Assistant',

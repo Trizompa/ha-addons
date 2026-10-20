@@ -741,6 +741,20 @@ export class FileService {
     return { ...usage, fileCount: usage.files.length, keep: this.backups.keep, files };
   }
 
+  /**
+   * SEC-7: il percorso è secrets.yaml o una sua copia, anche passando da un link (conta anche il
+   * nome del file vero). Un percorso che non esiste o non è valido vale solo per il suo nome.
+   */
+  async isSecrets(input: string): Promise<boolean> {
+    if (isSecretsFile(path.posix.basename(input))) return true;
+    try {
+      const file = await this.guard.resolveExisting(input);
+      return isSecretsFile(path.posix.basename(file.rel)) || isSecretsFile(path.basename(file.abs));
+    } catch {
+      return false;
+    }
+  }
+
   /** BK-7: elimina (o con `dryRun` conta) le versioni della cronologia create prima di `before`. */
   async pruneHistory(before: Date, dryRun: boolean, all = false): Promise<PruneResult> {
     return this.backups.pruneBefore(before, dryRun, all);

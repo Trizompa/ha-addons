@@ -155,6 +155,11 @@ export interface HistoryUsageInfo {
   files: { path: string | null; bytes: number; versions: number; oldest: string; newest: string; exists: boolean }[];
 }
 
+/** HA-7: esito dell'anteprima; gli errori del template non sono errori della richiesta. */
+export type TemplateResult =
+  | { ok: true; result: string }
+  | { ok: false; kind: 'syntax' | 'render'; message: string };
+
 /** Esito (o anteprima) della pulizia della cronologia. */
 export interface PruneInfo {
   versions: number;
@@ -248,6 +253,9 @@ export const api = {
     status: () => request<{ available: boolean }>('GET', 'api/ha/status'),
     entities: (fresh = false) => request<{ entities: EntityInfo[] }>('GET', `api/ha/entities?fresh=${fresh}`),
     services: (fresh = false) => request<{ services: ServiceInfo[] }>('GET', `api/ha/services?fresh=${fresh}`),
+    /** HA-7: rende un template con lo stato attuale delle entità. */
+    template: (template: string, path: string) =>
+      request<TemplateResult>('POST', 'api/ha/template', { template, path }),
     check: () => request<CheckResult>('POST', 'api/ha/check'),
     reload: () => request<{ ok: true; warnings: string | null }>('POST', 'api/ha/reload'),
     restart: () => request<{ ok: true; warnings: string | null }>('POST', 'api/ha/restart'),
