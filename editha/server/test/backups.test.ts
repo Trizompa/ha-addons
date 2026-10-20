@@ -82,6 +82,44 @@ describe('BackupStore', () => {
     assert.equal((await store.pruneBefore(new Date('2026-02-01T00:00:00.000Z'), false)).versions, 0);
   });
 
+  it('cancella tutta la cronologia con gli avanzi, ma non le versioni più recenti della soglia', async () => {
+    store = new BackupStore(path.join(sb.dataDir, 'backups'), 10, () => clock);
+    clock = new Date('2026-01-01T10:00:00.000Z');
+    await store.saveFile('a.yaml', Buffer.from('a1'), 'save');
+    await store.saveFile('b.yaml', Buffer.from('b1'), 'save');
+    const root = path.join(sb.dataDir, 'backups');
+    const keyA = createHash('sha256').update('a.yaml').digest('hex');
+    // Avanzi: una cartella senza versioni; una cartella estranea non va toccata.
+    await mkdir(path.join(root, 'estranea'));
+    await mkdir(path.join(root, 'f'.repeat(64)));
+    await writeFile(path.join(root, 'f'.repeat(64), '.tmp-orfano'), 'y');
+    const before = new Date('2026-02-01T00:00:00.000Z');
+    // Salvata dopo l'anteprima: resta, ma la sua scrittura interrotta no.
+    clock = new Date('2026-03-01T10:00:00.000Z');
+    await store.saveFile('a.yaml', Buffer.from('a2'), 'save');
+    // Scrittura interrotta (dopo il salvataggio, che altrimenti la ripulirebbe).
+    await writeFile(path.join(root, keyA, '.tmp-resto'), 'x'.repeat(50_000));
+
+    // Senza `sweep` gli avanzi restano.
+    const plain = await store.pruneBefore(before, true);
+    assert.equal(plain.files.length, 2);
+    const preview = await store.pruneBefore(before, true, true);
+    assert.equal(preview.versions, 2);
+    assert.deepEqual(preview.files.map((f) => f.path).sort(), ['a.yaml', 'b.yaml']);
+    // La cartella senza versioni è un avanzo; la scrittura interrotta conta nello spazio di a.yaml.
+    assert.equal(preview.leftovers.count, 1);
+    assert.ok(preview.bytes >= plain.bytes + preview.leftovers.bytes + 50_000);
+    assert.equal((await readdir(root)).length, 4);
+    assert.ok((await readdir(path.join(root, keyA))).includes('.tmp-resto'));
+
+    const done = await store.pruneBefore(before, false, true);
+    assert.equal(done.versions, 2);
+    assert.deepEqual(done.failed, []);
+    assert.deepEqual((await readdir(root)).sort(), [keyA, 'estranea'].sort());
+    assert.deepEqual((await store.list('a.yaml')).map((v) => v.createdAt), ['2026-03-01T10:00:00.000Z']);
+    assert.ok(!(await readdir(path.join(root, keyA))).some((n) => n.startsWith('.tmp-')));
+  });
+
   it('elenca le versioni dalla più recente', async () => {
     await store.saveFile('a.yaml', Buffer.from('1'), 'save');
     clock = new Date('2026-10-15T08:00:01.000Z');

@@ -259,6 +259,7 @@ editha/
 | 0.21.0 | Revisione del codice: SEC-7 (copie di secrets.yaml escluse da ricerca e sostituzione), HA-9 (template senza virgolette, chiavi complesse, alias senza ancora), scorciatoie per tasto fisico (anche su Mac), bozze non più salvabili scartate con un avviso. |
 | 0.22.0 | Seconda revisione: BK-1 (nessuna eliminazione senza copia senza conferma, versioni senza doppioni, id monotoni), SEC-3/SEC-4 (conflitto anche durante la scrittura), SEC-7 (copie di secrets.yaml in ogni forma), ED-14 (bozze ritentate, attesa massima, ricrea il file sparito), CRLF conservato, HA-9 (spazi invisibili, tag sconosciuti, errori da principiante), scorciatoie per lettera della tastiera. |
 | 0.22.3 | ED-14: bozze per finestra (più finestre o dispositivi non si scartano né sovrascrivono le bozze a vicenda), segnale di finestra aperta, proposta delle bozze di finestre chiuse; Esc sulla domanda rimanda davvero (0.22.2). |
+| 0.25.0 | BK-7 (3/3): cancellazione completa della cronologia (voce «tutte»), confermata scrivendo CANCELLA. |
 | 0.24.0 | BK-7 (2/3): eliminazione delle versioni più vecchie di 7/30/90 giorni, un anno o una data, con anteprima e conferma. |
 | 0.23.0 | BK-7 (1/3): spazio occupato dalla cronologia, da Informazioni e dalla cronologia; ED-14: bozze recuperate prese in carico in modo atomico (0.22.4). |
 

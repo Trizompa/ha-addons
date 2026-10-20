@@ -249,8 +249,10 @@ disk button in the history header, EDITHA shows how much disk space the history 
 file by file, biggest first, marking the files that no longer exist. Below that you can delete the
 versions older than 7, 30, 90 days, one year or a date you choose: **Preview** first tells you how
 many versions of how many files would go and how much space they free, then **Delete N versions…**
-asks for confirmation. Deleted versions can no longer be restored; your files in `/config` are never
-touched. The add-on log lists what was deleted.
+asks for confirmation. The last choice, **all**, deletes the whole history (including leftovers of
+interrupted saves): to confirm you have to type **DELETE** (**CANCELLA** in Italian). Deleted
+versions can no longer be restored; your files in `/config` and unsaved changes are never touched.
+The add-on log lists what was deleted.
 
 To compare any two files: right-click the first → **Select for compare**, then right-click the
 second → **Compare with *name*** (the name of the first file). Esc closes the comparison.

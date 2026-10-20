@@ -1111,3 +1111,34 @@ test('BK-7 – elimina le versioni più vecchie: anteprima, conferma, spazio lib
   await space.locator('input[type="date"]').fill(ymd);
   await expect(space.locator('button[data-action="clean-preview"]')).toBeDisabled();
 });
+
+// Ultimo di tutti: cancella l'intera cronologia.
+test('BK-7 – cancella tutta la cronologia solo dopo aver scritto CANCELLA', async ({ page, request }) => {
+  const usage = async () => (await (await request.get('api/history/usage')).json()) as { versions: number };
+  expect((await usage()).versions).toBeGreaterThan(0);
+  const before = await disk('spazio/pulisci.yaml');
+
+  await page.locator('editha-toolbar button[title="Informazioni su Editha"]').click();
+  await page.locator('editha-about-dialog dialog[open] button', { hasText: 'Spazio e pulizia' }).click();
+  const space = page.locator('editha-history-space dialog[open]');
+  await space.locator('select').selectOption('all');
+  await space.locator('button[data-action="clean-preview"]').click();
+  await space.locator('button[data-action="clean-delete"]', { hasText: 'Cancella tutta la cronologia' }).click();
+  await expect(space).toContainText('irreversibile');
+  const word = space.locator('#clean-word');
+  await expect(word).toBeFocused();
+  const confirm = space.locator('button[data-action="clean-confirm"]');
+  await expect(confirm).toBeDisabled();
+  await word.fill('cancella');
+  await expect(confirm).toBeDisabled();
+  expect((await usage()).versions).toBeGreaterThan(0);
+  await word.fill('CANCELLA');
+  await expect(confirm).toBeEnabled();
+  // Invio conferma solo con la parola giusta.
+  await word.press('Enter');
+  await expect(space.locator('[role="status"]')).toContainText('Fatto:');
+  expect((await usage()).versions).toBe(0);
+  await expect(space).toContainText('La cronologia è vuota');
+  // I file in /config restano come erano.
+  expect(await disk('spazio/pulisci.yaml')).toBe(before);
+});

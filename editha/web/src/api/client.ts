@@ -162,6 +162,8 @@ export interface PruneInfo {
   files: { path: string | null; versions: number; bytes: number; emptied: boolean }[];
   /** Cronologie che non si sono potute pulire. */
   failed: (string | null)[];
+  /** Avanzi di salvataggi interrotti (solo con la cancellazione completa); il loro spazio è in `bytes`. */
+  leftovers: { count: number; bytes: number };
   /** Soglia usata, come istante ISO. */
   before: string;
 }
@@ -185,7 +187,8 @@ export const api = {
    * Versioni più vecchie di N giorni (contati dal server) o di una data già passata: con
    * `dryRun` solo contate, altrimenti eliminate. La risposta dice la soglia usata (`before`).
    */
-  pruneHistory: (threshold: { olderThanDays: number } | { before: string }, dryRun: boolean) =>
+  /** BK-7: `all` cancella tutta la cronologia (fino a `before`, o fino ad ora) e i suoi avanzi. */
+  pruneHistory: (threshold: { olderThanDays: number } | { before?: string; all: true } | { before: string }, dryRun: boolean) =>
     request<PruneInfo>('POST', 'api/history/prune', { ...threshold, dryRun }),
   versions: (path: string) => request<{ path: string; versions: Version[] }>('GET', `api/versions${q(path)}`),
   version: (path: string, id: string) =>

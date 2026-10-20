@@ -111,7 +111,7 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
   // Pulizia: versioni più vecchie di N giorni (contati qui, con l'orologio del server) o di una
   // data già passata. Con dryRun solo l'anteprima; la risposta dice la soglia usata, che la
   // cancellazione vera ripete identica (così non tocca versioni nate dopo l'anteprima).
-  app.post<{ Body: { olderThanDays?: number; before?: string; dryRun: boolean } }>(
+  app.post<{ Body: { olderThanDays?: number; before?: string; all?: boolean; dryRun: boolean } }>(
     '/api/history/prune',
     {
       schema: {
@@ -121,6 +121,8 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
           properties: {
             olderThanDays: { type: 'integer', minimum: 1, maximum: 36500 },
             before: { type: 'string', minLength: 1, maxLength: 64 },
+            // Cancellazione completa: tutte le versioni fino a `before` (o fino ad ora) e gli avanzi.
+            all: { type: 'boolean' },
             dryRun: { type: 'boolean' },
           },
           additionalProperties: false,
@@ -130,25 +132,30 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
     async (req) => {
       const now = Date.now();
       let before: Date;
-      if (req.body.olderThanDays !== undefined) before = new Date(now - req.body.olderThanDays * 86_400_000);
+      const all = req.body.all === true;
+      if (all && req.body.olderThanDays !== undefined) throw new EdithaError('invalid_request', 'all e olderThanDays insieme');
+      if (all && req.body.before === undefined) before = new Date(now);
+      else if (req.body.olderThanDays !== undefined) before = new Date(now - req.body.olderThanDays * 86_400_000);
       else if (req.body.before !== undefined) before = new Date(req.body.before);
       else throw new EdithaError('invalid_request', 'Manca la soglia (olderThanDays o before)');
       if (Number.isNaN(before.getTime())) throw new EdithaError('invalid_request', 'Data non valida');
       // Una soglia nel futuro cancellerebbe anche versioni appena create.
       if (before.getTime() > now) throw new EdithaError('invalid_request', 'La data è nel futuro');
-      const result = await files.pruneHistory(before, req.body.dryRun);
-      if (!req.body.dryRun && (result.versions > 0 || result.failed.length > 0)) {
+      const result = await files.pruneHistory(before, req.body.dryRun, all);
+      if (!req.body.dryRun && (all || result.bytes > 0 || result.failed.length > 0)) {
         // Traccia nel registro dell'add-on di ciò che è stato eliminato (solo percorsi, mai contenuti).
         req.log.info(
           {
             before: before.toISOString(),
+            all,
             versions: result.versions,
             bytes: result.bytes,
             files: result.files.slice(0, 50).map((f) => `${f.path ?? '(senza nome)'}: ${f.versions}`),
             moreFiles: Math.max(0, result.files.length - 50),
             failed: result.failed.map((p) => p ?? '(senza nome)'),
+            leftovers: result.leftovers,
           },
-          'cronologia: versioni vecchie eliminate',
+          all ? 'cronologia: cancellata tutta' : 'cronologia: versioni vecchie eliminate',
         );
       }
       return { ...result, before: before.toISOString() };

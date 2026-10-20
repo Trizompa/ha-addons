@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.25.0
+
+- **Cancellare tutta la cronologia**: nel menu delle versioni da eliminare c'è la voce **tutte**. L'anteprima mostra quante versioni e quanto spazio, poi per confermare bisogna scrivere **CANCELLA** (il messaggio avvisa che è irreversibile). Vengono eliminati anche gli avanzi di salvataggi interrotti. Le versioni create dopo l'anteprima, i file in `/config` e le modifiche non salvate non vengono toccati; il registro dell'add-on annota la cancellazione.
+- Il menu ora dice per intero cosa elimina («più vecchie di 30 giorni», …).
+
 ## 0.24.0
 
 - **Pulizia della cronologia**: nella finestra *Cronologia: spazio e pulizia* puoi eliminare le versioni più vecchie di 7, 30, 90 giorni, un anno o una data a scelta. Prima **Anteprima** mostra quante versioni di quanti file se ne andrebbero e quanto spazio si libera, poi serve una conferma esplicita. Alla fine dice quanto spazio è stato liberato e il registro dell'add-on elenca cosa è stato eliminato. I file in `/config` non vengono mai toccati.

@@ -201,10 +201,51 @@ describe('API', () => {
       url: '/api/history/prune',
       payload: { before: '2000-01-01T00:00:00Z', dryRun: true },
     });
-    assert.deepEqual(none.json(), { versions: 0, bytes: 0, files: [], failed: [], before: '2000-01-01T00:00:00.000Z' });
+    assert.deepEqual(none.json(), {
+      versions: 0,
+      bytes: 0,
+      files: [],
+      failed: [],
+      leftovers: { count: 0, bytes: 0 },
+      before: '2000-01-01T00:00:00.000Z',
+    });
+    const mixed = await call({
+      method: 'POST',
+      url: '/api/history/prune',
+      payload: { all: true, olderThanDays: 30, dryRun: true },
+    });
+    assert.equal(mixed.statusCode, 400);
+    const all = await call({ method: 'POST', url: '/api/history/prune', payload: { all: true, dryRun: true } });
+    assert.equal(all.statusCode, 200);
+    assert.ok(Math.abs(Date.parse(all.json().before) - Date.now()) < 60_000);
     const days = await call({ method: 'POST', url: '/api/history/prune', payload: { olderThanDays: 30, dryRun: true } });
     assert.equal(days.statusCode, 200);
     assert.ok(Math.abs(Date.parse(days.json().before) - (Date.now() - 30 * 86_400_000)) < 60_000);
+  });
+
+  it('cancella tutta la cronologia: tiene file, bozze e versioni create dopo l\'anteprima', async () => {
+    const save = async (content: string) => {
+      const { etag } = (await call({ method: 'GET', url: '/api/file?path=configuration.yaml' })).json();
+      await call({ method: 'PUT', url: '/api/file', payload: { path: 'configuration.yaml', content, etag } });
+    };
+    const versions = async () =>
+      (await call({ method: 'GET', url: '/api/versions?path=configuration.yaml' })).json().versions.length;
+    await save('a: 2\n');
+    await save('a: 3\n');
+    await call({ method: 'PUT', url: '/api/draft', payload: { path: 'configuration.yaml', content: 'a: 9\n', etag: 'e1' } });
+    const preview = (await call({ method: 'POST', url: '/api/history/prune', payload: { all: true, dryRun: true } })).json();
+    assert.ok(preview.versions >= 2);
+    await new Promise((r) => setTimeout(r, 5));
+    await save('a: 4\n');
+    const done = await call({
+      method: 'POST',
+      url: '/api/history/prune',
+      payload: { all: true, before: preview.before, dryRun: false },
+    });
+    assert.equal(done.json().versions, preview.versions);
+    assert.equal(await versions(), 1);
+    assert.equal((await call({ method: 'GET', url: '/api/file?path=configuration.yaml' })).json().content, 'a: 4\n');
+    assert.equal((await call({ method: 'GET', url: '/api/drafts' })).json().drafts.length, 1);
   });
 
   it('crea, rinomina ed elimina', async () => {

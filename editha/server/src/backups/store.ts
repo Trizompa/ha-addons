@@ -47,6 +47,8 @@ export interface PruneResult {
   files: PruneFileResult[];
   /** Cronologie che non si sono potute pulire (errore del disco): restano com'erano o quasi. */
   failed: (string | null)[];
+  /** Avanzi eliminati con `sweep` (scritture interrotte, cartelle senza versioni): non sono in `files`. */
+  leftovers: { count: number; bytes: number };
 }
 
 /** Spazio su disco di una voce: blocchi occupati (un file da 1 KB ne usa comunque 4), non solo i byte. */
@@ -73,6 +75,7 @@ const VERSION_RE = /^(\d{8}T\d{9}Z)(?:\.(\d+))?-(save|delete|restore)$/;
 const INDEX_FILE = 'index.json';
 /** Versione in scrittura: non ha la forma di un id, quindi non compare mai nell'elenco. */
 const TEMP_RE = /^\.tmp-/;
+const KEY_RE = /^[0-9a-f]{64}$/;
 
 function compactTimestamp(date: Date): string {
   return date.toISOString().replace(/[-:.]/g, '');
@@ -393,18 +396,23 @@ export class BackupStore {
    * BK-7: elimina le versioni create prima di `before` (con `dryRun` le conta soltanto).
    * Una cronologia che resta vuota sparisce del tutto, indice compreso. Ogni file è
    * trattato sotto il suo blocco, quindi non si incrocia con un salvataggio in corso.
+   * Con `sweep` (cancellazione completa) se ne vanno anche gli avanzi: cartelle senza versioni
+   * e scritture interrotte.
    */
-  async pruneBefore(before: Date, dryRun: boolean): Promise<PruneResult> {
+  async pruneBefore(before: Date, dryRun: boolean, sweep = false): Promise<PruneResult> {
     const limit = compactTimestamp(before);
     let keys: string[];
     try {
       keys = await readdir(this.dir);
     } catch {
-      return { versions: 0, bytes: 0, files: [], failed: [] };
+      return { versions: 0, bytes: 0, files: [], failed: [], leftovers: { count: 0, bytes: 0 } };
     }
     const files: PruneFileResult[] = [];
+    const leftovers = { count: 0, bytes: 0 };
     const failed: (string | null)[] = [];
     for (const key of keys) {
+      // Solo le cartelle create dalla cronologia (sha256 del percorso): il resto non si tocca.
+      if (!KEY_RE.test(key)) continue;
       const dir = path.join(this.dir, key);
       let rel: string | null = null;
       // Quanto è già stato eliminato: se un errore interrompe la cartella a metà, va contato lo stesso.
@@ -418,18 +426,20 @@ export class BackupStore {
           return null;
         }
         const old = ids.filter((id) => VERSION_RE.exec(id)![1]! < limit);
-        if (old.length === 0) return null;
+        const temps = sweep ? (await readdir(dir)).filter((name) => TEMP_RE.test(name)) : [];
+        const all = old.length === ids.length;
+        if (old.length === 0 && !(sweep && (all || temps.length > 0))) return null;
         try {
           const p = (JSON.parse(await readFile(path.join(dir, INDEX_FILE), 'utf8')) as { path?: unknown }).path;
           if (typeof p === 'string') rel = p;
         } catch {
           // indice illeggibile: il file resta senza nome
         }
-        const all = old.length === ids.length;
         const sizes: number[] = [];
         for (const id of old) sizes.push(await treeBytes(path.join(dir, id)));
         // Tutte vecchie: se ne va l'intera cartella, quindi conta tutto il suo spazio.
-        const bytes = all ? await treeBytes(dir) : sizes.reduce((n, b) => n + b, 0);
+        let bytes = all ? await treeBytes(dir) : sizes.reduce((n, b) => n + b, 0);
+        if (!all) for (const name of temps) bytes += await treeBytes(path.join(dir, name));
         if (!dryRun) {
           // Prima le versioni, l'indice e la cartella per ultimi: un errore a metà non lascia
           // versioni senza nome.
@@ -439,20 +449,27 @@ export class BackupStore {
             gone.bytes += sizes[i]!;
           }
           if (all) await rm(dir, { recursive: true, force: true });
+          else for (const name of temps) await rm(path.join(dir, name), { recursive: true, force: true });
         }
         return { path: rel, versions: old.length, bytes, emptied: all };
       }).catch(() => {
         failed.push(rel);
         return gone.versions > 0 ? { path: rel, versions: gone.versions, bytes: gone.bytes, emptied: false } : null;
       });
-      if (done) files.push(done);
+      if (!done) continue;
+      if (done.versions > 0) files.push(done);
+      else {
+        leftovers.count++;
+        leftovers.bytes += done.bytes;
+      }
     }
     files.sort((a, b) => b.bytes - a.bytes);
     return {
       versions: files.reduce((n, f) => n + f.versions, 0),
-      bytes: files.reduce((n, f) => n + f.bytes, 0),
+      bytes: files.reduce((n, f) => n + f.bytes, 0) + leftovers.bytes,
       files,
       failed,
+      leftovers,
     };
   }
 

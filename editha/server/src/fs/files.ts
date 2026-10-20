@@ -742,8 +742,8 @@ export class FileService {
   }
 
   /** BK-7: elimina (o con `dryRun` conta) le versioni della cronologia create prima di `before`. */
-  async pruneHistory(before: Date, dryRun: boolean): Promise<PruneResult> {
-    return this.backups.pruneBefore(before, dryRun);
+  async pruneHistory(before: Date, dryRun: boolean, all = false): Promise<PruneResult> {
+    return this.backups.pruneBefore(before, dryRun, all);
   }
 
   /** BK-3: testo di una versione conservata, per il confronto con il file attuale. */
