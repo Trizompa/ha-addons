@@ -16,6 +16,8 @@ import { createSettingsStore } from './state/settings.js';
 import { createSnippetStore } from './state/snippets.js';
 import { DraftStore } from './state/drafts.js';
 import { HaClient } from './ha/client.js';
+import { GitService } from './git/git.js';
+import { registerGitRoutes } from './routes/git.js';
 import { registerHaRoutes } from './routes/ha.js';
 
 export interface AppOptions {
@@ -80,6 +82,7 @@ export async function buildApp(config: Config, options: AppOptions = {}): Promis
     new DraftStore(path.join(config.dataDir, 'drafts')),
     config.maxFileSize,
   );
+  registerGitRoutes(app, new GitService(config.configDir, path.join(config.dataDir, 'git-home')));
   registerHaRoutes(app, new HaClient(config.haUrl, config.haToken), (p) => files.isSecrets(p));
   await registerWebRoutes(app, config.webDir);
   return app;

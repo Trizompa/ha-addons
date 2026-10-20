@@ -1158,6 +1158,21 @@ test('HA-7 – pulsante nella barra, aggiornamento mentre si scrive, entità ine
   await expect(panel.locator('.render pre')).toHaveText('ZeroDivisionError: division by zero');
 });
 
+test('GIT-1 – pannello Git: inizializza il repository in /config con il .gitignore di base', async ({ page }) => {
+  await page.locator('editha-file-tree button[data-action="git"]').click();
+  const panel = page.locator('editha-git-panel');
+  await expect(panel).toContainText('non c\'è ancora un repository Git');
+  await expect(panel).toContainText('secrets.yaml');
+  await panel.locator('button[data-action="git-init"]').click();
+  await expect(page.locator('editha-toasts')).toContainText('Repository Git creato');
+  await expect(panel).toContainText('main');
+  await expect(panel).toContainText('Nessun commit ancora');
+  expect(await disk('.gitignore')).toContain('[Ss][Ee][Cc][Rr][Ee][Tt][Ss].[Yy]*[Mm][Ll]*');
+  // Chiuso il pannello torna l'albero, con il .gitignore nuovo.
+  await panel.locator('button[aria-label="Chiudi"]').click();
+  await expect(row(page, '.gitignore')).toBeVisible();
+});
+
 // In fondo: tocca la cronologia, che altri test usano.
 test('BK-7 – elimina le versioni più vecchie: anteprima, conferma, spazio liberato', async ({ page, request }) => {
   // spazio/pulisci.yaml ha una versione di due anni fa (serve.mjs); ne aggiungiamo una di oggi.

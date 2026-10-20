@@ -8,6 +8,7 @@ import {
   mdiChevronRight,
   mdiClose,
   mdiCodeBraces,
+  mdiSourceBranch,
   mdiCodeJson,
   mdiCollapseAllOutline,
   mdiContentCopy,
@@ -117,6 +118,7 @@ export const icons = {
   keyboardClose: mdiKeyboardClose,
   outline: mdiFormatListBulleted,
   template: mdiCodeBraces,
+  git: mdiSourceBranch,
 };
 
 export function icon(path: string, size = 18): SVGTemplateResult {

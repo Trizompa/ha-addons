@@ -17,7 +17,9 @@ export type ErrorCode =
   | 'no_backup'
   | 'busy'
   | 'io_error'
-  | 'cross_device';
+  | 'cross_device'
+  | 'git_unavailable'
+  | 'git_error';
 
 const STATUS: Record<ErrorCode, number> = {
   invalid_request: 400,
@@ -39,6 +41,8 @@ const STATUS: Record<ErrorCode, number> = {
   busy: 409,
   io_error: 500,
   cross_device: 409,
+  git_unavailable: 503,
+  git_error: 500,
 };
 
 /** Errore previsto, con codice stabile per il frontend. */

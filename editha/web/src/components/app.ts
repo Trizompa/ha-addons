@@ -41,6 +41,8 @@ import './toolbar.js';
 import './insert-panel.js';
 import './history-panel.js';
 import './template-panel.js';
+import './git-panel.js';
+import type { EdithaGitPanel } from './git-panel.js';
 import type { TemplateView } from './template-panel.js';
 import { JINJA, entitiesIn, syntaxErrorLine, templateAt, type TemplateSource } from '../editor/jinja-template.js';
 import './side-pane.js';
@@ -110,6 +112,7 @@ export class EdithaApp extends LitElement {
     split: { state: true },
     sideFocused: { state: true },
     searchOpen: { state: true },
+    gitOpen: { state: true },
     compare: { state: true },
     preview: { state: true },
     previewShown: { state: true },
@@ -143,6 +146,8 @@ export class EdithaApp extends LitElement {
   declare sideFocused: boolean;
   /** SR-1: nella barra laterale c'è la ricerca al posto dell'albero. */
   declare searchOpen: boolean;
+  /** GIT-1: pannello Git nella barra laterale, al posto dell'albero. */
+  declare gitOpen: boolean;
   /** BK-6: confronto tra due file aperto. */
   declare compare: { left: CompareSide; right: CompareSide } | null;
   /** FS-10: immagine o PDF mostrato al posto dell'editor. */
@@ -194,6 +199,7 @@ export class EdithaApp extends LitElement {
     this.split = false;
     this.sideFocused = false;
     this.searchOpen = false;
+    this.gitOpen = false;
     this.compare = null;
     this.preview = null;
     this.previewShown = false;
@@ -863,6 +869,7 @@ export class EdithaApp extends LitElement {
     if (this.narrow) this.drawerOpen = true;
     else if (!this.settings.sidebarVisible) await this.updateSettings({ sidebarVisible: true });
     this.searchOpen = true;
+    this.gitOpen = false;
     this.refreshToolbar();
     await this.updateComplete;
     if (!req && this.focusedTab()) {
@@ -875,6 +882,35 @@ export class EdithaApp extends LitElement {
     }
     if (req) this.searchPanel.searchFor(req);
     else this.searchPanel.focusInput();
+  }
+
+  // ——— Git locale (GIT-1…6) ———
+
+  private async openGit(): Promise<void> {
+    if (this.narrow) this.drawerOpen = true;
+    else if (!this.settings.sidebarVisible) await this.updateSettings({ sidebarVisible: true });
+    this.searchOpen = false;
+    this.gitOpen = true;
+    this.refreshToolbar();
+    await this.updateComplete;
+    const panel = this.renderRoot.querySelector('editha-git-panel') as EdithaGitPanel;
+    panel.focusPanel();
+    await panel.load();
+  }
+
+  private closeGit(): void {
+    this.gitOpen = false;
+    this.refreshToolbar();
+    // Il focus torna dove si era partiti: il pulsante Git dell'esplora file.
+    void this.updateComplete.then(() =>
+      this.tree.shadowRoot?.querySelector<HTMLButtonElement>('button[data-action="git"]')?.focus(),
+    );
+  }
+
+  /** Dopo un'operazione Git: messaggio e albero aggiornato (.gitignore nuovo, cartella .git). */
+  private async afterGitChange(message: string): Promise<void> {
+    this.flash(message);
+    await this.tree.refresh('');
   }
 
   private closeSearch(): void {
@@ -2207,6 +2243,9 @@ export class EdithaApp extends LitElement {
       case 'search':
         void this.openSearch();
         break;
+      case 'git':
+        void this.openGit();
+        break;
       case 'toggle-system':
         void this.updateSettings({ showSystem: !this.settings.showSystem });
         break;
@@ -2811,8 +2850,14 @@ export class EdithaApp extends LitElement {
             @search-open=${(e: CustomEvent<{ path: string; match: SearchMatch }>) =>
               void this.openSearchResult(e.detail.path, e.detail.match)}
           ></editha-search-panel>
+          <editha-git-panel
+            ?hidden=${!this.gitOpen}
+            @git-close=${() => this.closeGit()}
+            @git-changed=${(e: CustomEvent<{ message: string }>) => void this.afterGitChange(e.detail.message)}
+            @git-error=${(e: CustomEvent<{ message: string }>) => this.toasts.show(e.detail.message, 'error')}
+          ></editha-git-panel>
           <editha-file-tree
-            ?hidden=${this.searchOpen}
+            ?hidden=${this.searchOpen || this.gitOpen}
             .activePath=${this.previewShown ? this.preview : this.activePath}
             .showSystem=${this.settings.showSystem}
             @file-open=${(e: CustomEvent<{ path: string }>) => void this.openFile(e.detail.path)}

@@ -73,11 +73,13 @@ export class EdithaFileTree extends LitElement {
       }
       header {
         display: flex;
+        /* Barra stretta: i pulsanti vanno a capo invece di uscire a sinistra, irraggiungibili. */
+        flex-wrap: wrap;
         align-items: center;
         justify-content: flex-end;
         gap: 2px;
-        height: 40px;
-        padding: 0 6px 0 14px;
+        min-height: 40px;
+        padding: 4px 6px 4px 14px;
         flex: none;
       }
       .filter {
@@ -463,6 +465,9 @@ export class EdithaFileTree extends LitElement {
       <header role="toolbar" aria-label=${t('tree.title')}>
         <button class="icon-btn small" title=${shortcutLabel(t('toolbar.searchAll'))} @click=${() => this.emit('tree-action', { action: 'search' })}>
           ${icon(icons.search, 17)}
+        </button>
+        <button class="icon-btn small" title=${t('tree.git')} data-action="git" @click=${() => this.emit('tree-action', { action: 'git' })}>
+          ${icon(icons.git, 17)}
         </button>
         <button class="icon-btn small" title=${t('tree.newFile')} @click=${() => this.emit('tree-action', { action: 'new-file' })}>
           ${icon(icons.fileNew, 17)}

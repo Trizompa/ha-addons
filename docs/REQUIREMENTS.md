@@ -118,6 +118,19 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 | BK-7 | Manutenzione della cronologia: spazio occupato (in tutto e per file), cancellazione delle versioni più vecchie di una data, cancellazione completa; sempre con conferma, solo le copie, mai i file di /config. | P2 |
 | BK-7 | Backup completi di HA tramite Supervisor (crea/elenca). | P2 |
 
+## 6b. Git locale
+
+Solo il repository in `/config`, sul dispositivo: nessun comando di rete (niente push, pull o fetch).
+
+| ID | Requisito | Pr. |
+| --- | --- | --- |
+| GIT-1 | Inizializzazione di un repository in `/config` (ramo `main`) con un `.gitignore` di base (segreti, dati interni di HA, database, registri, temporanei); un repository o un `.gitignore` esistenti si usano così come sono. | P2 |
+| GIT-2 | Stato dei file (modificati, nuovi, eliminati), calcolato su richiesta. | P2 |
+| GIT-3 | Differenze di un file rispetto all'ultimo commit, nella vista di confronto. | P2 |
+| GIT-4 | Commit con messaggio, di tutti i file o di quelli scelti; secrets.yaml e copie rifiutati sempre. | P2 |
+| GIT-5 | Elenco dei commit; per ciascuno i file toccati. | P2 |
+| GIT-6 | Ripristino di un file da un commit, con conferma, passando dal salvataggio di EDITHA (quindi anche nella sua cronologia). | P2 |
+
 ## 7. Ricerca
 
 | ID | Requisito | Pr. |
@@ -162,7 +175,7 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 ## Fuori ambito (per ora)
 
 - **Terminale**: c'è già l'add-on SSH/Terminal; aggiungerlo amplierebbe molto la superficie d'attacco.
-- **Git integrato**: valutabile dopo la 1.0.
+- **Git remoto** (push, pull, GitHub/Forgejo): eventualmente dopo il Git locale (GIT-1…6).
 - **Accesso fuori da `/config`** (`/share`, `/media`, `/addons`, `/ssl`): eventualmente come opzione futura, una cartella alla volta.
 
 ---
@@ -259,6 +272,7 @@ editha/
 | 0.21.0 | Revisione del codice: SEC-7 (copie di secrets.yaml escluse da ricerca e sostituzione), HA-9 (template senza virgolette, chiavi complesse, alias senza ancora), scorciatoie per tasto fisico (anche su Mac), bozze non più salvabili scartate con un avviso. |
 | 0.22.0 | Seconda revisione: BK-1 (nessuna eliminazione senza copia senza conferma, versioni senza doppioni, id monotoni), SEC-3/SEC-4 (conflitto anche durante la scrittura), SEC-7 (copie di secrets.yaml in ogni forma), ED-14 (bozze ritentate, attesa massima, ricrea il file sparito), CRLF conservato, HA-9 (spazi invisibili, tag sconosciuti, errori da principiante), scorciatoie per lettera della tastiera. |
 | 0.22.3 | ED-14: bozze per finestra (più finestre o dispositivi non si scartano né sovrascrivono le bozze a vicenda), segnale di finestra aperta, proposta delle bozze di finestre chiuse; Esc sulla domanda rimanda davvero (0.22.2). |
+| 0.28.0 | GIT-1: pannello Git nella barra laterale, inizializzazione del repository in /config con il .gitignore di base; git nell'immagine dell'add-on. |
 | 0.27.1 | HA-7: l'anteprima segue il cursore su un altro template, senza bisogno di Alt+T. |
 | 0.27.0 | HA-7 (2/2): pulsante nella barra, aggiornamento automatico mentre si scrive, Copia, avviso per le entità inesistenti, riga dell'errore di sintassi trovata da EDITHA. |
 | 0.26.0 | HA-7 (1/2): anteprima del template selezionato o sotto il cursore (Alt+T, menu Home Assistant), calcolata da Home Assistant, in un pannello sotto l'editor. |

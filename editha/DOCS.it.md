@@ -21,6 +21,7 @@ EDITHA è anche in italiano (pulsante della lingua in alto a destra).
 - [Aiuti per Home Assistant](#aiuti-per-home-assistant)
 - [Cerca e sostituisci in tutti i file](#cerca-e-sostituisci-in-tutti-i-file)
 - [Cronologia e confronto](#cronologia-e-confronto)
+- [Git locale](#git-locale)
 - [Telefono e tablet](#telefono-e-tablet)
 - [Scorciatoie da tastiera](#scorciatoie-da-tastiera)
 - [Sicurezza e privacy](#sicurezza-e-privacy)
@@ -295,6 +296,22 @@ tasto destro sul secondo → **Confronta con *nome*** (il nome del primo file). 
 confronto.
 
 La cronologia sta nello spazio dell'add-on, che viene incluso quando fai il backup dell'add-on.
+
+## Git locale
+
+Il pulsante **Git** (il ramo, in alto nell'esplora file) apre il pannello Git al posto dell'albero.
+Tutto resta sul tuo Home Assistant: EDITHA usa solo il repository in `/config` e non invia niente
+fuori (niente GitHub né altri server).
+
+- Se in `/config` non c'è ancora un repository, **Inizializza repository Git** lo crea (ramo
+  `main`) insieme a un file `.gitignore` di base, che tiene fuori password e chiavi
+  (`secrets.yaml` e copie), i dati interni di Home Assistant (`.storage`, `.cloud`, `deps`,
+  `tts`…), database, registri e file temporanei. Puoi modificarlo come ogni altro file.
+- Un repository o un `.gitignore` che esistono già si usano così come sono.
+- Il pannello mostra il ramo e l'ultimo commit.
+
+La cronologia di EDITHA (le copie automatiche a ogni salvataggio) resta separata e continua a
+funzionare come prima.
 
 ## Telefono e tablet
 

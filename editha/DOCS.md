@@ -20,6 +20,7 @@ before every restart. Every save keeps the previous version, so you can always g
 - [Help with Home Assistant](#help-with-home-assistant)
 - [Search and replace in all files](#search-and-replace-in-all-files)
 - [History and comparison](#history-and-comparison)
+- [Local Git](#local-git)
 - [Phone and tablet](#phone-and-tablet)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Safety and privacy](#safety-and-privacy)
@@ -283,6 +284,21 @@ To compare any two files: right-click the first → **Select for compare**, then
 second → **Compare with *name*** (the name of the first file). Esc closes the comparison.
 
 The history lives in the add-on's own storage, which is included when you back up the add-on.
+
+## Local Git
+
+The **Git** button (the branch, at the top of the file explorer) opens the Git panel in place of
+the tree. Everything stays on your Home Assistant: EDITHA only uses the repository in `/config` and
+sends nothing outside (no GitHub or other servers).
+
+- If there is no repository in `/config` yet, **Initialise Git repository** creates it (branch
+  `main`) together with a basic `.gitignore` file, which keeps out passwords and keys
+  (`secrets.yaml` and copies), Home Assistant internal data (`.storage`, `.cloud`, `deps`,
+  `tts`…), databases, logs and temporary files. You can edit it like any other file.
+- An existing repository or `.gitignore` is used as it is.
+- The panel shows the branch and the last commit.
+
+EDITHA's history (the automatic copies on every save) stays separate and keeps working as before.
 
 ## Phone and tablet
 

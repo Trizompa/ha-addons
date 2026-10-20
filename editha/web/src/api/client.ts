@@ -155,6 +155,16 @@ export interface HistoryUsageInfo {
   files: { path: string | null; bytes: number; versions: number; oldest: string; newest: string; exists: boolean }[];
 }
 
+/** GIT-1: stato del Git locale in /config. */
+export interface GitInfo {
+  available: boolean;
+  version: string | null;
+  repo: 'none' | 'ready' | 'broken';
+  branch: string | null;
+  head: { hash: string; subject: string; date: string } | null;
+  gitignore: boolean;
+}
+
 /** HA-7: esito dell'anteprima; gli errori del template non sono errori della richiesta. */
 export type TemplateResult =
   | { ok: true; result: string }
@@ -249,6 +259,11 @@ export const api = {
   draftsAlive: (closing = false) =>
     request<{ ok: true }>('POST', 'api/drafts/alive', { client: CLIENT_ID, ...(closing ? { closing } : {}) }),
   health: () => request<{ status: string; build: string }>('GET', 'api/health'),
+  git: {
+    info: () => request<GitInfo>('GET', 'api/git/info'),
+    init: () => request<{ info: GitInfo; gitignoreCreated: boolean }>('POST', 'api/git/init'),
+    gitignore: () => request<{ info: GitInfo; created: boolean }>('POST', 'api/git/gitignore'),
+  },
   ha: {
     status: () => request<{ available: boolean }>('GET', 'api/ha/status'),
     entities: (fresh = false) => request<{ entities: EntityInfo[] }>('GET', `api/ha/entities?fresh=${fresh}`),

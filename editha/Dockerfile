@@ -26,7 +26,8 @@ COPY web/src ./src
 RUN npm run build
 
 FROM ${BUILD_FROM}
-RUN apk add --no-cache nodejs
+# git: GIT-1…6, repository locale in /config (solo comandi locali).
+RUN apk add --no-cache nodejs git
 WORKDIR /app
 COPY --from=server /build/package.json ./
 COPY --from=server /build/node_modules ./node_modules

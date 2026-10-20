@@ -124,6 +124,9 @@ Per provare l'interfaccia a mano: `npm run build`, poi avviare il server come so
 | `POST /api/copy` | `{ from, to }` | 201 con l'`Entry`: duplica un file o una cartella (link copiati come link, fino a `EDITHA_MAX_TRANSFER`); la destinazione non deve esistere. Una copia non riuscita non lascia la destinazione a metà. L'interfaccia duplica solo file |
 | `GET /api/ha/status` | | `{ available }` |
 | `GET /api/ha/entities` / `GET /api/ha/services` | `?fresh=true` per saltare la cache | Entità e azioni di HA |
+| `GET /api/git/info` | | `{ available, version, repo: 'none' \| 'ready' \| 'broken', branch, head: { hash, subject, date } \| null, gitignore }`: GIT-1, repository in /config (non nelle cartelle sopra) |
+| `POST /api/git/init` | | `{ info, gitignoreCreated }`: `git init` (ramo main) e `.gitignore` di base se manca; 409 se c'è già `.git` |
+| `POST /api/git/gitignore` | | `{ info, created }`: `.gitignore` di base, mai sopra uno esistente |
 | `POST /api/ha/check` | | `{ valid, errors, warnings }` |
 | `POST /api/ha/template` | `{ template, path? }` | `{ ok: true, result }` oppure `{ ok: false, kind: 'syntax' \| 'render', message }`: HA-7, rende il template con `POST /api/template` di Core. Serve `{{`, `{%` o `{#`; 403 per secrets.yaml e copie (anche tramite link); HA non indica la riga dell'errore |
 | `POST /api/ha/reload` / `POST /api/ha/restart` | | `{ ok, warnings }`: verifica e poi ricarica / riavvia; 409 `config_invalid` con gli errori |

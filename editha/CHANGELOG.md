@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.28.0
+
+- **Git locale, primo passo**: nuovo pulsante **Git** in alto nell'esplora file. Apre un pannello che, se in `/config` non c'è ancora un repository, lo crea con **Inizializza repository Git** (ramo `main`) insieme a un `.gitignore` di base che tiene fuori `secrets.yaml` e copie, i dati interni di Home Assistant, database, registri e file temporanei. Un repository o un `.gitignore` esistenti si usano così come sono. Tutto resta sul tuo Home Assistant: niente push né pull. Stato, differenze, commit, storia e ripristino arrivano nei prossimi passi.
+- Il programma git è ora incluso nell'add-on.
+
 ## 0.27.1
 
 - **Anteprima template**: con il pannello aperto basta fare clic (o spostare il cursore) su un altro template, anche in un altro file, e l'anteprima si aggiorna da sola. Su una riga senza template resta il risultato di prima; muovendosi dentro lo stesso template Home Assistant non viene richiamato. Un testo selezionato si manda solo con Alt+T o il pulsante; nei file YAML molto grandi l'aggiornamento automatico è spento per non rallentare l'editor. Dopo un errore di connessione si riprova spostando il cursore.
