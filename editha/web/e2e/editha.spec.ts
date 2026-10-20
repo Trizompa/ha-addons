@@ -1113,6 +1113,38 @@ test('HA-7 – anteprima del template sotto il cursore: risultato, errore di sin
   await expect(panel).toHaveCount(0);
 });
 
+test('HA-7 – pulsante nella barra, aggiornamento mentre si scrive, entità inesistenti, riga dell\'errore, Copia', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await openFile(page, 'template/auto.yaml');
+  const panel = page.locator('editha-template-panel');
+  const lineOf = (n: number) => editor(page).locator('.cm-line').nth(n - 1);
+
+  await lineOf(4).click();
+  await page.locator('editha-toolbar button[aria-label="Anteprima template (Alt+T)"]').click();
+  await expect(panel.locator('.ok pre')).toHaveText('on');
+  await expect(panel.locator('.missing')).toHaveCount(0);
+
+  // Copia il risultato.
+  await panel.locator('button[data-action="template-copy"]').click();
+  await expect(panel.locator('button[data-action="template-copy"]')).toContainText('Copiato');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('on');
+
+  // Si scrive nel template: l'anteprima si aggiorna da sola e avvisa dell'entità che non esiste.
+  await lineOf(4).click();
+  await page.keyboard.press('End');
+  for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowLeft');
+  await page.keyboard.type('_x');
+  await expect(panel.locator('.ok pre')).toHaveText('unknown');
+  await expect(panel.locator('.missing')).toContainText('light.cucina_x');
+
+  // Errore di sintassi: la riga la trova EDITHA ({% if %} alla riga 10 del file).
+  await lineOf(9).click();
+  await page.keyboard.press('Alt+t');
+  await expect(panel.locator('.syntax')).toBeVisible();
+  await panel.locator('button[data-action="template-goto"]').click();
+  await expect(page.locator('editha-status-bar')).toContainText('Riga 10');
+});
+
 // In fondo: tocca la cronologia, che altri test usano.
 test('BK-7 – elimina le versioni più vecchie: anteprima, conferma, spazio liberato', async ({ page, request }) => {
   // spazio/pulisci.yaml ha una versione di due anni fa (serve.mjs); ne aggiungiamo una di oggi.

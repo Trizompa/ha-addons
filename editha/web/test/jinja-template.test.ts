@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { templateAt } from '../src/editor/jinja-template.js';
+import { entitiesIn, syntaxErrorLine, templateAt } from '../src/editor/jinja-template.js';
 
 /** Template sotto il cursore, messo dove nel testo c'è "‸". */
 function at(text: string, language = 'yaml') {
@@ -77,5 +77,38 @@ describe('anteprima template: cosa si manda (HA-7)', () => {
     assert.equal(templateAt(doc, 0, 1, 'yaml'), null);
     const jinja = templateAt('{% set x = 1 %}\n{{ x }}\n', 0, 0, 'jinja');
     assert.equal(jinja?.template, '{% set x = 1 %}\n{{ x }}\n');
+  });
+});
+
+describe('anteprima template: riga dell\'errore ed entità (HA-7)', () => {
+  it('trova blocchi non chiusi, chiusure senza apertura e parentesi aperte', () => {
+    assert.equal(syntaxErrorLine('a\n{% if x %}\nb'), 2);
+    assert.equal(syntaxErrorLine('{% for a in b %}\n{% endif %}\n{% endfor %}'), 2);
+    assert.equal(syntaxErrorLine('x\ny {{ states("a")\n'), 2);
+    assert.equal(syntaxErrorLine('{% else %}'), 1);
+    assert.equal(syntaxErrorLine('{%- if a -%}{% elif b %}{% else %}{%+ endif %}'), null);
+    assert.equal(syntaxErrorLine('{% set x = 1 %}{% set y %}a{% endset %}{{ x }}'), null);
+    assert.equal(syntaxErrorLine('{% raw %}{% if %}{% endraw %}'), null);
+    assert.equal(syntaxErrorLine('{% raw %}{{{% endraw %}'), null);
+    assert.equal(syntaxErrorLine('{% raw %}\n{{'), 1);
+    assert.equal(syntaxErrorLine('{{ x | int(0) }} {# nota #}'), null);
+  });
+
+  it('elenca le entità citate', () => {
+    assert.deepEqual(
+      entitiesIn("{{ states('sensor.a') }} {{ is_state(\"light.b\", 'on') }} {{ states.switch.c.state }} {{ 'light.turn_on' }}"),
+      ['sensor.a', 'light.b', 'switch.c'],
+    );
+    assert.deepEqual(entitiesIn("{# states('sensor.old') #}{{ 'states.light.x' }}{% raw %}{{ states('a.b') }}{% endraw %}"), []);
+    assert.deepEqual(entitiesIn("It's {{ states.sensor.x.state }} o'clock"), ['sensor.x']);
+  });
+
+  it('le righe corrispondono al file solo se il template non è ripiegato', () => {
+    assert.equal(at('k: |\n  {{ a ‸}}\n  b\n')?.linear, true);
+    assert.equal(at('k: >\n  {{ a ‸}}\n  b\n')?.linear, false);
+    assert.equal(at('k: "{{ a }}\n  {% if x ‸%}"\n')?.linear, false);
+    assert.equal(at('k: a {{ b }}\n  {% if x ‸%}\n')?.linear, false);
+    assert.equal(at('k: >\n  {{ a ‸}}\n\n  b\n')?.linear, false);
+    assert.equal(at('k: "{{ a ‸}}"\n')?.linear, true);
   });
 });

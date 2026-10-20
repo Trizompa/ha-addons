@@ -116,7 +116,8 @@ export class EdithaToolbar extends LitElement {
           padding: 0 4px;
         }
       }
-      @media (max-width: 370px) {
+      /* iPhone stretti (375 px) compresi: con 30 px l'ultimo pulsante usciva di mezzo pixel. */
+      @media (max-width: 380px) {
         .icon-btn {
           width: 28px;
         }
@@ -165,6 +166,7 @@ export class EdithaToolbar extends LitElement {
       ${this.button('outline', t('toolbar.outline'), icons.outline, { on: s.outline, cls: 'hide-narrow' })}
       <span class="sep"></span>
       ${this.button('insert', t('toolbar.insert'), icons.insert, { on: s.insertOpen })}
+      ${this.button('template', t('toolbar.template'), icons.template, { disabled: !s.hasTab })}
       ${this.button('ha-menu', t('toolbar.ha'), icons.homeAssistant, { disabled: s.haBusy })}
       <span class="spacer"></span>
       ${this.renderPrefs()}

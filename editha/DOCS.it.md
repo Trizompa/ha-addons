@@ -216,15 +216,23 @@ se **Salva tutto e continua** o **Continua senza salvare**.
 
 ### Anteprima dei template
 
-Metti il cursore su un template (o selezionalo) e premi **Alt+T**, oppure scegli **Anteprima
-template** nel menu di Home Assistant. Senza selezione EDITHA prende il valore sotto il cursore,
+Metti il cursore su un template (o selezionalo) e premi **Alt+T**, oppure usa il pulsante
+**Anteprima template** nella barra (le parentesi graffe) o la voce nel menu di Home Assistant. Senza selezione EDITHA prende il valore sotto il cursore,
 letto come lo legge Home Assistant: anche su più righe (`value_template: >`, `|`, virgolette che
 vanno a capo). Nei file `.jinja` prende il file intero.
 
 Il risultato lo calcola Home Assistant con lo stato attuale delle entità, come in Strumenti per
 sviluppatori, e compare in un pannello sotto l'editor: in verde il risultato, in rosso un errore di
-sintassi, in arancione un errore di valutazione (per esempio una divisione per zero). Il pulsante
-di aggiornamento ricalcola dal punto in cui si trova il cursore; Esc chiude il pannello. Variabili
+sintassi, in arancione un errore di valutazione (per esempio una divisione per zero).
+
+- Mentre modifichi il template l'anteprima si aggiorna da sola, poco dopo che smetti di scrivere.
+  Il pulsante di aggiornamento ricalcola dal punto in cui si trova il cursore.
+- **Copia** copia il risultato.
+- Se il template cita entità che non esistono (per esempio `states('sensor.sbagliato')`), sotto il
+  risultato compare un avviso: Home Assistant in quel caso non dà errore, risponde `unknown`.
+- Home Assistant non dice in che riga sta un errore di sintassi: quando può, la trova EDITHA (un
+  `{% if %}` senza `{% endif %}`, un `{{` non chiuso…) e offre **Vai alla riga N**.
+- Esc chiude il pannello. Variabili
 come `trigger`, `this` o quelle di un'automazione esistono solo mentre l'automazione gira: qui
 risultano vuote. Da `secrets.yaml` e dalle sue copie l'anteprima non parte mai.
 

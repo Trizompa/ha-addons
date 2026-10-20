@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.27.0
+
+- **Anteprima template**, secondo passo:
+  - pulsante nella barra (le parentesi graffe), oltre ad Alt+T e al menu di Home Assistant;
+  - l'anteprima si aggiorna da sola mentre modifichi il template;
+  - pulsante **Copia** per il risultato;
+  - avviso se il template cita entità che non esistono (Home Assistant in quel caso risponde `unknown` senza errore);
+  - per gli errori di sintassi EDITHA cerca la riga (blocco non chiuso, `{{` aperto…) e offre **Vai alla riga N**.
+
 ## 0.26.0
 
 - **Anteprima dei template Jinja**: con il cursore su un template (o selezionandolo) premi **Alt+T**, oppure scegli **Anteprima template** nel menu di Home Assistant. EDITHA manda a Home Assistant solo quel template, letto come lo legge HA (anche blocchi `|` e `>` e testo tra virgolette su più righe), e mostra il risultato in un pannello sotto l'editor: verde il risultato, rosso un errore di sintassi, arancione un errore di valutazione. Da `secrets.yaml` e dalle sue copie l'anteprima non parte mai.

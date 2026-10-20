@@ -210,15 +210,23 @@ whether to **Save all and continue** or **Continue without saving**.
 
 ### Template preview
 
-Put the cursor on a template (or select it) and press **Alt+T**, or choose **Template preview** in
-the Home Assistant menu. Without a selection EDITHA takes the value under the cursor, read the way
+Put the cursor on a template (or select it) and press **Alt+T**, or use the **Template preview**
+button in the toolbar (the curly braces) or the entry in the Home Assistant menu. Without a selection EDITHA takes the value under the cursor, read the way
 Home Assistant reads it: also across several lines (`value_template: >`, `|`, quoted text that
 wraps). In `.jinja` files it takes the whole file.
 
 Home Assistant renders it with the current state of the entities, as in Developer tools, and the
 result appears in a panel below the editor: green for the result, red for a syntax error, orange
-for an evaluation error (for example a division by zero). The refresh button renders again from
-where the cursor is; Esc closes the panel. Variables such as `trigger`, `this` or those of an
+for an evaluation error (for example a division by zero).
+
+- While you edit the template the preview updates by itself, shortly after you stop typing. The
+  refresh button renders again from where the cursor is.
+- **Copy** copies the result.
+- If the template mentions entities that do not exist (for example `states('sensor.wrong')`), a
+  warning appears below the result: Home Assistant gives no error in that case, it returns `unknown`.
+- Home Assistant does not say on which line a syntax error is: when it can, EDITHA finds it (an
+  `{% if %}` without `{% endif %}`, an unclosed `{{`…) and offers **Go to line N**.
+- Esc closes the panel. Variables such as `trigger`, `this` or those of an
 automation only exist while the automation runs: here they are empty. The preview never starts
 from `secrets.yaml` or its copies.
 

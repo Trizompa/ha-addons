@@ -1,4 +1,4 @@
-import { LitElement, css, html } from 'lit';
+import { LitElement, css, html, nothing } from 'lit';
 import { t } from '../i18n/index.js';
 import { basename } from '../state/paths.js';
 import { icon, icons } from '../ui/icons.js';
@@ -7,9 +7,11 @@ import { sharedStyles } from '../ui/shared-styles.js';
 /** Stato dell'anteprima di un template (HA-7). */
 export type TemplateView =
   | { status: 'loading' }
-  | { status: 'ok'; result: string }
-  /** Errore del template (Home Assistant non dice in che riga). */
-  | { status: 'syntax' | 'render'; message: string }
+  /** `missing`: entità citate nel template che Home Assistant non ha. */
+  | { status: 'ok'; result: string; missing: string[] }
+  | { status: 'render'; message: string; missing: string[] }
+  /** `line`: riga del file trovata da EDITHA (Home Assistant non la indica), se si trova. */
+  | { status: 'syntax'; message: string; line: number | null }
   /** Home Assistant non raggiungibile o altro problema: non dipende dal template. */
   | { status: 'failed'; message: string };
 
@@ -22,15 +24,23 @@ export class EdithaTemplatePanel extends LitElement {
     view: { attribute: false },
     file: { type: String },
     line: { type: Number },
+    updating: { type: Boolean },
+    copied: { state: true },
   };
 
   declare view: TemplateView;
   /** File e prima riga del template mostrato. */
   declare file: string;
   declare line: number;
+  /** Aggiornamento automatico in corso: il risultato mostrato resta finché arriva il nuovo. */
+  declare updating: boolean;
+  declare copied: boolean;
+  private copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
     super();
+    this.updating = false;
+    this.copied = false;
     this.view = { status: 'loading' };
     this.file = '';
     this.line = 1;
@@ -120,6 +130,25 @@ export class EdithaTemplatePanel extends LitElement {
       .render pre {
         border-left-color: var(--warning);
       }
+      .missing {
+        margin: 8px 0 0;
+        padding: 6px 10px;
+        border-radius: var(--radius-sm);
+        background: var(--danger-soft);
+        font-size: 12px;
+      }
+      .missing code {
+        font-family: var(--font-code);
+      }
+      .actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .updating {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
       .empty {
         color: var(--text-muted);
         font-style: italic;
@@ -145,15 +174,30 @@ export class EdithaTemplatePanel extends LitElement {
         return html`<div class="ok" role="status">
           <div class="badge">${icon(icons.ok, 16)} ${t('template.result')}</div>
           <pre>${v.result === '' ? html`<span class="empty">${t('template.emptyResult')}</span>` : v.result}</pre>
+          <div class="actions">
+            <button class="btn" data-action="template-copy" ?disabled=${v.result === ''} @click=${() => void this.copy(v.result)}>
+              ${icon(this.copied ? icons.ok : icons.copy, 16)} ${this.copied ? t('template.copied') : t('template.copy')}
+            </button>
+          </div>
+          ${this.renderMissing(v.missing)}
+        </div>`;
+      case 'render':
+        return html`<div class="render" role="alert">
+          <div class="badge">${icon(icons.warning, 16)} ${t('template.renderError')}</div>
+          <pre>${v.message}</pre>
+          ${this.renderMissing(v.missing)}
         </div>`;
       case 'syntax':
-      case 'render':
-        return html`<div class=${v.status} role="alert">
-          <div class="badge">
-            ${icon(v.status === 'syntax' ? icons.alert : icons.warning, 16)}
-            ${t(v.status === 'syntax' ? 'template.syntaxError' : 'template.renderError')}
-          </div>
+        return html`<div class="syntax" role="alert">
+          <div class="badge">${icon(icons.alert, 16)} ${t('template.syntaxError')}</div>
           <pre>${v.message}</pre>
+          ${v.line !== null
+            ? html`<div class="actions">
+                <button class="btn" data-action="template-goto" ?disabled=${this.updating} @click=${() => this.emit('template-goto', { line: v.line })}>
+                  ${t('template.goToLine', { line: v.line })}
+                </button>
+              </div>`
+            : nothing}
         </div>`;
       case 'failed':
         return html`<div class="failed" role="alert">
@@ -163,11 +207,51 @@ export class EdithaTemplatePanel extends LitElement {
     }
   }
 
+  private renderMissing(missing: string[]) {
+    if (missing.length === 0) return nothing;
+    return html`<p class="missing">
+      ${icon(icons.warning, 14)} ${t(missing.length === 1 ? 'template.missingOne' : 'template.missingMany')}
+      ${missing.map((id, i) => html`${i > 0 ? ', ' : ''}<code>${id}</code>`)}
+    </p>`;
+  }
+
+  /** Copia il risultato; se il browser non lo permette (pagina in un iframe), prova alla vecchia maniera. */
+  private async copy(text: string): Promise<void> {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch {
+      const button = this.renderRoot.querySelector<HTMLButtonElement>('button[data-action="template-copy"]');
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.readOnly = true;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      this.renderRoot.appendChild(area);
+      area.focus();
+      area.select();
+      try {
+        ok = document.execCommand('copy');
+      } catch {
+        ok = false;
+      }
+      area.remove();
+      // Il focus torna sul pulsante, non sulla pagina.
+      button?.focus();
+    }
+    if (!ok) return void this.emit('template-copy-failed');
+    this.copied = true;
+    clearTimeout(this.copiedTimer);
+    this.copiedTimer = setTimeout(() => (this.copied = false), 1500);
+  }
+
   override render() {
     return html`
       <header>
         <h2>${icon(icons.template, 16)} ${t('template.title')}</h2>
         <span class="source" title=${this.file}>${t('template.source', { file: basename(this.file), line: this.line })}</span>
+        ${this.updating ? html`<span class="updating" role="status">${t('template.updating')}</span>` : nothing}
         <button
           class="icon-btn small"
           title=${t('template.refresh')}
