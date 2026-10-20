@@ -19,6 +19,38 @@ describe('BackupStore', () => {
 
   afterEach(() => sb.cleanup());
 
+  it('calcola lo spazio occupato, in tutto e per file', async () => {
+    assert.deepEqual(await store.usage(), { totalBytes: 0, versions: 0, files: [] });
+    await store.saveFile('a.yaml', Buffer.from('12345'), 'save');
+    clock = new Date('2026-10-15T08:00:01.000Z');
+    await store.saveFile('a.yaml', Buffer.from('123'), 'save');
+    await store.saveFile('b/c.yaml', Buffer.from('1'), 'delete');
+    await mkdir(path.join(sb.configDir, 'cartella'), { recursive: true });
+    await writeFile(path.join(sb.configDir, 'cartella/x.txt'), 'ciao');
+    await store.saveTree('cartella', path.join(sb.configDir, 'cartella'), 'delete');
+    const usage = await store.usage();
+    assert.equal(usage.versions, 4);
+    // Spazio su disco: blocchi, indici e cartelle compresi, quindi almeno i byte dei contenuti.
+    assert.ok(usage.totalBytes >= 5 + 3 + 1 + 4);
+    assert.deepEqual(
+      usage.files.map((f) => [f.path, f.versions]).sort(),
+      [
+        ['a.yaml', 2],
+        ['b/c.yaml', 1],
+        ['cartella', 1],
+      ],
+    );
+    assert.equal(usage.files.reduce((n, f) => n + f.bytes, 0) <= usage.totalBytes, true);
+    assert.ok(usage.files.every((f) => f.bytes > 0));
+    // Un avanzo di scrittura interrotta conta nel totale.
+    const before = usage.totalBytes;
+    const key = createHash('sha256').update('a.yaml').digest('hex');
+    await writeFile(path.join(sb.dataDir, 'backups', key, '.tmp-resto'), 'x'.repeat(10_000));
+    assert.ok((await store.usage()).totalBytes >= before + 10_000);
+    assert.equal(usage.files[0]!.oldest, '2026-10-15T08:00:00.000Z');
+    assert.equal(usage.files[0]!.newest, '2026-10-15T08:00:01.000Z');
+  });
+
   it('elenca le versioni dalla più recente', async () => {
     await store.saveFile('a.yaml', Buffer.from('1'), 'save');
     clock = new Date('2026-10-15T08:00:01.000Z');

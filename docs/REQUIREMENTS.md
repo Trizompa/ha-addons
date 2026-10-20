@@ -115,6 +115,7 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 | BK-4 | Ripristino di una versione (a sua volta crea una versione, quindi è annullabile). | P1 |
 | BK-5 | Politica di conservazione: 10 versioni per file (configurabile con `EDITHA_BACKUP_KEEP`). | P1 |
 | BK-6 | Confronto tra due file qualsiasi. | P2 |
+| BK-7 | Manutenzione della cronologia: spazio occupato (in tutto e per file), cancellazione delle versioni più vecchie di una data, cancellazione completa; sempre con conferma, solo le copie, mai i file di /config. | P2 |
 | BK-7 | Backup completi di HA tramite Supervisor (crea/elenca). | P2 |
 
 ## 7. Ricerca
@@ -258,6 +259,7 @@ editha/
 | 0.21.0 | Revisione del codice: SEC-7 (copie di secrets.yaml escluse da ricerca e sostituzione), HA-9 (template senza virgolette, chiavi complesse, alias senza ancora), scorciatoie per tasto fisico (anche su Mac), bozze non più salvabili scartate con un avviso. |
 | 0.22.0 | Seconda revisione: BK-1 (nessuna eliminazione senza copia senza conferma, versioni senza doppioni, id monotoni), SEC-3/SEC-4 (conflitto anche durante la scrittura), SEC-7 (copie di secrets.yaml in ogni forma), ED-14 (bozze ritentate, attesa massima, ricrea il file sparito), CRLF conservato, HA-9 (spazi invisibili, tag sconosciuti, errori da principiante), scorciatoie per lettera della tastiera. |
 | 0.22.3 | ED-14: bozze per finestra (più finestre o dispositivi non si scartano né sovrascrivono le bozze a vicenda), segnale di finestra aperta, proposta delle bozze di finestre chiuse; Esc sulla domanda rimanda davvero (0.22.2). |
+| 0.23.0 | BK-7 (1/3): spazio occupato dalla cronologia, da Informazioni e dalla cronologia; ED-14: bozze recuperate prese in carico in modo atomico (0.22.4). |
 
 ---
 

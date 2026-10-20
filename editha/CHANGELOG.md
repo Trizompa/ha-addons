@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.23.0
+
+- **Spazio occupato dalla cronologia**: nuova finestra *Cronologia: spazio e pulizia*, da **Informazioni** (riga *Cronologia*) o dal pulsante a forma di disco nell'intestazione della cronologia. Mostra quanto spazio occupa davvero sul disco la cronologia, in tutto e file per file (dai più pesanti), con il numero di versioni, la data dell'ultima e i file che non esistono più. Per ora si guarda soltanto: la pulizia arriva nei prossimi passi.
+- Dimensioni scritte con la virgola in italiano e fino ai GB.
+
 ## 0.22.4
 
 - Se due finestre recuperano nello stesso momento le modifiche lasciate da una terza finestra chiusa, ora le ottiene una sola: l'altra non apre niente e avvisa che sono già state recuperate (o scartate) altrove. Prima finivano in entrambe.

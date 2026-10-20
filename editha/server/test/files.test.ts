@@ -38,7 +38,27 @@ describe('FileService', () => {
   const abs = (rel: string) => path.join(sb.configDir, rel);
 
   describe('list', () => {
-    it('mette le cartelle prima dei file e ordina per nome', async () => {
+    it('BK-7: spazio della cronologia, con i file eliminati segnalati', async () => {
+    await writeFile(path.join(sb.configDir, 'resta.yaml'), 'a: 1\n');
+    await writeFile(path.join(sb.configDir, 'via.yaml'), 'b: 1\n');
+    const r = await files.read('resta.yaml');
+    await files.write('resta.yaml', 'a: 2\n', r.etag);
+    await files.remove('via.yaml');
+    // Una cronologia con l'indice rovinato resta senza nome.
+    await mkdir(path.join(sb.dataDir, 'backups', 'rovinata'), { recursive: true });
+    await writeFile(path.join(sb.dataDir, 'backups', 'rovinata', '20261015T080000000Z-save'), 'x');
+    await writeFile(path.join(sb.dataDir, 'backups', 'rovinata', 'index.json'), '{');
+    const usage = await files.historyUsage();
+    assert.equal(usage.fileCount, 3);
+    assert.equal(usage.keep, 50);
+    const byPath = new Map(usage.files.map((f) => [f.path, f]));
+    assert.equal(byPath.get('resta.yaml')?.exists, true);
+    assert.equal(byPath.get('via.yaml')?.exists, false);
+    assert.equal(byPath.get(null)?.exists, false);
+    assert.equal(usage.versions, 3);
+  });
+
+  it('mette le cartelle prima dei file e ordina per nome', async () => {
       const root = await files.list('');
       assert.deepEqual(
         root.map((e) => e.name),

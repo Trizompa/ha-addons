@@ -105,6 +105,9 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
     async (req) => files.remove(req.query.path, { noBackup: req.query.noBackup === 'true' }),
   );
 
+  // Manutenzione della cronologia: spazio occupato, in tutto e per file.
+  app.get('/api/history/usage', async () => files.historyUsage());
+
   app.get<{ Querystring: PathQuery }>('/api/versions', { schema: { querystring: pathQuery } }, async (req) => ({
     path: req.query.path,
     versions: await files.versions(req.query.path),

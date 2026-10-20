@@ -44,6 +44,7 @@ const files = {
   'drafts/dopo.yaml': 'stato: salvato\n',
   'drafts/due-finestre.yaml': 'stato: salvato\n',
   'drafts/conteso.yaml': 'stato: salvato\n',
+  'spazio/pesante.yaml': 'a: 1\n',
   'crlf/windows.yaml': 'a: 1\r\nb: 2\r\n',
   'crlf/misto.yaml': 'a: 1\r\nb: 2\nc: 3\n',
   'dup/originale.yaml': 'copia: no\n',

@@ -2,7 +2,7 @@ import path from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
 import { constants } from 'node:fs';
 import type { Stats } from 'node:fs';
-import { copyFile, cp, mkdir, open, readdir, readFile, rename, rm, stat } from 'node:fs/promises';
+import { copyFile, cp, lstat, mkdir, open, readdir, readFile, rename, rm, stat } from 'node:fs/promises';
 import { syncDir, writeFileAtomic } from '../fs/atomic.js';
 import { KeyedLock } from '../fs/lock.js';
 
@@ -15,6 +15,41 @@ export interface Version {
   createdAt: string;
   kind: 'file' | 'directory';
   size: number;
+}
+
+/** Spazio della cronologia di un file (path null: indice illeggibile). */
+export interface HistoryFileUsage {
+  path: string | null;
+  bytes: number;
+  versions: number;
+  oldest: string;
+  newest: string;
+}
+
+export interface HistoryUsage {
+  /** Tutto lo spazio su disco della cronologia, avanzi di scritture interrotte compresi. */
+  totalBytes: number;
+  versions: number;
+  files: HistoryFileUsage[];
+}
+
+/** Spazio su disco di una voce: blocchi occupati (un file da 1 KB ne usa comunque 4), non solo i byte. */
+function diskBytes(st: Stats): number {
+  return Math.max(st.size, st.blocks * 512);
+}
+
+/** Spazio su disco di un file, o di una cartella con tutto il contenuto (i link contano per sé, non si seguono). */
+async function treeBytes(target: string): Promise<number> {
+  let st: Stats;
+  try {
+    st = await lstat(target);
+  } catch {
+    return 0;
+  }
+  if (!st.isDirectory()) return diskBytes(st);
+  let total = diskBytes(st);
+  for (const name of await readdir(target).catch(() => [] as string[])) total += await treeBytes(path.join(target, name));
+  return total;
 }
 
 // Il suffisso ".N" c'è solo nelle versioni create dalle versioni precedenti di Editha.
@@ -87,7 +122,8 @@ export class BackupStore {
 
   constructor(
     readonly dir: string,
-    private readonly keep: number,
+    /** Versioni conservate per file. */
+    readonly keep: number,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -281,6 +317,60 @@ export class BackupStore {
       }
       await writeFileAtomic(path.join(to, INDEX_FILE), Buffer.from(JSON.stringify({ path: toRel }) + '\n'));
     });
+  }
+
+  /**
+   * Spazio occupato dalla cronologia: in tutto e per ogni file (dal più pesante). Le cartelle
+   * di cui non si legge l'indice (resti di versioni molto vecchie o rovinate) contano nel
+   * totale come "sconosciute".
+   */
+  async usage(): Promise<HistoryUsage> {
+    let keys: string[];
+    try {
+      keys = await readdir(this.dir);
+    } catch {
+      return { totalBytes: 0, versions: 0, files: [] };
+    }
+    // La cartella stessa e ciò che non è una cronologia (file sparsi) contano nel totale.
+    let totalBytes = 0;
+    try {
+      totalBytes = diskBytes(await lstat(this.dir));
+    } catch {
+      // vedi sopra
+    }
+    const files: HistoryFileUsage[] = [];
+    let versions = 0;
+    for (const key of keys) {
+      const dir = path.join(this.dir, key);
+      // Tutto ciò che c'è nella cartella del file: versioni, indice, avanzi di scritture interrotte.
+      const bytes = await treeBytes(dir);
+      totalBytes += bytes;
+      let ids: string[];
+      try {
+        if (!(await stat(dir)).isDirectory()) continue;
+        ids = await this.ids(dir);
+      } catch {
+        continue;
+      }
+      if (ids.length === 0) continue;
+      let rel: string | null = null;
+      try {
+        const p = (JSON.parse(await readFile(path.join(dir, INDEX_FILE), 'utf8')) as { path?: unknown }).path;
+        if (typeof p === 'string') rel = p;
+      } catch {
+        // indice mancante: il file resta senza nome
+      }
+      files.push({
+        path: rel,
+        bytes,
+        versions: ids.length,
+        oldest: parseTimestamp(VERSION_RE.exec(ids[0]!)![1]!),
+        newest: parseTimestamp(VERSION_RE.exec(ids[ids.length - 1]!)![1]!),
+      });
+      versions += ids.length;
+    }
+    files.sort((a, b) => b.bytes - a.bytes);
+    return { totalBytes, versions, files };
   }
 
   /** Tiene le ultime N versioni; quella appena creata non si tocca mai. */

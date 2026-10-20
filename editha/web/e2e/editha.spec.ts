@@ -696,6 +696,32 @@ test('Informazioni: autore, versione e licenza', async ({ page }) => {
   await expect(about).toHaveCount(0);
 });
 
+test('BK-7 – spazio della cronologia: totale e file per file, da Informazioni e dalla cronologia', async ({ page }) => {
+  // Due salvataggi: due versioni di spazio/pesante.yaml.
+  await openFile(page, 'spazio/pesante.yaml');
+  for (const line of ['b: 2', 'c: 3']) {
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type(`${line}\n`);
+    await page.keyboard.press('Control+s');
+    await expect(activeTab(page)).not.toHaveClass(/dirty/);
+  }
+
+  await page.locator('editha-toolbar button[title="Informazioni su Editha"]').click();
+  await page.locator('editha-about-dialog dialog[open] button', { hasText: 'Spazio e pulizia' }).click();
+  const space = page.locator('editha-history-space dialog[open]');
+  await expect(space).toContainText('La cronologia occupa');
+  const row = space.locator('tr', { hasText: 'spazio/pesante.yaml' });
+  await expect(row.locator('td').nth(1)).toHaveText('2');
+  await space.locator('button', { hasText: 'Chiudi' }).click();
+  await expect(space).toHaveCount(0);
+
+  // Anche dall'intestazione della cronologia.
+  await page.locator('editha-toolbar button[title^="Cronologia"]').click();
+  await page.locator('editha-history-panel button[title="Spazio occupato dalla cronologia"]').click();
+  await expect(space).toContainText('spazio/pesante.yaml');
+});
+
 test('Controllo YAML: il conteggio nella barra apre l\'elenco dei problemi con le spiegazioni', async ({ page }) => {
   await openFile(page, 'lint/problemi.yaml');
   const count = page.locator('editha-status-bar button.problems');

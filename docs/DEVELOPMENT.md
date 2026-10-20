@@ -63,6 +63,7 @@ campi sconosciuti: nella query i booleani sono le stringhe `'true'` / `'false'` 
 | `GET /api/preview` | `?path=` | Immagine o PDF con il proprio Content-Type, `inline` (FS-10); 415 `not_previewable` per gli altri file, 413 `too_large` oltre `EDITHA_MAX_TRANSFER`. Gli SVG hanno una CSP `sandbox`. |
 | `POST /api/upload` | `?dir=&name=&overwrite=true\|false&noBackup=true\|false`, corpo `application/octet-stream` | 201 con `Entry & { backup }`: `backup` è l'id della copia del file sostituito, `null` per un file nuovo o con `noBackup`; 409 `already_exists` senza `overwrite`; 409 `no_backup` (`details: { path, size, limit }`) se il file da sostituire supera `EDITHA_MAX_TRANSFER` e manca `noBackup=true`; 413 se il corpo supera `EDITHA_MAX_TRANSFER` (prima di toccare il disco) |
 | `GET /api/versions` | `?path=` | `{ path, versions: Version[] }`, dalla più recente |
+| `GET /api/history/usage` | | `{ totalBytes, versions, fileCount, keep, files: [{ path, bytes, versions, oldest, newest, exists }] }`: spazio su disco della cronologia (blocchi occupati, indici e avanzi compresi), al massimo 200 file dai più pesanti; `path` null se l'indice è illeggibile |
 
 Codici di errore: `invalid_request` / `not_a_file` / `not_a_directory` (400),
 `forbidden_path` / `read_only` / `forbidden_origin` (403), `not_found` (404),

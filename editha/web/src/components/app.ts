@@ -42,6 +42,8 @@ import './insert-panel.js';
 import './history-panel.js';
 import './side-pane.js';
 import './about-dialog.js';
+import './history-space.js';
+import type { EdithaHistorySpace } from './history-space.js';
 import './folder-picker.js';
 import './search-panel.js';
 import './compare-panel.js';
@@ -1634,6 +1636,11 @@ export class EdithaApp extends LitElement {
     return null;
   }
 
+  /** BK-7: spazio occupato dalla cronologia. */
+  private openHistorySpace(): Promise<void> {
+    return (this.renderRoot.querySelector('editha-history-space') as EdithaHistorySpace).show();
+  }
+
   /** Il file è cambiato su disco dopo l'apertura: decide l'utente. */
   private async resolveConflict(tab: EditorTab, err: ApiError): Promise<boolean> {
     const choice = await this.dialog.choose({
@@ -2659,6 +2666,7 @@ export class EdithaApp extends LitElement {
               .prefs=${{ wordWrap: this.settings.wordWrap, fontSize: this.settings.fontSize }}
               .canRestore=${!this.history.readOnly}
               @history-close=${() => this.closeHistory()}
+              @history-space=${() => void this.openHistorySpace()}
               @history-restore=${(e: CustomEvent<{ id: string; date: string }>) =>
                 void this.restoreVersion(e.detail.id, e.detail.date)}
             ></editha-history-panel>`
@@ -2744,7 +2752,8 @@ export class EdithaApp extends LitElement {
       />
       <editha-dialog></editha-dialog>
       <editha-context-menu></editha-context-menu>
-      <editha-about-dialog></editha-about-dialog>
+      <editha-about-dialog @history-space=${() => void this.openHistorySpace()}></editha-about-dialog>
+      <editha-history-space></editha-history-space>
       <editha-folder-picker></editha-folder-picker>
       <editha-snippet-editor></editha-snippet-editor>
       <editha-toasts></editha-toasts>

@@ -253,6 +253,11 @@ apri **Cronologia…** su di lui: le sue versioni sono ancora lì, compresa quel
 all'eliminazione. Le cartelle non si possono ripristinare così, e degli elementi oltre 50 MB non
 resta copia (EDITHA avvisa prima di eliminarli).
 
+**Spazio occupato dalla cronologia**: in **Informazioni** (riga *Cronologia*, **Spazio e
+pulizia…**) o con il pulsante a forma di disco nell'intestazione della cronologia, EDITHA mostra
+quanto spazio occupa la cronologia sul disco, in tutto e file per file, dai più pesanti, segnalando
+i file che non esistono più. Si limita a mostrare: i tuoi file in `/config` non vengono toccati.
+
 Per confrontare due file qualsiasi: tasto destro sul primo → **Seleziona per il confronto**, poi
 tasto destro sul secondo → **Confronta con *nome*** (il nome del primo file). Esc chiude il
 confronto.

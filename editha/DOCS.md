@@ -244,6 +244,11 @@ because the current content is kept too). History works on text files up to 5 MB
 Folders cannot be restored this way, and items larger than 50 MB have no copy (EDITHA warns you
 before deleting them).
 
+**Space taken by the history**: in **About** (row *History*, **Space and cleanup…**) or with the
+disk button in the history header, EDITHA shows how much disk space the history takes in total and
+file by file, biggest first, marking the files that no longer exist. It only looks: your files in
+`/config` are not touched.
+
 To compare any two files: right-click the first → **Select for compare**, then right-click the
 second → **Compare with *name*** (the name of the first file). Esc closes the comparison.
 

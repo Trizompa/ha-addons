@@ -16,10 +16,18 @@ export function formatVersionDate(iso: string): string {
   return new Intl.DateTimeFormat(getLang(), { dateStyle: 'short', timeStyle: 'medium' }).format(new Date(iso));
 }
 
+/** Dimensione leggibile, con la virgola o il punto della lingua dell'interfaccia. */
 export function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  const n = (v: number) => new Intl.NumberFormat(getLang(), { maximumFractionDigits: 1 }).format(v);
+  if (bytes < 1024) return `${n(bytes)} B`;
+  if (bytes < 1024 ** 2) return `${n(bytes / 1024)} KB`;
+  if (bytes < 1024 ** 3) return `${n(bytes / 1024 ** 2)} MB`;
+  return `${n(bytes / 1024 ** 3)} GB`;
+}
+
+/** Numero intero con i separatori della lingua (12.345 / 12,345). */
+export function formatCount(value: number): string {
+  return new Intl.NumberFormat(getLang()).format(value);
 }
 
 /**
@@ -349,6 +357,9 @@ export class EdithaHistoryPanel extends LitElement {
       <header>
         ${icon(icons.history, 18)}
         <h2>${t('history.title', { name: basename(this.path) })}<small>${t('history.keep')}</small></h2>
+        <button class="icon-btn small" title=${t('space.openTitle')} @click=${() => this.emit('history-space')}>
+          ${icon(icons.storage, 18)}
+        </button>
         <button class="icon-btn small" title=${t('common.close')} @click=${() => this.emit('history-close')}>
           ${icon(icons.close, 18)}
         </button>

@@ -145,6 +145,16 @@ export function keepClientId(): void {
   }
 }
 
+/** Spazio della cronologia come lo manda il server (`files`: i più pesanti, al massimo 200). */
+export interface HistoryUsageInfo {
+  totalBytes: number;
+  versions: number;
+  fileCount: number;
+  /** Versioni conservate per file. */
+  keep: number;
+  files: { path: string | null; bytes: number; versions: number; oldest: string; newest: string; exists: boolean }[];
+}
+
 const q = (path: string) => `?path=${encodeURIComponent(path)}`;
 
 export const api = {
@@ -158,6 +168,8 @@ export const api = {
   /** Senza `noBackup` il server rifiuta (no_backup) ciò di cui non può tenere una copia. */
   remove: (path: string, noBackup = false) =>
     request<{ path: string; backup: string | null }>('DELETE', `api/file${q(path)}${noBackup ? '&noBackup=true' : ''}`),
+  /** Manutenzione: spazio occupato dalla cronologia, in tutto e per file. */
+  historyUsage: () => request<HistoryUsageInfo>('GET', 'api/history/usage'),
   versions: (path: string) => request<{ path: string; versions: Version[] }>('GET', `api/versions${q(path)}`),
   version: (path: string, id: string) =>
     request<{ path: string; id: string; content: string }>('GET', `api/version${q(path)}&id=${encodeURIComponent(id)}`),

@@ -5,7 +5,7 @@ import { copyFile, cp, lstat, mkdir, open, opendir, readdir, readFile, realpath,
 import type { Stats } from 'node:fs';
 import { isMap, isScalar, LineCounter, parseDocument } from 'yaml';
 import { EdithaError, fromFsError } from '../errors.js';
-import type { BackupStore, Version } from '../backups/store.js';
+import type { BackupStore, HistoryFileUsage, HistoryUsage, Version } from '../backups/store.js';
 import { isTempName, writeFileAtomic } from './atomic.js';
 import { KeyedLock } from './lock.js';
 import { createZip, type ZipEntry } from './zip.js';
@@ -716,6 +716,29 @@ export class FileService {
   async versions(input: string): Promise<Version[]> {
     const target = await this.historyTarget(input);
     return this.backups.list(this.guard.relativeOf(target.abs));
+  }
+
+  /**
+   * Spazio occupato dalla cronologia, con i file più pesanti in testa (al massimo 200) e, per
+   * ciascuno, se esiste ancora in /config (le versioni dei file eliminati restano finché non le si cancella).
+   */
+  async historyUsage(): Promise<Omit<HistoryUsage, 'files'> & { fileCount: number; keep: number; files: (HistoryFileUsage & { exists: boolean })[] }> {
+    const usage = await this.backups.usage();
+    const files = await Promise.all(
+      usage.files.slice(0, 200).map(async (f) => {
+        let exists = false;
+        if (f.path !== null) {
+          try {
+            await lstat(path.join(this.guard.root, f.path));
+            exists = true;
+          } catch {
+            exists = false;
+          }
+        }
+        return { ...f, exists };
+      }),
+    );
+    return { ...usage, fileCount: usage.files.length, keep: this.backups.keep, files };
   }
 
   /** BK-3: testo di una versione conservata, per il confronto con il file attuale. */
