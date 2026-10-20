@@ -3,10 +3,10 @@ import type { ChangeSet, EditorState, StateEffect, Text } from '@codemirror/stat
 import type { ViewUpdate } from '@codemirror/view';
 import { redoDepth, undoDepth } from '@codemirror/commands';
 import { forEachDiagnostic } from '@codemirror/lint';
-import { api, ApiError, errorText, whileLeaving } from '../api/client.js';
+import { api, ApiError, CLIENT_ID, errorText, forgetKeptClientId, keepClientId, whileLeaving } from '../api/client.js';
 import { getLang, onLangChange, resolveLang, setLang, t, type LanguageSetting, type MessageKey } from '../i18n/index.js';
 import { connection } from '../api/connection.js';
-import type { Draft, Entry, Session, Settings, ThemeMode } from '../api/types.js';
+import type { Draft, Entry, ListedDraft, Session, Settings, ThemeMode } from '../api/types.js';
 import { createEditorState, docText, reconfigureEffects } from '../editor/setup.js';
 import { languageOf } from '../editor/languages.js';
 import { LINT_MAX_CHARS } from '../editor/yaml-lint.js';
@@ -77,6 +77,9 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 const NARROW = '(max-width: 760px)';
+
+/** Come LIVE_MS del server: dopo questo silenzio una finestra si considera chiusa. */
+const DRAFT_LIVE_MS = 90_000;
 
 /** Errori di apertura che non passano da soli: una bozza di quel file non si potrà mai salvare. */
 const PERMANENT_OPEN_ERRORS = new Set(['not_found', 'not_a_file', 'forbidden_path', 'binary', 'too_large']);
@@ -443,6 +446,8 @@ export class EdithaApp extends LitElement {
     window.addEventListener('keydown', this.onEscape);
     window.addEventListener('beforeunload', this.onBeforeUnload);
     document.addEventListener('visibilitychange', this.onVisibility);
+    window.addEventListener('pagehide', this.onPageHide);
+    window.addEventListener('pageshow', this.onPageShow);
     connection.addEventListener('change', this.onConnection);
     this.offLang = onLangChange(() => this.onLanguageChanged());
     this.narrowQuery.addEventListener('change', this.onNarrowChange);
@@ -454,9 +459,13 @@ export class EdithaApp extends LitElement {
     window.removeEventListener('keydown', this.onEscape);
     window.removeEventListener('beforeunload', this.onBeforeUnload);
     document.removeEventListener('visibilitychange', this.onVisibility);
+    window.removeEventListener('pagehide', this.onPageHide);
+    window.removeEventListener('pageshow', this.onPageShow);
     connection.removeEventListener('change', this.onConnection);
     this.offLang?.();
     clearInterval(this.healthTimer);
+    clearInterval(this.aliveTimer);
+    clearTimeout(this.draftCheckTimer);
     this.narrowQuery.removeEventListener('change', this.onNarrowChange);
     super.disconnectedCallback();
   }
@@ -472,6 +481,8 @@ export class EdithaApp extends LitElement {
     setLang(resolveLang(this.settings.language));
     this.side!.makeState = (tab) => this.mirrorState(tab);
     this.refreshToolbar();
+    this.sendAlive();
+    this.aliveTimer = setInterval(this.sendAlive, 20_000);
     await this.recoverDrafts();
     void haData.start();
     void this.loadSnippets();
@@ -1276,7 +1287,7 @@ export class EdithaApp extends LitElement {
     }
     this.deferredDrafts.delete(draft.path);
     if (choice === 'discard') {
-      await api.deleteDraft(draft.path).catch(() => undefined);
+      await this.discardDraft(draft);
       if (tab.dirty) this.scheduleDraft(tab);
       return;
     }
@@ -1288,6 +1299,7 @@ export class EdithaApp extends LitElement {
     const saved = this.saved.get(tab);
     tab.dirty = !saved || !this.pane.stateOf(tab).doc.eq(saved);
     this.drafted.add(tab.path);
+    void this.adoptDraft(draft);
     this.refreshTabs();
     if (this.tabs.active !== tab && this.side?.shown !== tab) this.activate(tab.path);
     this.flash(t('drafts.recovered'));
@@ -1316,6 +1328,13 @@ export class EdithaApp extends LitElement {
 
   private readonly onVisibility = () => {
     if (document.visibilityState === 'hidden') whileLeaving(() => this.flushDrafts());
+    else {
+      // Al ritorno (telefono sbloccato, scheda riaperta): si torna "vivi", e le bozze si
+      // riscrivono, nel caso un'altra finestra le avesse scartate credendo questa chiusa.
+      this.sendAlive();
+      void this.writeAllDrafts();
+      void this.checkOrphanDrafts();
+    }
   };
 
   /**
@@ -1323,12 +1342,13 @@ export class EdithaApp extends LitElement {
    * della sessione, così non si fa in tempo a modificare un file che ha una bozza da recuperare.
    */
   private async recoverDrafts(): Promise<void> {
-    let drafts: Draft[] = [];
+    let list: ListedDraft[] = [];
     try {
-      drafts = (await api.drafts()).drafts;
+      list = (await api.drafts()).drafts;
     } catch {
       // Senza elenco si prosegue: le bozze restano sul server per la prossima apertura.
     }
+    const drafts = this.orphanDrafts(list);
     this.pendingDrafts = new Set(drafts.map((d) => d.path));
     let choice: string | null = null;
     try {
@@ -1349,18 +1369,172 @@ export class EdithaApp extends LitElement {
       if (choice === null) for (const draft of drafts) this.deferredDrafts.set(draft.path, { draft, asked: false });
       await this.restoreSession();
       if (choice === 'discard') {
-        await Promise.all(drafts.map((d) => api.deleteDraft(d.path).catch(() => undefined)));
+        await Promise.all(drafts.map((d) => this.discardDraft(d)));
       } else if (choice === 'recover') {
         await this.applyDrafts(drafts);
       }
     } finally {
       this.pendingDrafts = new Set();
+      this.scheduleDraftCheck(list);
     }
   }
+
+  // ——— bozze e più finestre aperte ———
+
+  /** Bozze di altre finestre già viste in questa pagina (proposte o lasciate in sospeso). */
+  private readonly seenDrafts = new Set<string>();
+  private draftCheckTimer: ReturnType<typeof setTimeout> | undefined;
+
+  private static draftKey(d: Draft): string {
+    return `${d.client ?? ''}\0${d.path}`;
+  }
+
+  /**
+   * Bozze da proporre qui: quelle lasciate da questa stessa finestra (prima di ricaricarla) e
+   * quelle di finestre ormai chiuse. Le bozze di una finestra ancora aperta sono sue, non si
+   * toccano. Una per file, la più recente; tutte risultano viste.
+   */
+  private orphanDrafts(list: ListedDraft[]): ListedDraft[] {
+    const byPath = new Map<string, ListedDraft>();
+    for (const d of list) {
+      if (d.live && d.client !== CLIENT_ID) continue;
+      const key = EdithaApp.draftKey(d);
+      if (this.seenDrafts.has(key)) continue;
+      this.seenDrafts.add(key);
+      if (!byPath.has(d.path)) byPath.set(d.path, d);
+      else {
+        // Più vecchie della bozza proposta per lo stesso file: seguono la sua sorte.
+        const older = this.supersededDrafts.get(d.path) ?? [];
+        older.push(d);
+        this.supersededDrafts.set(d.path, older);
+      }
+    }
+    return [...byPath.values()];
+  }
+
+  /** Bozze più vecchie di quella proposta per lo stesso file. */
+  private readonly supersededDrafts = new Map<string, Draft[]>();
+
+  /** Una bozza proposta è stata scartata o fatta propria: via anche quelle più vecchie dello stesso file. */
+  private async dropSuperseded(path: string, keepOwn = false): Promise<void> {
+    const older = this.supersededDrafts.get(path);
+    if (!older) return;
+    this.supersededDrafts.delete(path);
+    // Recuperando, la bozza di questa finestra è appena stata riscritta: non va tolta.
+    const drop = keepOwn ? older.filter((d) => d.client !== CLIENT_ID) : older;
+    await Promise.all(drop.map((d) => api.deleteDraft(d.path, d.client ?? null).catch(() => undefined)));
+  }
+
+  /** Scarta una bozza proposta (di questa o di un'altra finestra) e quelle più vecchie dello stesso file. */
+  private async discardDraft(draft: Draft): Promise<void> {
+    await api.deleteDraft(draft.path, draft.client ?? null).catch(() => undefined);
+    await this.dropSuperseded(draft.path);
+  }
+
+  /**
+   * Bozze di finestre ancora aperte: si ricontrolla quando la prima potrebbe risultare chiusa
+   * (una finestra chiusa di colpo, per esempio dal telefono, non lo dice al server).
+   */
+  private scheduleDraftCheck(list: ListedDraft[]): void {
+    clearTimeout(this.draftCheckTimer);
+    const others = list.filter((d) => d.live && d.client !== CLIENT_ID && !this.seenDrafts.has(EdithaApp.draftKey(d)));
+    if (others.length === 0) return;
+    const wait = Math.min(...others.map((d) => DRAFT_LIVE_MS - (d.idleMs ?? 0))) + 3000;
+    this.draftCheckTimer = setTimeout(() => void this.checkOrphanDrafts(), Math.min(Math.max(wait, 5000), 120_000));
+  }
+
+  /** Durante il lavoro: bozze lasciate da una finestra che nel frattempo si è chiusa. */
+  private async checkOrphanDrafts(): Promise<void> {
+    // Un'altra finestra di dialogo aperta verrebbe annullata: si riprova tra poco.
+    // Una finestra nascosta non chiede niente: lo farà tornando in primo piano (onVisibility).
+    if (document.hidden) return;
+    if (this.dialog.busy) {
+      clearTimeout(this.draftCheckTimer);
+      this.draftCheckTimer = setTimeout(() => void this.checkOrphanDrafts(), 10_000);
+      return;
+    }
+    let list: ListedDraft[];
+    try {
+      list = (await api.drafts()).drafts;
+    } catch {
+      clearTimeout(this.draftCheckTimer);
+      this.draftCheckTimer = setTimeout(() => void this.checkOrphanDrafts(), 30_000);
+      return;
+    }
+    // Intanto si è aperta un'altra finestra di dialogo, o la pagina è passata in secondo piano.
+    if (this.dialog.busy || document.hidden) {
+      clearTimeout(this.draftCheckTimer);
+      this.draftCheckTimer = setTimeout(() => void this.checkOrphanDrafts(), 10_000);
+      return;
+    }
+    // Un file con modifiche di questa finestra non riceve la bozza di un'altra a metà lavoro:
+    // la si propone alla prossima apertura.
+    const mine = (path: string) => this.drafted.has(path) || this.deferredDrafts.has(path) || !!this.tabs.find(path)?.dirty;
+    const drafts = this.orphanDrafts(list).filter((d) => {
+      if (!mine(d.path)) return true;
+      this.seenDrafts.delete(EdithaApp.draftKey(d));
+      for (const old of this.supersededDrafts.get(d.path) ?? []) this.seenDrafts.delete(EdithaApp.draftKey(old));
+      this.supersededDrafts.delete(d.path);
+      return false;
+    });
+    if (drafts.length) {
+      const names = drafts.map((d) => `• ${d.path} (${formatVersionDate(d.savedAt)})`).join('\n');
+      const choice = await this.dialog.choose({
+        title: t('drafts.title'),
+        message: drafts.length === 1 ? t('drafts.otherOne') : t('drafts.otherMany', { n: drafts.length }),
+        detail: names,
+        choices: [
+          { id: 'discard', label: t('drafts.discard'), variant: 'danger' },
+          { id: 'recover', label: t('drafts.recover'), variant: 'primary' },
+        ],
+        defaultId: 'recover',
+        whileTyping: true,
+      });
+      if (choice === 'discard') {
+        await Promise.all(drafts.map((d) => this.discardDraft(d)));
+      } else if (choice === 'recover') {
+        await this.applyDrafts(drafts);
+      } else {
+        for (const d of drafts) if (!this.deferredDrafts.has(d.path)) this.deferredDrafts.set(d.path, { draft: d, asked: false });
+      }
+    }
+    this.scheduleDraftCheck(list);
+  }
+
+  /**
+   * Bozza recuperata da un'altra finestra (o da una versione precedente): diventa di questa
+   * finestra, prima scrivendola a suo nome e poi togliendo l'originale, che altrimenti verrebbe
+   * riproposta alla prossima apertura.
+   */
+  private async adoptDraft(draft: Draft): Promise<void> {
+    if (draft.client === CLIENT_ID) return this.dropSuperseded(draft.path);
+    try {
+      await api.saveDraft(draft.path, draft.content, draft.etag);
+    } catch {
+      return;
+    }
+    // L'originale e quelle più vecchie dello stesso file: ora la bozza è di questa finestra.
+    await api.deleteDraft(draft.path, draft.client ?? null).catch(() => undefined);
+    await this.dropSuperseded(draft.path, true);
+  }
+
+  /** Questa finestra è ancora aperta: le sue bozze non vanno proposte altrove. */
+  private readonly sendAlive = () => void api.draftsAlive().catch(() => undefined);
+  private aliveTimer: ReturnType<typeof setInterval> | undefined;
+
+  /** Pagina ripresa dalla cache del browser (indietro/avanti): l'identità torna solo in memoria. */
+  private readonly onPageShow = () => forgetKeptClientId();
+
+  private readonly onPageHide = () => {
+    keepClientId();
+    whileLeaving(() => void api.draftsAlive(true).catch(() => undefined));
+  };
 
   private async applyDrafts(drafts: Draft[]): Promise<void> {
     let first: EditorTab | null = null;
     for (const draft of drafts) {
+      // Già in sospeso per quel file: vale la domanda alla prima modifica.
+      if (this.deferredDrafts.has(draft.path) && this.deferredDrafts.get(draft.path)!.draft !== draft) continue;
       let failure: unknown = null;
       let tab = await this.loadTab(draft.path, undefined, true, (err) => (failure = err));
       if (!tab && failure instanceof ApiError && failure.code === 'not_found') {
@@ -1373,7 +1547,7 @@ export class EdithaApp extends LitElement {
       ) {
         // Diventato di sola lettura o non più apribile: la bozza non si potrà mai salvare, e
         // tenerla farebbe tornare la domanda a ogni apertura.
-        await api.deleteDraft(draft.path).catch(() => undefined);
+        await this.discardDraft(draft);
         this.toasts.show(t('drafts.dropped', { name: draft.path }), 'warning');
         continue;
       }
@@ -1389,7 +1563,7 @@ export class EdithaApp extends LitElement {
       const diskEtag = tab.etag;
       if (docText(this.pane.stateOf(tab)) === draft.content) {
         // Uguale al file su disco: niente da recuperare.
-        await api.deleteDraft(draft.path).catch(() => undefined);
+        await this.discardDraft(draft);
         continue;
       }
       this.replaceDoc(tab, draft.content);
@@ -1398,6 +1572,7 @@ export class EdithaApp extends LitElement {
       const saved = this.saved.get(tab);
       tab.dirty = !saved || !this.pane.stateOf(tab).doc.eq(saved);
       this.drafted.add(tab.path);
+      void this.adoptDraft(draft);
       if (diskEtag !== draft.etag) this.toasts.show(t('drafts.changedOnDisk', { name: tab.name }), 'warning');
       first ??= tab;
     }
@@ -1420,7 +1595,7 @@ export class EdithaApp extends LitElement {
       defaultId: 'recreate',
     });
     if (choice === 'discard') {
-      await api.deleteDraft(draft.path).catch(() => undefined);
+      await this.discardDraft(draft);
       return null;
     }
     if (choice !== 'recreate') return null;
@@ -1431,7 +1606,7 @@ export class EdithaApp extends LitElement {
       this.toasts.show(t('drafts.recreateFailed', { name: draft.path, error: this.errorText(err) }), 'error');
       return null;
     }
-    await api.deleteDraft(draft.path).catch(() => undefined);
+    await this.discardDraft(draft);
     await this.tree.refresh(dirname(draft.path));
     const tab = await this.loadTab(draft.path, undefined, true);
     if (tab) {
@@ -1596,7 +1771,7 @@ export class EdithaApp extends LitElement {
       const moved = to + path.slice(entry.path.length);
       // Al nuovo nome c'è già un'altra bozza in sospeso: questa resta dov'è.
       if (this.deferredDrafts.has(moved)) continue;
-      const draft = { ...deferred.draft, path: moved };
+      const draft = { ...deferred.draft, path: moved, client: CLIENT_ID };
       // Subito, prima di aspettare il server: una modifica fatta intanto vale già per il nuovo nome.
       this.deferredDrafts.delete(path);
       this.deferredDrafts.set(moved, { draft, asked: deferred.asked });
@@ -1607,7 +1782,7 @@ export class EdithaApp extends LitElement {
         this.deferredDrafts.set(path, deferred);
         continue;
       }
-      await api.deleteDraft(path).catch(() => undefined);
+      await api.deleteDraft(path, deferred.draft.client ?? null).catch(() => undefined);
     }
     // La cronologia aperta su quel percorso non è più valida.
     if (this.history && (this.history.path === entry.path || this.history.path.startsWith(entry.path + '/'))) {
@@ -1664,10 +1839,10 @@ export class EdithaApp extends LitElement {
     }
     for (const tab of affected) await this.closeTab(tab.path, { force: true });
     // Eliminato su conferma: anche le bozze in sospeso di quei file non servono più.
-    for (const path of [...this.deferredDrafts.keys()]) {
+    for (const [path, deferred] of [...this.deferredDrafts]) {
       if (path !== entry.path && !path.startsWith(entry.path + '/')) continue;
       this.deferredDrafts.delete(path);
-      await api.deleteDraft(path).catch(() => undefined);
+      await api.deleteDraft(path, deferred.draft.client ?? null).catch(() => undefined);
     }
     if (this.history && (this.history.path === entry.path || this.history.path.startsWith(entry.path + '/'))) {
       this.history = null;

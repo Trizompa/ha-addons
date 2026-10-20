@@ -124,6 +124,10 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
   elsewhere), EDITHA offers to recreate it with those changes; a draft of a file that can no longer
   be saved (for example it became read-only) is discarded with a notice. The same choice to
   recreate the file appears if you save a file that was renamed or deleted elsewhere meanwhile.
+- With EDITHA open in several windows or devices, each one keeps its own drafts: a window never
+  offers, discards or overwrites the drafts of another window that is still open. If a window
+  closes without saving (or a phone closes the app), another open window offers its changes
+  after about a minute and a half.
 - If EDITHA stops responding for a moment (add-on update or restart), keep the page open: the
   changes stay in the tabs and their drafts are written as soon as it comes back. **Reload page**
   in the banner writes the drafts first, and warns you if EDITHA is still unreachable.

@@ -10,7 +10,7 @@ import type {
   SnippetList,
   SecretKey,
   SearchResult,
-  Draft,
+  ListedDraft,
   Version,
 } from './types.js';
 import { connection, isPathFailure } from './connection.js';
@@ -108,6 +108,42 @@ async function request<T>(method: Method, url: string, body?: unknown): Promise<
   return data as T;
 }
 
+/**
+ * Identità di questa finestra per le bozze: resta uguale ricaricando la pagina, così le bozze
+ * lasciate dal caricamento precedente si riconoscono come proprie. In sessionStorage (che è per
+ * scheda) la si tiene solo mentre la pagina si chiude: una scheda duplicata, che ne copia il
+ * contenuto, così ne riceve una nuova invece di condividerla.
+ */
+export const CLIENT_ID: string = (() => {
+  let id = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  try {
+    const saved = sessionStorage.getItem('editha.client');
+    if (saved) id = saved;
+    sessionStorage.removeItem('editha.client');
+  } catch {
+    // Senza sessionStorage (navigazione privata rigida): un'identità nuova a ogni caricamento.
+  }
+  return id;
+})();
+
+/** Pagina di nuovo attiva (ripresa dalla cache del browser): l'identità non resta in sessionStorage. */
+export function forgetKeptClientId(): void {
+  try {
+    sessionStorage.removeItem('editha.client');
+  } catch {
+    // vedi sopra
+  }
+}
+
+/** Da chiamare mentre la pagina si chiude: il prossimo caricamento di questa scheda la ritrova. */
+export function keepClientId(): void {
+  try {
+    sessionStorage.setItem('editha.client', CLIENT_ID);
+  } catch {
+    // vedi sopra
+  }
+}
+
 const q = (path: string) => `?path=${encodeURIComponent(path)}`;
 
 export const api = {
@@ -157,10 +193,16 @@ export const api = {
     ),
   folders: () => request<{ folders: string[] }>('GET', 'api/folders'),
   secrets: (path: string) => request<{ secrets: SecretKey[] }>('GET', `api/secrets${q(path)}`),
-  drafts: () => request<{ drafts: Draft[] }>('GET', 'api/drafts'),
+  drafts: () => request<{ drafts: ListedDraft[] }>('GET', 'api/drafts'),
+  /** Bozza di questa finestra. */
   saveDraft: (path: string, content: string, etag: string) =>
-    request<{ path: string; savedAt: string }>('PUT', 'api/draft', { path, content, etag }),
-  deleteDraft: (path: string) => request<{ path: string }>('DELETE', `api/draft${q(path)}`),
+    request<{ path: string; savedAt: string }>('PUT', 'api/draft', { path, content, etag, client: CLIENT_ID }),
+  /** Senza `client` si elimina la bozza di questa finestra; `null`: bozza di una versione precedente. */
+  deleteDraft: (path: string, client: string | null | undefined = CLIENT_ID) =>
+    request<{ path: string }>('DELETE', `api/draft${q(path)}${client ? `&client=${encodeURIComponent(client)}` : ''}`),
+  /** Questa finestra è ancora aperta (`closing`: si sta chiudendo). */
+  draftsAlive: (closing = false) =>
+    request<{ ok: true }>('POST', 'api/drafts/alive', { client: CLIENT_ID, ...(closing ? { closing } : {}) }),
   health: () => request<{ status: string; build: string }>('GET', 'api/health'),
   ha: {
     status: () => request<{ available: boolean }>('GET', 'api/ha/status'),

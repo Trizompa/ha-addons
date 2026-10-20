@@ -470,6 +470,14 @@ test.describe('Cronologia e duplicazione', () => {
 });
 
 test.describe('Bozze (ED-14)', () => {
+  // Altri test possono lasciare file modificati e quindi bozze: qui si parte senza.
+  test.beforeEach(async ({ request }) => {
+    const drafts = (await (await request.get('api/drafts')).json()).drafts as { path: string; client?: string }[];
+    for (const d of drafts) {
+      await request.delete(`api/draft?path=${encodeURIComponent(d.path)}${d.client ? `&client=${encodeURIComponent(d.client)}` : ''}`);
+    }
+  });
+
   async function typeAndLeave(
     page: Page,
     request: import('@playwright/test').APIRequestContext,
@@ -535,6 +543,43 @@ test.describe('Bozze (ED-14)', () => {
     await dialogButton(again, 'Recupera').click();
     await expect(editor(again)).toContainText('bozza: si');
     await expect(activeTab(again)).toHaveClass(/dirty/);
+    // Recuperata: la bozza passa a questa finestra, e salvando sparisce.
+    await again.keyboard.press('Control+s');
+    await expect(activeTab(again)).not.toHaveClass(/dirty/);
+    await expect.poll(async () => (await (await request.get('api/drafts')).json()).drafts.length).toBe(0);
+  });
+
+  test('due finestre aperte: la seconda non propone né sovrascrive le bozze della prima', async ({ page, request }) => {
+    const p = 'drafts/due-finestre.yaml';
+    await openFile(page, p);
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('prima: si\n');
+    await expect.poll(async () => (await (await request.get('api/drafts')).json()).drafts.length).toBe(1);
+
+    // Seconda finestra (un'altra scheda): nessuna domanda sulle bozze della prima, ancora aperta.
+    const other = await page.context().newPage();
+    await other.goto('./');
+    await expect(other.locator('editha-file-tree')).toBeVisible();
+    await other.waitForTimeout(1500);
+    await expect(other.locator('editha-dialog dialog[open]')).toHaveCount(0);
+
+    // Anche la seconda modifica lo stesso file: le due bozze restano separate.
+    await openFile(other, p);
+    await editor(other).click();
+    await other.keyboard.press('Control+End');
+    await other.keyboard.type('seconda: si\n');
+    await expect.poll(async () => (await (await request.get('api/drafts')).json()).drafts.length).toBe(2);
+    const contents = (await (await request.get('api/drafts')).json()).drafts.map((d: { content: string }) => d.content).sort();
+    expect(contents).toEqual(['stato: salvato\nprima: si\n', 'stato: salvato\nseconda: si\n']);
+
+    // Pulizia: le due finestre scartano le proprie modifiche.
+    for (const w of [page, other]) {
+      await w.keyboard.press('Alt+w');
+      await dialogButton(w, 'Non salvare').click();
+    }
+    await expect.poll(async () => (await (await request.get('api/drafts')).json()).drafts.length).toBe(0);
+    await other.close();
   });
 
   test('la bozza di un file cancellato nel frattempo si può ricreare', async ({ page, request }) => {

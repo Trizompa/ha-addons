@@ -141,6 +141,30 @@ describe('API', () => {
     assert.deepEqual((await call({ method: 'GET', url: '/api/drafts' })).json(), { drafts: [] });
   });
 
+  it('bozze per finestra: due finestre non si sovrascrivono, e si sa quali sono ancora aperte', async () => {
+    const put = (client: string, content: string) =>
+      call({ method: 'PUT', url: '/api/draft', payload: { path: 'a.yaml', content, etag: 'e', client } });
+    await call({ method: 'POST', url: '/api/drafts/alive', payload: { client: 'w1' } });
+    await call({ method: 'POST', url: '/api/drafts/alive', payload: { client: 'w2' } });
+    await put('w1', 'uno\n');
+    await put('w2', 'due\n');
+    let list = (await call({ method: 'GET', url: '/api/drafts' })).json().drafts;
+    assert.equal(list.length, 2);
+    assert.deepEqual(list.map((d: { content: string }) => d.content).sort(), ['due\n', 'uno\n']);
+    assert.ok(list.every((d: { live: boolean }) => d.live));
+    // La prima finestra si chiude: le sue bozze si possono proporre, quelle dell'altra no.
+    await call({ method: 'POST', url: '/api/drafts/alive', payload: { client: 'w1', closing: true } });
+    list = (await call({ method: 'GET', url: '/api/drafts' })).json().drafts;
+    assert.deepEqual(
+      list.map((d: { client: string; live: boolean }) => [d.client, d.live]).sort(),
+      [['w1', false], ['w2', true]],
+    );
+    await call({ method: 'DELETE', url: '/api/draft?path=a.yaml&client=w1' });
+    list = (await call({ method: 'GET', url: '/api/drafts' })).json().drafts;
+    assert.deepEqual(list.map((d: { client: string }) => d.client), ['w2']);
+    await call({ method: 'DELETE', url: '/api/draft?path=a.yaml&client=w2' });
+  });
+
   it('crea, rinomina ed elimina', async () => {
     const created = await call({
       method: 'POST',

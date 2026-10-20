@@ -131,6 +131,10 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
   bozza di un file che non si può più salvare (per esempio è diventato di sola lettura) viene
   scartata con un avviso. La stessa scelta di ricreare il file compare se salvi un file che nel
   frattempo è stato rinominato o eliminato da un'altra parte.
+- Con EDITHA aperta in più finestre o dispositivi, ognuno tiene le sue bozze: una finestra non
+  propone, scarta o sovrascrive mai le bozze di un'altra ancora aperta. Se una finestra si chiude
+  senza salvare (o il telefono chiude l'app), un'altra finestra aperta propone le sue modifiche
+  dopo circa un minuto e mezzo.
 - Se EDITHA smette di rispondere per un momento (aggiornamento o riavvio dell'add-on), lascia la
   pagina aperta: le modifiche restano nelle tab e le bozze si scrivono appena torna. **Ricarica la
   pagina** nel banner scrive prima le bozze, e avvisa se EDITHA non risponde ancora.

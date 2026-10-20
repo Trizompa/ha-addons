@@ -42,6 +42,7 @@ const files = {
   'drafts/scarta.yaml': 'stato: salvato\n',
   'drafts/sparisce.yaml': 'stato: salvato\n',
   'drafts/dopo.yaml': 'stato: salvato\n',
+  'drafts/due-finestre.yaml': 'stato: salvato\n',
   'crlf/windows.yaml': 'a: 1\r\nb: 2\r\n',
   'crlf/misto.yaml': 'a: 1\r\nb: 2\nc: 3\n',
   'dup/originale.yaml': 'copia: no\n',

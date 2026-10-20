@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.22.3
+
+- **Più finestre o dispositivi aperti insieme**: ognuno tiene le sue bozze delle modifiche non salvate. Una finestra non propone, non scarta e non sovrascrive più le bozze di un'altra ancora aperta (per esempio EDITHA sul PC e sul telefono). Ricaricando la pagina le proprie bozze vengono riconosciute e proposte come prima.
+- Se una finestra si chiude senza salvare, o il telefono chiude l'app all'improvviso, un'altra finestra aperta propone le sue modifiche dopo circa un minuto e mezzo; la domanda non compare nelle schede nascoste e non interrompe un file su cui stai già lavorando.
+- Dopo un riavvio dell'add-on le bozze delle finestre ancora aperte non vengono scambiate per abbandonate.
+- Compilazione dell'interfaccia: niente più errore di esbuild nel registro quando l'output va su un file.
+
 ## 0.22.2
 
 - Bozze: se all'apertura rispondi con Esc alla domanda sulle modifiche non salvate, le bozze restano davvero per dopo. Prima la prima modifica allo stesso file le sostituiva; ora, alla prima modifica di uno di quei file, EDITHA chiede se recuperarle o scartarle.

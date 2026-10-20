@@ -342,6 +342,8 @@ export const it = {
   'drafts.title': 'Modifiche non salvate',
   'drafts.messageOne': 'Editha ha conservato modifiche non salvate di un file, rimaste in sospeso quando la pagina è stata chiusa. Vuoi recuperarle? Torneranno nella sua tab, da salvare o scartare.',
   'drafts.messageMany': 'Editha ha conservato modifiche non salvate di {n} file, rimaste in sospeso quando la pagina è stata chiusa. Vuoi recuperarle? Torneranno nelle loro tab, da salvare o scartare.',
+  'drafts.otherOne': 'Un\'altra finestra di Editha si è chiusa lasciando modifiche non salvate di un file. Vuoi recuperarle qui? Torneranno nella sua tab, da salvare o scartare.',
+  'drafts.otherMany': 'Un\'altra finestra di Editha si è chiusa lasciando modifiche non salvate di {n} file. Vuoi recuperarle qui? Torneranno nelle loro tab, da salvare o scartare.',
   'drafts.recover': 'Recupera',
   'drafts.discard': 'Scarta',
   'drafts.recovered': 'Modifiche recuperate: salva per tenerle',
