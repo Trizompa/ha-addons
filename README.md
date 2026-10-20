@@ -25,7 +25,7 @@ alias) and previews images and PDFs.
 | ![Search in all files](docs/images/search.png) | ![File history](docs/images/history.png) |
 
 - 📖 [Documentation](editha/DOCS.md) · [Documentazione in italiano](editha/DOCS.it.md)
-- 📝 [Changelog](editha/CHANGELOG.md)
+- 📝 [Changelog](editha/CHANGELOG.md) · [in italiano](editha/CHANGELOG.it.md)
 
 ## Installation
 

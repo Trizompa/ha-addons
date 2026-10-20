@@ -7,7 +7,9 @@ Promemoria per il manutentore. Le voci con ☐ si fanno una volta sola, al primo
 
 1. `version` in `editha/config.yaml` aumentata (MAJOR.MINOR.PATCH: PATCH per correzioni, MINOR per
    funzioni nuove, MAJOR per cambiamenti che rompono qualcosa).
-2. Voce in `editha/CHANGELOG.md` con lo stesso numero (`## 1.0.0`).
+2. Voce con lo stesso numero (`## 1.0.0`) in `editha/CHANGELOG.md` (inglese: è quella che Home
+   Assistant mostra nella finestra di aggiornamento e che finisce nella release) e in
+   `editha/CHANGELOG.it.md` (italiano).
 3. Documentazione aggiornata se cambia qualcosa che l'utente vede (`editha/DOCS.md` e
    `editha/DOCS.it.md`). Se cambia l'aspetto, rigenerare le immagini (vedi CONTRIBUTING.md).
 4. CI verde su GitHub.
@@ -51,5 +53,3 @@ serve solo alla pagina delle release su GitHub.
   dispositivo a ogni installazione o aggiornamento (qualche minuto su un Raspberry). Pubblicando le
   immagini già costruite, l'aggiornamento diventa un semplice download. Richiede un workflow in
   più e la riga `image:` in `config.yaml`.
-- **CHANGELOG in inglese** dalla 1.0.0, se il pubblico diventa internazionale (Home Assistant lo
-  mostra nella finestra di aggiornamento).

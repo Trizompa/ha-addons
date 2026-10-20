@@ -1,452 +1,454 @@
 # Changelog
 
+Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
+
 ## 0.35.0
 
-- **Git, cartelle apribili**: la freccetta accanto a una cartella nuova mostra i suoi file, ognuno con la sua spunta e il suo occhio barrato. Così puoi mettere nel commit, o escludere per sempre, solo alcuni file di una cartella. La spunta della cartella diventa "in parte" e il conteggio dice quanti file entrano (per esempio `3 di 8 file`). Si vedono al massimo 200 file per cartella: gli altri entrano solo con la cartella intera.
-- Barra dei pulsanti: senza un file aperto, i pulsanti **A capo automatico**, **Schema del file** e **Inserisci entità o snippet** sono spenti, come già ricerca e anteprima template.
-- Documentazione in inglese: ora si vedono anche le immagini.
+- **Git, expandable folders**: the arrow next to a new folder shows its files, each with its own checkbox and crossed-out eye. This way you can put only some files of a folder into the commit, or exclude them for good. The folder's checkbox becomes "partial" and the count says how many files go in (for example `3 of 8 files`). At most 200 files per folder are shown: the others go in only with the whole folder.
+- Toolbar: with no file open, the **Word wrap**, **File outline** and **Insert entity or snippet** buttons are turned off, like search and template preview already were.
+- English documentation: images now show up too.
 
 ## 0.34.0
 
-- **ZIP senza password**: scaricando una cartella come zip, `secrets.yaml` e le sue copie restano sempre fuori, ed EDITHA lo dice con un avviso. Il file da solo si scarica come prima.
-- Git: dopo un commit, il primo file salvato compare già spuntato (prima arrivava senza spunta e il pulsante diceva «Commit (0 file)»).
-- Documentazione: immagini rifatte con l'interfaccia di oggi, più le nuove per l'anteprima template e il pannello Git; requisiti riordinati.
+- **ZIP without passwords**: when you download a folder as a zip, `secrets.yaml` and its copies are always left out, and EDITHA says so with a notice. The file on its own downloads as before.
+- Git: after a commit, the first file you save appears already checked (before, it arrived unchecked and the button said "Commit (0 files)").
+- Documentation: images redone with today's interface, plus new ones for the template preview and the Git panel; requirements reordered.
 
 ## 0.33.0
 
-- L'anteprima template non è più nel menu di Home Assistant (che ora ha solo verifica, ricarica e riavvio): resta il pulsante `{}` nella barra e Alt+T.
-- Il pulsante **Cronologia del file** nella barra si comporta come gli altri: resta evidenziato mentre la cronologia è aperta e un secondo clic la chiude.
-- Pannello Git: la legenda sta in un riquadro, una voce per riga (spunta, lettere N/M/E, occhio barrato, confronto); tolta la frase sul repository che resta in locale.
-- Pagina iniziale: solo le scorciatoie, senza logo e nome ripetuti. Finestra Informazioni: tolta la riga Cronologia (lo spazio della cronologia si apre dal pannello Cronologia).
-- Il motto è tra virgolette: “Every Day I Tweak HA”.
+- The template preview is no longer in the Home Assistant menu (which now only has check, reload and restart): the `{}` button in the toolbar and Alt+T remain.
+- The **File history** button in the toolbar behaves like the others: it stays highlighted while the history is open, and a second click closes it.
+- Git panel: the legend is in a box, one entry per line (checkbox, letters N/M/D, crossed-out eye, compare); removed the sentence about the repository staying local.
+- Start page: only the shortcuts, without the repeated logo and name. About window: removed the History line (the history space window opens from the History panel).
+- The motto is in quotes: “Every Day I Tweak HA”.
 
 ## 0.32.0
 
-- **Git, Esclusi**: nel pannello Git una sezione elenca file e cartelle esclusi con l'occhio barrato; **Includi** li fa ricomparire, senza aprire il `.gitignore` a mano. Le righe aggiunte stanno sotto un titolo nel `.gitignore`.
-- Sotto l'elenco delle modifiche una legenda spiega le lettere (N nuovo, M modificato, E eliminato), la spunta (cosa entra in questo commit) e l'occhio barrato (escludi per sempre).
-- Il pulsante di confronto compare solo quando c'è un commit con cui confrontare (non prima del primo commit né per i file nuovi).
-- Il `.gitignore` di base dei repository nuovi esclude anche i file temporanei lasciati da Home Assistant (`.nome.tmp.…`); in un repository già creato si escludono con l'occhio barrato.
-- Se dopo «Includi» un'altra regola del `.gitignore` esclude ancora lo stesso file, EDITHA lo dice.
+- **Git, Excluded**: in the Git panel a section lists the files and folders excluded with the crossed-out eye; **Include** brings them back, without opening `.gitignore` by hand. The added lines go under a heading in `.gitignore`.
+- Below the list of changes a legend explains the letters (N new, M modified, D deleted), the checkbox (what goes into this commit) and the crossed-out eye (exclude for good).
+- The compare button only appears when there is a commit to compare with (not before the first commit, nor for new files).
+- The basic `.gitignore` of new repositories also excludes the temporary files left by Home Assistant (`.name.tmp.…`); in an existing repository you exclude them with the crossed-out eye.
+- If after "Include" another `.gitignore` rule still excludes the same file, EDITHA says so.
 
 ## 0.31.0
 
-- **Git, primo commit più semplice**: una cartella che git non ha mai visto è ora una riga sola con il numero di file (per esempio `custom_components/ · 1450 file`), invece di migliaia di righe. Il commit di una cartella include i suoi file, tranne segreti e dati interni.
-- **Escludi**: l'occhio barrato accanto a un file o una cartella nuovi li aggiunge al `.gitignore`, così spariscono dall'elenco e da tutti i commit.
-- Al primo commit un avviso suggerisce di escludere prima le cartelle che non servono; con più di 2000 righe il commit è bloccato finché non si escludono cartelle.
-- Sul telefono il pannello Git non è più trasparente.
+- **Git, simpler first commit**: a folder git has never seen is now a single row with the number of files (for example `custom_components/ · 1450 files`), instead of thousands of rows. Committing a folder includes its files, except secrets and internal data.
+- **Exclude**: the crossed-out eye next to a new file or folder adds it to `.gitignore`, so it disappears from the list and from all commits.
+- On the first commit a notice suggests excluding the folders you don't need first; with more than 2000 rows the commit is blocked until you exclude some folders.
+- On phones the Git panel is no longer transparent.
 
 ## 0.30.0
 
-- **Git locale completo.** Nel pannello Git:
-  - il pulsante del confronto accanto a ogni file cambiato: le differenze rispetto all'ultimo commit, nella vista di confronto;
-  - **Storia dei commit**: l'elenco dei commit, dal più recente; un clic mostra i file toccati;
-  - per ogni file di un commit puoi **confrontare** quella versione con il file attuale o **ripristinarla** (con conferma). Il ripristino passa dal salvataggio di EDITHA, quindi il contenuto attuale resta nella cronologia; un file che ora non c'è viene ricreato.
-- Segreti e dati interni di Home Assistant non si mostrano né si ripristinano dal repository.
-- **Sicurezza** (riguarda anche la 0.28 e la 0.29): un `.git/config` scritto da un altro programma poteva far partire un comando chiedendo a git di scaricare oggetti mancanti. Ora git non usa mai la rete né scarica oggetti, in nessun caso.
-- Il contenuto dei file dal repository si legge in modo rigoroso: un file non UTF-8 o un collegamento non vengono mostrati né ripristinati come testo rovinato.
+- **Full local Git.** In the Git panel:
+  - the compare button next to each changed file: the differences from the last commit, in the compare view;
+  - **Commit history**: the list of commits, newest first; a click shows the files touched;
+  - for each file in a commit you can **compare** that version with the current file or **restore** it (with confirmation). The restore goes through EDITHA's normal save, so the current content stays in the history; a file that no longer exists is recreated.
+- Secrets and Home Assistant internal data are never shown or restored from the repository.
+- **Security** (also affects 0.28 and 0.29): a `.git/config` written by another program could start a command by asking git to download missing objects. Now git never uses the network or downloads objects, in any case.
+- File contents from the repository are read strictly: a non-UTF-8 file or a link is not shown or restored as garbled text.
 
 ## 0.29.0
 
-- **Git locale: modifiche e commit.** Il pannello Git ora mostra i file cambiati dall'ultimo commit (**M** modificato, **N** nuovo, **E** eliminato), ognuno con una casella. Scrivi un messaggio e premi **Commit** per salvare una «fotografia» dei file spuntati. L'elenco si aggiorna da solo quando salvi un file con il pannello aperto; un clic sul nome apre il file.
-- Non entrano mai in un commit, anche se il `.gitignore` è stato cambiato o manca: `secrets.yaml` e copie, dati interni e credenziali di Home Assistant (`.storage`, `.cloud`, token, database), file con un filtro di git e altri repository dentro `/config`. Compaiono con un lucchetto e il motivo.
-- I file nuovi che compaiono mentre il pannello è aperto arrivano senza spunta. L'elenco si aggiorna anche dopo aver creato, eliminato, spostato o caricato file.
-- Sicurezza: EDITHA lancia git con i programmi esterni spenti (filtri, hook, firme, pager…), anche se `.git/config` ne indica.
+- **Local Git: changes and commits.** The Git panel now shows the files changed since the last commit (**M** modified, **N** new, **D** deleted), each with a checkbox. Write a message and press **Commit** to save a "snapshot" of the checked files. The list updates by itself when you save a file with the panel open; a click on the name opens the file.
+- These never go into a commit, even if `.gitignore` was changed or is missing: `secrets.yaml` and its copies, Home Assistant internal data and credentials (`.storage`, `.cloud`, tokens, databases), files with a git filter, and other repositories inside `/config`. They appear with a padlock and the reason.
+- New files that appear while the panel is open arrive unchecked. The list also updates after creating, deleting, moving or uploading files.
+- Security: EDITHA runs git with external programs turned off (filters, hooks, signing, pager…), even if `.git/config` sets them.
 
 ## 0.28.0
 
-- **Git locale, primo passo**: nuovo pulsante **Git** in alto nell'esplora file. Apre un pannello che, se in `/config` non c'è ancora un repository, lo crea con **Inizializza repository Git** (ramo `main`) insieme a un `.gitignore` di base che tiene fuori `secrets.yaml` e copie, i dati interni di Home Assistant, database, registri e file temporanei. Un repository o un `.gitignore` esistenti si usano così come sono. Tutto resta sul tuo Home Assistant: niente push né pull. Stato, differenze, commit, storia e ripristino arrivano nei prossimi passi.
-- Il programma git è ora incluso nell'add-on.
+- **Local Git, first step**: new **Git** button at the top of the file explorer. It opens a panel that, if there is no repository in `/config` yet, creates one with **Initialise Git repository** (branch `main`) together with a basic `.gitignore` that keeps out `secrets.yaml` and its copies, Home Assistant internal data, databases, logs and temporary files. An existing repository or `.gitignore` is used as it is. Everything stays on your Home Assistant: no push or pull. Status, differences, commits, history and restore come in the next steps.
+- The git program is now included in the add-on.
 
 ## 0.27.1
 
-- **Anteprima template**: con il pannello aperto basta fare clic (o spostare il cursore) su un altro template, anche in un altro file, e l'anteprima si aggiorna da sola. Su una riga senza template resta il risultato di prima; muovendosi dentro lo stesso template Home Assistant non viene richiamato. Un testo selezionato si manda solo con Alt+T o il pulsante; nei file YAML molto grandi l'aggiornamento automatico è spento per non rallentare l'editor. Dopo un errore di connessione si riprova spostando il cursore.
+- **Template preview**: with the panel open, just click (or move the cursor) on another template, even in another file, and the preview updates by itself. On a line without a template the previous result stays; moving within the same template doesn't call Home Assistant again. Selected text is only sent with Alt+T or the button; in very large YAML files automatic updating is turned off so the editor doesn't slow down. After a connection error, moving the cursor tries again.
 
 ## 0.27.0
 
-- **Anteprima template**, secondo passo:
-  - pulsante nella barra (le parentesi graffe), oltre ad Alt+T e al menu di Home Assistant;
-  - l'anteprima si aggiorna da sola mentre modifichi il template;
-  - pulsante **Copia** per il risultato;
-  - avviso se il template cita entità che non esistono (Home Assistant in quel caso risponde `unknown` senza errore);
-  - per gli errori di sintassi EDITHA cerca la riga (blocco non chiuso, `{{` aperto…) e offre **Vai alla riga N**.
+- **Template preview**, second step:
+  - button in the toolbar (the curly braces), in addition to Alt+T and the Home Assistant menu;
+  - the preview updates by itself while you edit the template;
+  - **Copy** button for the result;
+  - a warning if the template refers to entities that don't exist (in that case Home Assistant answers `unknown` with no error);
+  - for syntax errors EDITHA finds the line (unclosed block, open `{{`…) and offers **Go to line N**.
 
 ## 0.26.0
 
-- **Anteprima dei template Jinja**: con il cursore su un template (o selezionandolo) premi **Alt+T**, oppure scegli **Anteprima template** nel menu di Home Assistant. EDITHA manda a Home Assistant solo quel template, letto come lo legge HA (anche blocchi `|` e `>` e testo tra virgolette su più righe), e mostra il risultato in un pannello sotto l'editor: verde il risultato, rosso un errore di sintassi, arancione un errore di valutazione. Da `secrets.yaml` e dalle sue copie l'anteprima non parte mai.
+- **Jinja template preview**: with the cursor on a template (or with it selected) press **Alt+T**, or choose **Template preview** in the Home Assistant menu. EDITHA sends only that template to Home Assistant, read the way HA reads it (including `|` and `>` blocks and quoted text over several lines), and shows the result in a panel below the editor: green for the result, red for a syntax error, orange for an evaluation error. The preview never starts from `secrets.yaml` or its copies.
 
 ## 0.25.0
 
-- **Cancellare tutta la cronologia**: nel menu delle versioni da eliminare c'è la voce **tutte**. L'anteprima mostra quante versioni e quanto spazio, poi per confermare bisogna scrivere **CANCELLA** (il messaggio avvisa che è irreversibile). Vengono eliminati anche gli avanzi di salvataggi interrotti. Le versioni create dopo l'anteprima, i file in `/config` e le modifiche non salvate non vengono toccati; il registro dell'add-on annota la cancellazione.
-- Il menu ora dice per intero cosa elimina («più vecchie di 30 giorni», …).
+- **Delete the whole history**: the menu of versions to delete has an **all** entry. The preview shows how many versions and how much space, then to confirm you have to type **DELETE** (the message warns that it cannot be undone). Leftovers of interrupted saves are deleted too. Versions created after the preview, the files in `/config` and unsaved changes are not touched; the add-on log records the deletion.
+- The menu now says in full what it deletes ("older than 30 days", …).
 
 ## 0.24.0
 
-- **Pulizia della cronologia**: nella finestra *Cronologia: spazio e pulizia* puoi eliminare le versioni più vecchie di 7, 30, 90 giorni, un anno o una data a scelta. Prima **Anteprima** mostra quante versioni di quanti file se ne andrebbero e quanto spazio si libera, poi serve una conferma esplicita. Alla fine dice quanto spazio è stato liberato e il registro dell'add-on elenca cosa è stato eliminato. I file in `/config` non vengono mai toccati.
+- **History cleanup**: in the *History: space and cleanup* window you can delete versions older than 7, 30 or 90 days, a year, or a date of your choice. First **Preview** shows how many versions of how many files would go and how much space would be freed, then an explicit confirmation is required. At the end it says how much space was freed, and the add-on log lists what was deleted. Files in `/config` are never touched.
 
 ## 0.23.0
 
-- **Spazio occupato dalla cronologia**: nuova finestra *Cronologia: spazio e pulizia*, da **Informazioni** (riga *Cronologia*) o dal pulsante a forma di disco nell'intestazione della cronologia. Mostra quanto spazio occupa davvero sul disco la cronologia, in tutto e file per file (dai più pesanti), con il numero di versioni, la data dell'ultima e i file che non esistono più. Per ora si guarda soltanto: la pulizia arriva nei prossimi passi.
-- Dimensioni scritte con la virgola in italiano e fino ai GB.
+- **Space taken by the history**: new *History: space and cleanup* window, from **About** (*History* line) or from the disk-shaped button in the history header. It shows how much disk space the history really takes, in total and file by file (largest first), with the number of versions, the date of the latest one and the files that no longer exist. For now it only shows: cleanup comes in the next steps.
+- Sizes are written with a decimal comma in Italian and go up to GB.
 
 ## 0.22.4
 
-- Se due finestre recuperano nello stesso momento le modifiche lasciate da una terza finestra chiusa, ora le ottiene una sola: l'altra non apre niente e avvisa che sono già state recuperate (o scartate) altrove. Prima finivano in entrambe.
+- If two windows recover at the same moment the changes left by a third, closed window, now only one of them gets them: the other opens nothing and says they have already been recovered (or discarded) elsewhere. Before, they ended up in both.
 
 ## 0.22.3
 
-- **Più finestre o dispositivi aperti insieme**: ognuno tiene le sue bozze delle modifiche non salvate. Una finestra non propone, non scarta e non sovrascrive più le bozze di un'altra ancora aperta (per esempio EDITHA sul PC e sul telefono). Ricaricando la pagina le proprie bozze vengono riconosciute e proposte come prima.
-- Se una finestra si chiude senza salvare, o il telefono chiude l'app all'improvviso, un'altra finestra aperta propone le sue modifiche dopo circa un minuto e mezzo; la domanda non compare nelle schede nascoste e non interrompe un file su cui stai già lavorando.
-- Dopo un riavvio dell'add-on le bozze delle finestre ancora aperte non vengono scambiate per abbandonate.
-- Compilazione dell'interfaccia: niente più errore di esbuild nel registro quando l'output va su un file.
+- **Several windows or devices open at once**: each one keeps its own drafts of unsaved changes. A window no longer offers, discards or overwrites the drafts of another window that is still open (for example EDITHA on the PC and on the phone). When you reload the page, your own drafts are recognised and offered as before.
+- If a window closes without saving, or the phone suddenly closes the app, another open window offers its changes after about a minute and a half; the question doesn't appear in hidden tabs and doesn't interrupt a file you are already working on.
+- After an add-on restart, the drafts of windows that are still open are not mistaken for abandoned ones.
+- Interface build: no more esbuild error in the log when the output goes to a file.
 
 ## 0.22.2
 
-- Bozze: se all'apertura rispondi con Esc alla domanda sulle modifiche non salvate, le bozze restano davvero per dopo. Prima la prima modifica allo stesso file le sostituiva; ora, alla prima modifica di uno di quei file, EDITHA chiede se recuperarle o scartarle.
-- La domanda che compare mentre scrivi ignora i tasti battuti per inerzia (Tab, spazio, Invio) finché non fai una pausa: non si può più scartare una bozza per sbaglio.
-- Le bozze in sospeso seguono il file se lo rinomini o lo sposti, e vengono tolte se lo elimini.
+- Drafts: if at startup you answer the question about unsaved changes with Esc, the drafts really are kept for later. Before, the first change to the same file replaced them; now, at the first change to one of those files, EDITHA asks whether to recover or discard them.
+- The question that appears while you type ignores keys pressed out of momentum (Tab, space, Enter) until you pause: you can no longer discard a draft by mistake.
+- Pending drafts follow the file if you rename or move it, and are removed if you delete it.
 
 ## 0.22.1
 
-- Un file con a capo misti (in parte Windows, in parte Linux) si vede di nuovo a righe normali: con la 0.22.0 alcune righe apparivano incollate. Questi file si salvano con gli a capo Linux; quelli tutti Windows restano Windows.
-- Ricaricando un file dal disco (dopo una sostituzione, un ripristino o un conflitto) gli a capo non vengono più cambiati di nascosto.
-- Esclusione dei segreti più precisa: `secret_sensori.yaml` o `secret-porta.yaml` tornano a essere file normali nella ricerca; restano esclusi `secrets*.yaml` e le copie di `secret.yaml`.
+- A file with mixed line endings (partly Windows, partly Linux) shows normal lines again: with 0.22.0 some lines appeared joined together. These files are saved with Linux line endings; all-Windows files stay Windows.
+- Reloading a file from disk (after a replace, a restore or a conflict) no longer silently changes the line endings.
+- More precise exclusion of secrets: `secret_sensori.yaml` or `secret-porta.yaml` are normal files in search again; `secrets*.yaml` and copies of `secret.yaml` stay excluded.
 
 ## 0.22.0
 
-Secondo giro di revisione completa, più approfondito: soprattutto sicurezza dei dati.
+Second round of complete review, more in-depth: mostly data safety.
 
-**Nessuna modifica persa**
-- Eliminare un file o una cartella oltre i 50 MB, o sostituirlo caricandone uno nuovo, non lascia copia di sicurezza: ora EDITHA lo dice **prima** e chiede una seconda conferma (prima la conferma prometteva una copia che non veniva fatta).
-- Una copia conservata all'eliminazione si può ripristinare fino a 50 MB (prima solo fino a 5 MB).
-- Se Home Assistant (o un altro programma) riscrive un file proprio mentre lo salvi, EDITHA non sovrascrive più la sua modifica: chiede cosa fare, come per ogni conflitto.
-- Se EDITHA non risponde per un momento (aggiornamento, riavvio), le modifiche scritte nel frattempo vengono conservate appena torna; "Ricarica la pagina" scrive prima le bozze e avvisa se le modifiche andrebbero perse.
-- Le bozze si salvano anche scrivendo di continuo, senza pause.
-- Bozza di un file rinominato o eliminato da un'altra parte: EDITHA propone di **ricrearlo** con le modifiche invece di scartarle. Lo stesso al salvataggio di un file sparito nel frattempo.
-- La domanda sulle bozze arriva prima di riaprire le tab, così non si sovrascrive una bozza scrivendo subito.
-- I file con a capo di Windows (CRLF) restano così al salvataggio (prima diventavano a capo Linux).
-- Ctrl+S su un file non modificato non propone più di sovrascrivere il file cambiato su disco; una ricarica automatica non cancella più il testo appena scritto, e mantiene cursore e posizione.
-- Chiudendo una tab con "Salva", se nel frattempo hai scritto ancora, la tab resta aperta.
+**No lost changes**
+- Deleting a file or folder over 50 MB, or replacing it by uploading a new one, leaves no safety copy: now EDITHA says so **beforehand** and asks for a second confirmation (before, the confirmation promised a copy that was not made).
+- A copy kept on deletion can be restored up to 50 MB (before, only up to 5 MB).
+- If Home Assistant (or another program) rewrites a file right while you save it, EDITHA no longer overwrites its change: it asks what to do, as for any conflict.
+- If EDITHA stops responding for a moment (update, restart), changes written in the meantime are kept as soon as it is back; "Reload page" writes the drafts first and warns if changes would be lost.
+- Drafts are saved even when you type continuously, without pauses.
+- Draft of a file renamed or deleted elsewhere: EDITHA offers to **recreate** it with the changes instead of discarding them. The same when saving a file that has disappeared in the meantime.
+- The question about drafts comes before the tabs reopen, so you don't overwrite a draft by typing right away.
+- Files with Windows line endings (CRLF) stay that way when saved (before, they became Linux line endings).
+- Ctrl+S on an unmodified file no longer offers to overwrite the file changed on disk; an automatic reload no longer erases text you just typed, and keeps the cursor and scroll position.
+- When you close a tab with "Save", if you kept typing in the meantime, the tab stays open.
 
-**Cronologia più robusta**
-- Niente versioni doppie (salvataggi falliti e ripetuti, sostituzioni che non cambiano niente, ripristina e annulla): le versioni vere non vengono più spinte fuori dalle 10 conservate.
-- Con l'orologio che torna indietro, o il disco pieno, non si perdono versioni e non restano copie troncate; le copie vengono scritte su disco prima di eliminare o sovrascrivere.
+**Sturdier history**
+- No duplicate versions (failed and repeated saves, replaces that change nothing, restore and undo): real versions are no longer pushed out of the 10 kept.
+- If the clock goes back, or the disk is full, no versions are lost and no truncated copies remain; copies are written to disk before deleting or overwriting.
 
-**Ricerca, segreti e download**
-- Le copie di `secrets.yaml` sono escluse dalla ricerca in tutte le forme (anche `secrets.yaml_copia.bak` creato da "Duplica", `secrets.yaml.old`, `secret.yaml`…), e le cartelle `.storage`, `.cloud` e `.git` vengono saltate anche dentro altre cartelle.
-- "Parola intera" funziona con le lettere accentate (cercando "caff" non trova più "Caffè"); le espressioni regolari non spezzano più le emoji.
-- La conferma di "Sostituisci" indica il numero giusto di occorrenze anche oltre le 200 mostrate, con singolare e plurale corretti; un'espressione regolare sbagliata viene segnalata subito.
-- Lo ZIP di una cartella non blocca più EDITHA per secondi, e i nomi strani vengono resi innocui.
+**Search, secrets and downloads**
+- Copies of `secrets.yaml` are excluded from search in every form (including `secrets.yaml_copy.bak` created by "Duplicate", `secrets.yaml.old`, `secret.yaml`…), and the `.storage`, `.cloud` and `.git` folders are skipped even inside other folders.
+- "Whole word" works with accented letters (searching for "caff" no longer finds "Caffè"); regular expressions no longer split emoji.
+- The "Replace" confirmation shows the right number of occurrences even beyond the 200 shown, with correct singular and plural; a wrong regular expression is reported right away.
+- The ZIP of a folder no longer freezes EDITHA for seconds, and odd names are made harmless.
 
-**Controllo YAML ed editor**
-- Nuovi errori spiegati: tab e spazi "invisibili" incollati da una pagina web, tag sconosciuti (`!secrets` → "forse intendevi !secret?"), apostrofo dentro `'…'`, due punti dentro un testo senza virgolette, `\d` tra virgolette doppie, `{% %}` all'inizio di un valore, spazio mancante dopo i due punti (`name:Casa`).
-- Il JSON incollato con le tab non viene più segnalato come errore; nella cartella `esphome/` i tag di ESPHome (`!lambda`, `!extend`…) sono accettati.
-- I file oltre 1 MB non vengono controllati né schematizzati (prima l'interfaccia si bloccava per secondi); la barra in basso lo indica.
-- Le icone `mdi:` hanno tutte il nome giusto (37 erano sbagliate, es. `molecule-co2`).
-- Uno snippet salvato da una selezione mantiene il rientro giusto.
-- Cambiando lingua i messaggi del controllo YAML si aggiornano subito.
+**YAML check and editor**
+- New explained errors: "invisible" tabs and spaces pasted from a web page, unknown tags (`!secrets` → "did you mean !secret?"), an apostrophe inside `'…'`, a colon inside unquoted text, `\d` inside double quotes, `{% %}` at the start of a value, missing space after the colon (`name:Casa`).
+- JSON pasted with tabs is no longer reported as an error; in the `esphome/` folder ESPHome tags (`!lambda`, `!extend`…) are accepted.
+- Files over 1 MB are not checked or outlined (before, the interface froze for seconds); the bottom bar says so.
+- `mdi:` icons all have the right name (37 were wrong, e.g. `molecule-co2`).
+- A snippet saved from a selection keeps the right indentation.
+- When you change language, the YAML check messages update right away.
 
-**Tastiera e interfaccia**
-- Windows: AltGr+S (tastiere polacca, rumena, ungherese…) scrive di nuovo la lettera invece di salvare tutto. Le scorciatoie seguono la lettera della tastiera (AZERTY compresa).
-- Alt+W chiude il file della colonna che stai usando; Esc su un menu chiude solo il menu; con una finestra aperta le scorciatoie non agiscono sui file sotto.
-- Sul Mac i suggerimenti dei pulsanti mostrano ⌘, ⌥ e ⇧ (Ripeti è ⌘⇧Z).
-- Cliccando due file di fila resta aperto l'ultimo cliccato.
-- Messaggi di errore tradotti anche in inglese; anteprima con errori precisi (file sparito, troppo grande).
+**Keyboard and interface**
+- Windows: AltGr+S (Polish, Romanian, Hungarian keyboards…) types the letter again instead of saving everything. Shortcuts follow the keyboard's letter (AZERTY included).
+- Alt+W closes the file of the column you are using; Esc on a menu closes only the menu; with a dialog open, shortcuts don't act on the files underneath.
+- On Mac, button tooltips show ⌘, ⌥ and ⇧ (Redo is ⌘⇧Z).
+- When you click two files in a row, the last one clicked stays open.
+- Error messages translated into English too; preview with precise errors (file gone, too large).
 
 ## 0.21.0
 
-Revisione completa del codice: tante piccole correzioni, nessuna funzione nuova di rilievo.
+Complete code review: many small fixes, no major new features.
 
-**Ricerca e sostituzione**
-- Sostituisci con espressioni regolari: `$1`, `$&`, `$<nome>` e le condizioni prima/dopo (lookaround) ora danno lo stesso risultato dell'anteprima.
-- Anche le copie di `secrets.yaml` (es. `secrets.yaml.bak`, `secrets_old.yaml`) e i collegamenti a `secrets.yaml` sono esclusi da ricerca e sostituzione.
-- Un file troppo grande viene saltato invece di bloccare tutto; un errore su un file non ferma gli altri; lo stesso file raggiunto da due percorsi viene modificato una volta sola.
-- Una nuova ricerca ferma quella ancora in corso.
+**Find and replace**
+- Replace with regular expressions: `$1`, `$&`, `$<name>` and before/after conditions (lookaround) now give the same result as the preview.
+- Copies of `secrets.yaml` (e.g. `secrets.yaml.bak`, `secrets_old.yaml`) and links to `secrets.yaml` are also excluded from search and replace.
+- A file that is too large is skipped instead of blocking everything; an error on one file doesn't stop the others; the same file reached through two paths is changed only once.
+- A new search stops the one still running.
 
-**File e cronologia**
-- Un salvataggio dentro una cartella che si sta eliminando o spostando aspetta la fine dell'operazione, invece di incrociarsi con essa.
-- Rinominare un file non fallisce più se non si riesce a spostare la sua cronologia.
-- Con il disco pieno la creazione di un file non lascia un file vuoto a metà.
-- Limiti di dimensione controllati anche alla creazione, alla sostituzione di un file caricato e al ripristino di una versione.
-- Lo scaricamento di una cartella con troppi elementi per uno ZIP dà un errore chiaro.
-- **Apri come testo** (menu del tasto destro) per i file SVG, che altrimenti si aprono in anteprima. "Apri a destra" non compare più per immagini e PDF.
+**Files and history**
+- A save inside a folder that is being deleted or moved waits for the operation to finish, instead of colliding with it.
+- Renaming a file no longer fails if its history cannot be moved.
+- With a full disk, creating a file no longer leaves a half-empty file behind.
+- Size limits are also checked when creating, when replacing an uploaded file and when restoring a version.
+- Downloading a folder with too many items for a ZIP gives a clear error.
+- **Open as text** (right-click menu) for SVG files, which otherwise open in preview. "Open on the right" no longer appears for images and PDFs.
 
-**Editor e controllo YAML**
-- Nuove spiegazioni: un modello `{{ … }}` usato senza virgolette all'inizio di un valore, una chiave che è una lista o un elenco, un alias `*nome` che non esiste.
-- Due chiavi doppie in punti diversi del file sono segnalate entrambe; al massimo 200 problemi per file.
-- Ctrl+clic: niente più collegamenti finti dentro le virgolette; `!include` in una lista `[a, b]` e percorsi che iniziano con `/config` funzionano.
-- Scorciatoie (Ctrl+S, Ctrl+F, Alt+W…) indipendenti dalla tastiera e dal Mac; Esc chiude, in quest'ordine, cronologia, confronto e anteprima, ma non mentre si scrive in un campo.
+**Editor and YAML check**
+- New explanations: a `{{ … }}` template used without quotes at the start of a value, a key that is a list or a block, an alias `*name` that doesn't exist.
+- Two duplicate keys in different places of the file are both reported; at most 200 problems per file.
+- Ctrl+click: no more fake links inside quotes; `!include` in a `[a, b]` list and paths starting with `/config` work.
+- Shortcuts (Ctrl+S, Ctrl+F, Alt+W…) independent of keyboard layout and Mac; Esc closes, in this order, history, compare and preview, but not while typing in a field.
 
-**Bozze e interfaccia**
-- Le modifiche non salvate vengono conservate in modo più affidabile chiudendo la pagina, anche nei file grandi.
-- La bozza di un file che nel frattempo è stato cancellato o non si può più salvare viene scartata con un avviso, invece di essere riproposta a ogni apertura.
-- Vista divisa: la barra in basso segue la colonna destra; aprendo un file a destra l'anteprima non la copre più.
-- Lo schema del file azzera il filtro quando cambi file; la cronologia ignora le risposte arrivate dopo la chiusura; il confronto si aggiorna subito.
-- Messaggi di errore più chiari ("non è un file", "anteprima non disponibile"…).
+**Drafts and interface**
+- Unsaved changes are kept more reliably when the page closes, even in large files.
+- The draft of a file that has been deleted in the meantime or can no longer be saved is discarded with a notice, instead of being offered again every time you open EDITHA.
+- Split view: the bottom bar follows the right column; opening a file on the right no longer hides it behind the preview.
+- The file outline clears its filter when you change file; the history ignores answers that arrive after it is closed; the compare view updates right away.
+- Clearer error messages ("not a file", "no preview for this file type"…).
 
 ## 0.20.2
 
-- Cronologia: se la finestra è già aperta e le si chiede un altro file, ora mostra le versioni di quel file (prima restavano quelle del file precedente). Una risposta lenta per il file di prima non può più sovrascrivere quella giusta.
-- Documentazione: anteprima e schema del file anche nella presentazione dell'add-on e nel README; Esc chiude anche l'anteprima.
+- History: if the window is already open and you ask it for another file, it now shows that file's versions (before, those of the previous file stayed). A slow answer for the previous file can no longer overwrite the right one.
+- Documentation: preview and file outline also in the add-on introduction and in the README; Esc also closes the preview.
 
 ## 0.20.1
 
-- Nell'albero le cartelle vuote non hanno più la freccia per espanderle: si vede subito che non contengono niente.
+- In the tree, empty folders no longer have the arrow to expand them: you can see right away that they contain nothing.
 
 ## 0.20.0
 
-- **Schema del file**: nuovo pulsante nella barra (elenco puntato) che apre, a fianco dell'editor, lo schema del file YAML. In `automations.yaml` c'è una voce per ogni automazione, indicata con il suo alias; in `scripts.yaml` una per script; in `configuration.yaml` e nei package le sezioni, con dentro automazioni, script e helper. Un clic porta alla voce; quella in cui si trova il cursore resta evidenziata e lo schema si aggiorna mentre scrivi. Con molte voci compare un filtro. Il pulsante accende e spegne lo schema, ed EDITHA ricorda la scelta. Non disponibile sul telefono.
+- **File outline**: new button in the toolbar (bulleted list) that opens the outline of the YAML file next to the editor. In `automations.yaml` there is an entry for each automation, shown by its alias; in `scripts.yaml` one per script; in `configuration.yaml` and in packages the sections, with the automations, scripts and helpers inside. A click takes you to the entry; the one where the cursor is stays highlighted and the outline updates while you type. With many entries a filter appears. The button turns the outline on and off, and EDITHA remembers the choice. Not available on phones.
 
 ## 0.19.1
 
-- L'anteprima di immagini e PDF ha la **sua tab** nella barra delle tab: si passa dall'anteprima ai file di testo e ritorno come tra tab normali, e la si chiude con la sua ×. La tab è una sola: la prossima immagine aperta la riusa. Chiudendo tutti i file di testo resta in primo piano l'anteprima.
-- Accanto alle dimensioni compare lo **zoom** (es. "588 × 900 px · 82%"): si vede subito se l'immagine è adattata alla finestra o a grandezza reale.
-- A grandezza reale l'immagine resta centrata invece di spostarsi a sinistra; se è più grande della finestra si scorre.
-- Con l'anteprima in primo piano, salva, annulla e le altre azioni dell'editor non agiscono più sul file di testo nascosto sotto; albero e barra in basso indicano l'immagine.
+- The preview of images and PDFs has **its own tab** in the tab bar: you switch from the preview to text files and back like between normal tabs, and close it with its ×. There is only one such tab: the next image you open reuses it. When you close all text files, the preview stays in front.
+- Next to the dimensions the **zoom** appears (e.g. "588 × 900 px · 82%"): you can see right away whether the image is fitted to the window or at actual size.
+- At actual size the image stays centred instead of moving to the left; if it is larger than the window, you scroll.
+- With the preview in front, save, undo and the other editor actions no longer act on the text file hidden underneath; the tree and the bottom bar point to the image.
 
 ## 0.19.0
 
-- **Anteprima di immagini e PDF**: cliccando nell'albero un'immagine (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG) o un PDF, EDITHA la mostra al posto dell'editor invece di dire che il file non è testo. In alto nome, dimensioni in pixel e pulsante per scaricarla; un clic sull'immagine passa alla grandezza reale e ritorno; le parti trasparenti si vedono su una scacchiera. Esc, la X o un clic su una tab riportano all'editor.
-- Nell'albero immagini e PDF hanno la loro icona.
-- Sicurezza: un'immagine SVG non può eseguire codice nemmeno se aperta direttamente.
+- **Image and PDF preview**: when you click an image (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG) or a PDF in the tree, EDITHA shows it in place of the editor instead of saying the file is not text. At the top: name, size in pixels and a button to download it; a click on the image switches to actual size and back; transparent parts are shown on a checkerboard. Esc, the X or a click on a tab take you back to the editor.
+- In the tree, images and PDFs have their own icon.
+- Security: an SVG image cannot run code even when opened directly.
 
 ## 0.18.2
 
-- Descrizione dell'add-on nel negozio: "Smart file editor for Home Assistant". Il motto "Every Day I Tweak HA" resta nell'interfaccia, nel logo e nella documentazione.
+- Add-on description in the store: "Smart file editor for Home Assistant". The motto "Every Day I Tweak HA" stays in the interface, the logo and the documentation.
 
 ## 0.18.1
 
-- Nuovo file e nuova cartella restano solo nei pulsanti sopra l'albero dei file (e nel menu del tasto destro): tolto il doppione dalla barra in alto.
+- New file and new folder are now only in the buttons above the file tree (and in the right-click menu): removed the duplicate from the top bar.
 
 ## 0.18.0
 
-- **Documentazione completa**, in inglese (scheda *Documentazione* dell'add-on) e in italiano (`DOCS.it.md` su GitHub), con le immagini di tutte le funzioni.
-- Errore YAML spiegato anche quando mancano i due punti tra chiave e valore sulla stessa riga: `below 30` → «Alla riga 10 mancano i due punti dopo "below": probabilmente deve essere "below: 30"».
-- Informazioni: lo sviluppatore compare con l'alias GitHub (Trizompa), con il link al profilo.
-- Descrizione dell'add-on nel negozio: "Every Day I Tweak HA – the Home Assistant configuration editor".
+- **Complete documentation**, in English (the add-on's *Documentation* tab) and in Italian (`DOCS.it.md` on GitHub), with images of every feature.
+- YAML error also explained when the colon between key and value on the same line is missing: `below 30` → "Line 10 is missing the colon after “below”: it should probably be “below: 30”".
+- About: the developer appears with the GitHub alias (Trizompa), with a link to the profile.
+- Add-on description in the store: "Every Day I Tweak HA – the Home Assistant configuration editor".
 
 ## 0.17.2
 
-- Su telefono la barra in alto mostra solo il nome EDITHA, senza il logo: più spazio per i pulsanti.
+- On phones the top bar shows only the name EDITHA, without the logo: more room for the buttons.
 
 ## 0.17.1
 
-- Nuovo motto: **Every Day I Tweak HA** (le iniziali formano il nome). Nell'interfaccia il nome si scrive in maiuscolo: EDITHA.
-- Sopra l'albero dei file non c'è più la scritta "Esplora file", che su schermi stretti andava su due righe: restano solo i pulsanti.
+- New motto: **Every Day I Tweak HA** (the initials form the name). In the interface the name is written in capitals: EDITHA.
+- Above the file tree there is no longer the "File explorer" label, which wrapped onto two lines on narrow screens: only the buttons remain.
 
 ## 0.17.0
 
-- **Modifica degli snippet personali**: nel pannello Inserisci → Snippet, la matita accanto a ogni snippet personale apre una finestra per cambiarne nome e testo (Tab inserisce due spazi, come nell'editor).
+- **Edit personal snippets**: in the Insert → Snippets panel, the pencil next to each personal snippet opens a dialog to change its name and text (Tab inserts two spaces, as in the editor).
 
 ## 0.16.1
 
-- Icona di Editha nella barra laterale: `mdi:pencil`. Per vederla, dopo l'aggiornamento spegnere e riaccendere "Mostra nella barra laterale" nella pagina dell'add-on (oppure riavviare Home Assistant).
+- Editha icon in the sidebar: `mdi:pencil`. To see it, after the update turn "Show in sidebar" off and on again on the add-on page (or restart Home Assistant).
 
 ## 0.16.0
 
-- **Confronta due file**: tasto destro su un file → "Seleziona per il confronto", poi tasto destro su un altro file → "Confronta con …". I due file si vedono affiancati con le differenze evidenziate (in un'unica colonna su telefono). Se un file è aperto con modifiche non salvate, si confronta il testo dell'editor. Esc chiude il confronto.
-- Nuova icona di Editha nella barra laterale di Home Assistant: `mdi:pencil-circle-outline`.
+- **Compare two files**: right-click a file → "Select for compare", then right-click another file → "Compare with …". The two files are shown side by side with the differences highlighted (in a single column on phones). If a file is open with unsaved changes, the editor text is compared. Esc closes the comparison.
+- New Editha icon in the Home Assistant sidebar: `mdi:pencil-circle-outline`.
 
 ## 0.15.0
 
-- **Sostituisci in più file**: nel pannello "Cerca nei file", il pulsante con le frecce apre il campo "Sostituisci con". "Sostituisci tutto" cambia tutte le occorrenze trovate; il pulsante accanto a ogni file sostituisce solo in quel file. Prima di modificare Editha chiede conferma e conserva la versione precedente di ogni file nella sua cronologia, da cui si può ripristinare. Con le espressioni regolari si possono usare i gruppi (`$1`).
-- Protezioni: i file aperti con modifiche non salvate vengono saltati (Editha lo dice), così come `secrets.yaml`, le cartelle di sistema e i file cambiati nel frattempo. Le tab aperte si aggiornano subito con il testo nuovo. Un'espressione regolare troppo lenta non modifica nessun file.
+- **Replace in several files**: in the "Search in files" panel, the button with the arrows opens the "Replace with" field. "Replace all" changes every occurrence found; the button next to each file replaces only in that file. Before changing anything Editha asks for confirmation and keeps the previous version of each file in its history, from which it can be restored. With regular expressions you can use groups (`$1`).
+- Safeguards: open files with unsaved changes are skipped (Editha says so), as are `secrets.yaml`, system folders and files changed in the meantime. Open tabs update right away with the new text. A regular expression that is too slow changes no files.
 
 ## 0.14.0
 
-- **Icone MDI**: scrivendo `mdi:` l'editor propone le icone Material Design per nome, ognuna con la sua anteprima (es. `mdi:lightb` → lightbulb, lightbulb-outline, …). L'elenco delle icone (~7400) si scarica solo la prima volta che serve.
-- "Cerca in tutti i file" resta solo come lente sopra l'albero dei file (e con Ctrl+Maiusc+F): tolto il doppione dalla barra in alto.
+- **MDI icons**: when you type `mdi:` the editor suggests Material Design icons by name, each with its preview (e.g. `mdi:lightb` → lightbulb, lightbulb-outline, …). The icon list (~7400) is downloaded only the first time it is needed.
+- "Search all files" now stays only as the magnifying glass above the file tree (and with Ctrl+Shift+F): removed the duplicate from the top bar.
 
 ## 0.13.2
 
-- **Chiudi la tastiera su iPhone**: il pulsante ora compare accanto al cursore, sul lato destro dell'editor, mentre scrivi. Prima stava nella barra in alto, che iOS fa scorrere fuori dallo schermo quando apre la tastiera, quindi non si vedeva. Lingua e tema restano sempre al loro posto.
-- La ricerca in tutti i file non guarda più dentro `secrets.yaml`: password e chiavi non compaiono nei risultati.
+- **Hide the keyboard on iPhone**: the button now appears next to the cursor, on the right side of the editor, while you type. Before, it was in the top bar, which iOS scrolls off the screen when it opens the keyboard, so it couldn't be seen. Language and theme always stay in their place.
+- Searching all files no longer looks inside `secrets.yaml`: passwords and keys don't appear in the results.
 
 ## 0.13.1
 
-Revisione generale del codice, con queste correzioni:
+General code review, with these fixes:
 
-**Salvataggi e bozze**
-- Due Ctrl+S ravvicinati (con la rete o HA lenti) davano un falso "file modificato fuori da Editha" e, scegliendo "Ricarica", si perdevano le ultime modifiche. Ora i salvataggi della stessa tab vanno in coda.
-- Una bozza scritta mentre si salvava restava sul server e veniva riproposta all'apertura successiva. Ora le bozze vecchie vengono eliminate; una bozza uguale al file su disco non viene più proposta.
-- Le bozze e la sessione inviate alla chiusura della pagina arrivano a destinazione anche se la pagina si chiude subito.
+**Saves and drafts**
+- Two Ctrl+S in quick succession (with a slow network or HA) gave a false "File changed outside Editha" and, choosing "Reload from disk", the latest changes were lost. Now saves of the same tab are queued.
+- A draft written during a save stayed on the server and was offered again the next time. Now old drafts are deleted; a draft identical to the file on disk is no longer offered.
+- Drafts and session sent when the page closes reach their destination even if the page closes immediately.
 
-**Ricerca**
-- Un'espressione regolare "patologica" (es. `(a+)+$`) poteva bloccare Editha per minuti. Ora la ricerca gira separata dal resto e si ferma dopo 8 secondi, mostrando i risultati trovati fino a lì.
-- Nelle righe molto lunghe il testo trovato oltre il 400° carattere ora è visibile ed evidenziato.
-- Svuotando il campo di ricerca non ricompaiono più i risultati di una ricerca precedente.
+**Search**
+- A "pathological" regular expression (e.g. `(a+)+$`) could freeze Editha for minutes. Now search runs separately from everything else and stops after 8 seconds, showing the results found up to then.
+- In very long lines, text found beyond the 400th character is now visible and highlighted.
+- Clearing the search field no longer brings back the results of a previous search.
 
-**File**
-- Due spostamenti verso lo stesso nome nello stesso istante potevano far sparire un file. Ora uno dei due si ferma con "esiste già".
-- Spostando o rinominando una cartella, la cronologia dei file al suo interno la segue.
-- La cronologia di un file aperto attraverso un collegamento ora è quella del file reale.
-- I file e le cartelle molto grandi (oltre 50 MB) si eliminano senza copia di sicurezza, invece di riempire lo spazio dell'add-on o fallire; Editha lo segnala. Duplicare una cartella oltre 50 MB non è consentito.
-- Scaricare una cartella con un file enorme non esaurisce più la memoria.
-- Errori come "disco pieno" o "permesso negato" ora vengono spiegati invece di un generico "errore interno".
-- `secrets.yaml` viene letto con un vero lettore YAML: un valore su più righe non può più comparire tra i suggerimenti come se fosse una chiave.
+**Files**
+- Two moves to the same name at the same instant could make a file disappear. Now one of the two stops with "already exists".
+- When you move or rename a folder, the history of the files inside follows it.
+- The history of a file opened through a link is now that of the real file.
+- Very large files and folders (over 50 MB) are deleted without a safety copy, instead of filling the add-on's space or failing; Editha points this out. Duplicating a folder over 50 MB is not allowed.
+- Downloading a folder with a huge file no longer runs out of memory.
+- Errors such as "disk full" or "permission denied" are now explained instead of a generic "internal error".
+- `secrets.yaml` is read with a real YAML reader: a multi-line value can no longer appear among the suggestions as if it were a key.
 
-**Controllo YAML**
-- `chiave: &ancora` e `chiave: !!map` seguite da un blocco non vengono più indicate come errore, e non nascondono più gli errori successivi.
-- Niente avvisi su più `<<: *ancora` nello stesso blocco, che HA unisce.
-- Niente avvisi su `!secret on` o `!input yes`, che sono nomi, e su elenchi di icone come `- mdi:home`.
-- Niente avvisi sul rientro delle righe interne di `[ ]` e `{ }` su più righe.
-- Il nome della chiave ripetuta ora è quello giusto anche con virgolette o dentro `{ }`.
-- Cambiando lingua, anche i messaggi del controllo cambiano subito lingua.
+**YAML check**
+- `key: &anchor` and `key: !!map` followed by a block are no longer flagged as errors, and no longer hide the errors that follow.
+- No warnings about several `<<: *anchor` in the same block, which HA merges.
+- No warnings about `!secret on` or `!input yes`, which are names, nor about icon lists like `- mdi:home`.
+- No warnings about the indentation of inner lines of multi-line `[ ]` and `{ }`.
+- The name of the repeated key is now the right one even with quotes or inside `{ }`.
+- When you change language, the check messages change language right away too.
 
-**Altro**
-- Ctrl+clic su `!include /config/…` (percorso assoluto) apre il file giusto; i collegamenti dentro i commenti vengono ignorati.
-- Esc su un menu non chiude più anche la cronologia aperta. La cronologia si chiude se il file viene spostato o eliminato.
-- Chiudendo una tab non attiva con modifiche, resta attiva la tab di prima.
-- I suggerimenti "Piega"/"Espandi" ora sono tradotti; i nomi di file con lettere accentate rispettano il limite di lunghezza del disco.
+**Other**
+- Ctrl+click on `!include /config/…` (absolute path) opens the right file; links inside comments are ignored.
+- Esc on a menu no longer also closes the open history. The history closes if the file is moved or deleted.
+- When you close an inactive tab with changes, the previous tab stays active.
+- The "Fold"/"Unfold" tooltips are now translated; file names with accented letters respect the disk's length limit.
 
 ## 0.13.0
 
-- **Cerca in tutti i file** (Ctrl+Maiusc+F, pulsante nella barra o lente nell'albero): la ricerca prende il posto dell'albero nella barra laterale. Opzioni maiuscole/minuscole, parola intera ed espressione regolare. I risultati sono raggruppati per file, con la riga e il testo trovato evidenziato; un clic apre il file con il testo selezionato. Escluse le cartelle di sistema, i database e i file binari.
-- **Dove è usata un'entità**: dal pannello Inserisci, pulsante accanto a ogni entità; oppure con il cursore su un `entity_id` e Ctrl+Maiusc+F. Cerca la parola intera, quindi trova `light.cucina` anche dentro i template (`states.light.cucina.state`) ma non `light.cucina_2`, e mostra nome e stato dell'entità.
+- **Search all files** (Ctrl+Shift+F, toolbar button or magnifying glass in the tree): the search takes the place of the tree in the sidebar. Options for match case, whole word and regular expression. Results are grouped by file, with the line and the found text highlighted; a click opens the file with the text selected. System folders, databases and binary files are excluded.
+- **Where an entity is used**: from the Insert panel, button next to each entity; or with the cursor on an `entity_id` and Ctrl+Shift+F. It searches for the whole word, so it finds `light.cucina` even inside templates (`states.light.cucina.state`) but not `light.cucina_2`, and shows the entity's name and state.
 
 ## 0.12.0
 
-- **Sposta in…** nel menu contestuale di file e cartelle (anche su telefono, tenendo premuto). Si sceglie la cartella di destinazione da un elenco filtrabile; non si può spostare nella cartella dove il file sta già, né una cartella dentro sé stessa, né nelle cartelle di sistema. Le tab aperte, le bozze e la cronologia delle versioni seguono il file. Niente trascinamento, per evitare spostamenti per sbaglio.
+- **Move to…** in the context menu of files and folders (on phones too, with a long press). You choose the destination folder from a filterable list; you can't move into the folder where the file already is, nor a folder into itself, nor into system folders. Open tabs, drafts and the version history follow the file. No drag and drop, to avoid accidental moves.
 
 ## 0.11.0
 
-- **`!secret`**: scrivendo `!secret ` l'editor propone le chiavi di `secrets.yaml` (solo i nomi: i valori non escono mai dal server). Come HA, cerca `secrets.yaml` nella cartella del file e poi in quelle sopra fino a `/config`.
-- **Ctrl+clic** (Cmd+clic su Mac) sui collegamenti, che sono sottolineati a puntini:
-  - su `!include file.yaml` apre il file (percorso relativo alla cartella del file, come in HA);
-  - su `!include_dir_named`, `!include_dir_list`, `!include_dir_merge_…` apre la cartella nell'albero;
-  - su `!secret chiave` apre `secrets.yaml` sulla riga di quella chiave.
+- **`!secret`**: when you type `!secret ` the editor suggests the keys of `secrets.yaml` (names only: the values never leave the server). Like HA, it looks for `secrets.yaml` in the file's folder and then in the folders above, up to `/config`.
+- **Ctrl+click** (Cmd+click on Mac) on links, which are underlined with dots:
+  - on `!include file.yaml` it opens the file (path relative to the file's folder, as in HA);
+  - on `!include_dir_named`, `!include_dir_list`, `!include_dir_merge_…` it opens the folder in the tree;
+  - on `!secret key` it opens `secrets.yaml` at the line of that key.
 
 ## 0.10.4
 
-- Schermi molto stretti (sotto i 370 px): nella barra resta solo il logo, così tutti i pulsanti ci stanno e la pagina non si sposta più di lato tagliando il nome e la barra di stato.
+- Very narrow screens (below 370 px): only the logo stays in the bar, so all the buttons fit and the page no longer shifts sideways cutting off the name and the status bar.
 
 ## 0.10.3
 
-- Corretto: dopo una chiave senza «:» venivano segnalate come sbagliate anche le righe giuste sotto (per esempio "All mapping items must start at the same column" su `max:`). Ora per quel blocco resta solo la spiegazione della riga da correggere.
+- Fixed: after a key without ":", the correct lines below were also flagged as wrong (for example "All mapping items must start at the same column" on `max:`). Now for that block only the explanation of the line to fix remains.
 
 ## 0.10.2
 
-- Spiegazioni più chiare quando una riga è più rientrata di quella sopra:
-  - se alla riga sopra mancano i due punti: "Alla riga 28 mancano i due punti dopo «car_wican»: per contenere le righe sotto deve essere «car_wican:»";
-  - se la riga sopra ha già un valore: "La riga 12 ha già un valore («name: Casa»), quindi non può contenere la riga 13";
-  - negli altri casi il messaggio dice quale riga correggere e come.
+- Clearer explanations when a line is indented more than the one above:
+  - if the line above is missing the colon: "Line 28 is missing the colon after “car_wican”: to contain the lines below it must be “car_wican:”";
+  - if the line above already has a value: "Line 12 already has a value (“name: Casa”), so it cannot contain line 13";
+  - in other cases the message says which line to fix and how.
 
 ## 0.10.1
 
-- Corretto: nel tema scuro, l'elenco per scegliere il file della colonna destra (vista divisa) mostrava testo chiaro su sfondo bianco, illeggibile su Windows.
+- Fixed: in the dark theme, the list for choosing the file of the right column (split view) showed light text on a white background, unreadable on Windows.
 
 ## 0.10.0
 
-- **Controllo YAML più chiaro**: per gli errori di indentazione Editha spiega cosa non va e dove, con i numeri di riga. Per esempio "la riga 9 rientra di 5 spazi: nessun blocco sopra parte da lì (livelli possibili: 0, 2, 4, 6, 8)", oppure "per far parte dell'elemento di lista della riga 2 deve rientrare di 4 spazi, allineata a «platform»". Anche le chiavi ripetute dicono quale chiave è.
-- **Nuovi avvisi** per errori tipici di Home Assistant che restano YAML valido:
-  - `on`/`off`/`yes`/`no` senza virgolette, che HA legge come vero/falso (`to: on` in un trigger);
-  - `chiave:valore` senza spazio dopo i due punti, letto come testo;
-  - rientri dispari in un file che va di 2 in 2.
-- **Elenco dei problemi**: un clic sul conteggio "N errori · N avvisi" nella barra in basso (o Ctrl+Maiusc+M) apre l'elenco completo, con il numero di riga di ciascuno; un clic porta alla riga.
+- **Clearer YAML check**: for indentation errors Editha explains what is wrong and where, with line numbers. For example "Line 9 is indented by 5 spaces: no block above starts there (possible levels: 0, 2, 4, 6, 8)", or "to belong to the list item on line 2 it needs 4 spaces, aligned with “platform”". Repeated keys also say which key it is.
+- **New warnings** for typical Home Assistant mistakes that are still valid YAML:
+  - `on`/`off`/`yes`/`no` without quotes, which HA reads as true/false (`to: on` in a trigger);
+  - `key:value` without a space after the colon, read as text;
+  - odd indentation in a file that goes in steps of 2.
+- **List of problems**: a click on the "N errors · N warnings" count in the bottom bar (or Ctrl+Shift+M) opens the full list, with the line number of each one; a click takes you to the line.
 
 ## 0.9.1
 
-- Informazioni: sviluppatore Trizompa; tolto il riferimento a File Editor Plus.
-- Documentazione e licenza aggiornate con il nome dell'autore.
+- About: developer Trizompa; removed the reference to File Editor Plus.
+- Documentation and license updated with the author's name.
 
 ## 0.9.0
 
-- **Vista divisa in due colonne** (solo su PC e tablet): pulsante nella barra, oppure "Apri a destra" nel menu di un file. Nella colonna destra si sceglie quale file mostrare tra quelli aperti; può essere anche lo stesso file della colonna sinistra, per vedere due punti diversi: le modifiche fatte in una colonna compaiono subito nell'altra. Salva, Annulla, Cerca e Inserisci agiscono sulla colonna usata per ultima (segnata da una linea blu). La vista divisa resta uscendo e rientrando.
-- **Informazioni**: pulsante accanto a lingua e tema con sviluppatore (Trizompa), GitHub, repository, versione, licenza e le librerie usate. Su telefono si trova nel menu della lingua.
+- **Split view in two columns** (PC and tablet only): button in the toolbar, or "Open on the right" in a file's menu. In the right column you choose which of the open files to show; it can also be the same file as the left column, to see two different places: changes made in one column appear right away in the other. Save, Undo, Find and Insert act on the column used last (marked by a blue line). The split view stays when you leave and come back.
+- **About**: button next to language and theme with developer (Trizompa), GitHub, repository, version, license and the libraries used. On phones it is in the language menu.
 
 ## 0.8.1
 
-- Corretto su iPhone: trascinando l'editor verso destra oltre il bordo, l'effetto elastico di iOS spostava anche la colonna dei numeri di riga. Ora lo scorrimento si ferma ai bordi, anche per la pagina e per il confronto della cronologia.
+- Fixed on iPhone: dragging the editor to the right past the edge, the iOS bounce effect also moved the line-number column. Now scrolling stops at the edges, also for the page and for the history comparison.
 
 ## 0.8.0
 
-- **Bozze delle modifiche non salvate**: mentre scrivi Editha conserva le modifiche non ancora salvate (dopo un secondo di pausa, e subito quando la pagina viene chiusa o passi a un'altra app). Se chiudi la pagina, HA si riavvia o il telefono chiude l'app, alla riapertura Editha chiede se recuperarle o scartarle. Le modifiche recuperate tornano nella loro tab, da salvare; se nel frattempo il file è cambiato su disco, al salvataggio Editha chiede cosa fare.
+- **Drafts of unsaved changes**: while you type, Editha keeps the changes not yet saved (after a one-second pause, and immediately when the page is closed or you switch to another app). If you close the page, HA restarts or the phone closes the app, when you reopen it Editha asks whether to recover or discard them. Recovered changes go back to their tab, to be saved; if the file changed on disk in the meantime, Editha asks what to do when you save.
 
 ## 0.7.1
 
-- **Telefono: pulsante "Chiudi la tastiera"**. Su iPhone la tastiera si chiude solo togliendo il focus all'editor, e nella pagina non c'era un modo per farlo: ora, mentre scrivi, al posto di lingua e tema compare il pulsante con la tastiera. Aprendo un file su telefono la tastiera non si apre più da sola.
-- **Duplica più sicuro**: solo per i file. La copia di un file YAML viene proposta come `nome_copia.yaml.bak`, che Home Assistant non carica (niente automazioni o sensori doppi in `packages` o nelle cartelle `!include_dir_…`); Editha la mostra comunque come YAML. Un nome che finisce in `.yaml` va confermato.
-- Tra il testo "Easy Developer IDE for The HA" e il primo pulsante la stessa distanza che c'è tra logo e "Editha".
+- **Phone: "Hide the keyboard" button**. On iPhone the keyboard only closes when the editor loses focus, and the page had no way to do that: now, while you type, the keyboard button appears in place of language and theme. Opening a file on a phone no longer opens the keyboard by itself.
+- **Safer Duplicate**: files only. The copy of a YAML file is proposed as `name_copy.yaml.bak`, which Home Assistant doesn't load (no duplicate automations or sensors in `packages` or in `!include_dir_…` folders); Editha still shows it as YAML. A name ending in `.yaml` must be confirmed.
+- Between the text "Easy Developer IDE for The HA" and the first button, the same distance as between the logo and "Editha".
 
 ## 0.7.0
 
-- **Cronologia dei file**: pulsante "Cronologia del file" nella barra, o voce "Cronologia…" nel menu di un file. Elenca le versioni conservate da Editha (prima di ogni salvataggio, ripristino o eliminazione), le confronta con il contenuto attuale (affiancate su PC, in un'unica colonna su telefono) e ripristina quella scelta. Il contenuto sostituito diventa a sua volta una versione, quindi il ripristino si annulla.
-- Conservate **10 versioni per file** invece di 50 (configurabile con `EDITHA_BACKUP_KEEP`); le versioni in più spariscono al salvataggio successivo.
-- **Duplica** file e cartelle dal menu contestuale, con il nome della copia proposto (`nome_copia.yaml`).
-- Su telefono il menu contestuale dell'albero si apre con una pressione prolungata.
-- Barra in alto su telefono: tutti i pulsanti stanno nella riga anche su iPhone (prima il tema era tagliato).
+- **File history**: "File history" button in the toolbar, or "History…" entry in a file's menu. It lists the versions kept by Editha (before every save, restore or deletion), compares them with the current content (side by side on PC, in a single column on phones) and restores the chosen one. The replaced content becomes a version in turn, so the restore can be undone.
+- **10 versions per file** kept instead of 50 (configurable with `EDITHA_BACKUP_KEEP`); extra versions disappear at the next save.
+- **Duplicate** files and folders from the context menu, with a proposed name for the copy (`name_copy.yaml`).
+- On phones the tree's context menu opens with a long press.
+- Top bar on phones: all buttons fit on the row even on iPhone (before, the theme was cut off).
 
 ## 0.6.1
 
-- Logo e nome di Editha nell'angolo in alto a sinistra; il pulsante che mostra/nasconde l'albero passa insieme agli altri comandi.
-- Corretto: su finestre molto basse la schermata iniziale copriva i pulsanti della barra.
+- Editha logo and name in the top-left corner; the button that shows/hides the tree moves together with the other controls.
+- Fixed: on very short windows the start screen covered the toolbar buttons.
 
 ## 0.6.0
 
-- **Upload dal PC**: pulsante nell'albero, voce "Carica file qui…" nel menu di una cartella, oppure trascinando i file dal PC sopra una cartella. Se un file esiste già Editha chiede se sostituirlo; la versione precedente resta nei backup. Le cartelle di sistema restano protette.
-- **Download sul PC**: "Scarica sul PC" per un file (anche immagini e file binari), "Scarica come zip" per una cartella.
-- Limite di 50 MB per singolo trasferimento (configurabile con `EDITHA_MAX_TRANSFER`).
+- **Upload from PC**: button in the tree, "Upload files here…" entry in a folder's menu, or by dragging files from the PC onto a folder. If a file already exists Editha asks whether to replace it; the previous version stays in the backups. System folders stay protected.
+- **Download to PC**: "Download to your PC" for a file (images and binary files too), "Download as zip" for a folder.
+- Limit of 50 MB per single transfer (configurable with `EDITHA_MAX_TRANSFER`).
 
 ## 0.5.0
 
-- Interfaccia in italiano e inglese: selettore della lingua nella barra in alto (Automatica, Italiano, English). La scelta resta memorizzata e si applica subito, senza ricaricare la pagina; "Automatica" segue la lingua del browser.
-- Tradotti anche il pannello di ricerca dell'editor, i messaggi del validatore YAML e gli snippet predefiniti (nomi e testi di esempio).
+- Interface in Italian and English: language selector in the top bar (Automatic, Italiano, English). The choice is remembered and applies immediately, without reloading the page; "Automatic" follows the browser language.
+- Also translated: the editor's search panel, the YAML validator messages and the built-in snippets (names and example texts).
 
 ## 0.4.2
 
-- Corretto: entità, autocompletamento e menu Home Assistant non funzionavano nell'add-on ("Home Assistant non è raggiungibile da qui"). Il token del Supervisor ora viene letto anche quando l'avvio passa da s6-overlay; il log indica all'avvio se le API di HA sono disponibili.
-- Carattere dell'editor a 13 px su PC (14 px su telefono).
-- Dopo un aggiornamento la nuova interfaccia viene caricata senza refresh forzato del browser.
+- Fixed: entities, autocomplete and the Home Assistant menu didn't work in the add-on ("Home Assistant is not reachable from here"). The Supervisor token is now read even when startup goes through s6-overlay; the log says at startup whether the HA APIs are available.
+- Editor font at 13 px on PC (14 px on phones).
+- After an update the new interface is loaded without a forced browser refresh.
 
 ## 0.4.1
 
-- Se Editha non risponde (add-on in aggiornamento o riavvio con la pagina aperta) compare un avviso con "Ricarica la pagina", che sparisce da solo quando il server torna; dopo un aggiornamento dell'add-on l'avviso invita a ricaricare per usare la nuova versione.
-- Le letture si ritentano una volta prima di segnalare un errore.
-- Spazio tra "Editha" e "Easy Developer IDE for The HA" uguale a quello tra logo e nome.
+- If Editha doesn't respond (add-on updating or restarting with the page open) a notice appears with "Reload page", which disappears by itself when the server is back; after an add-on update the notice asks you to reload to use the new version.
+- Reads are retried once before reporting an error.
+- Space between "Editha" and "Easy Developer IDE for The HA" equal to the one between logo and name.
 
 ## 0.4.0
 
-- Menu **Home Assistant** nella barra: verifica della configurazione, ricarica della configurazione YAML e riavvio. Ricarica e riavvio partono solo se la verifica passa; gli errori di HA vengono mostrati per intero e l'esito è quello reale.
-- Pannello **Inserisci**: entità del proprio HA (nome, `entity_id`, stato) e snippet, predefiniti e personali ("Salva la selezione come snippet").
-- Autocompletamento di entità e azioni mentre si scrive (`light.`, `entity_id:`, `action:`), con stato attuale.
-- Colonna dei numeri di riga più stretta e vicina al codice anche su desktop.
-- Più spazio tra "Editha" e "Easy Developer IDE for The HA".
-- Le impostazioni si salvano con POST invece di PATCH (più compatibile con i proxy).
+- **Home Assistant** menu in the toolbar: configuration check, YAML configuration reload and restart. Reload and restart only start if the check passes; HA errors are shown in full and the outcome is the real one.
+- **Insert** panel: entities of your own HA (name, `entity_id`, state) and snippets, built-in and personal ("Save selection as snippet").
+- Autocomplete of entities and actions as you type (`light.`, `entity_id:`, `action:`), with the current state.
+- Line-number column narrower and closer to the code on desktop too.
+- More space between "Editha" and "Easy Developer IDE for The HA".
+- Settings are saved with POST instead of PATCH (more compatible with proxies).
 
 ## 0.3.1
 
-- Descrizione semplificata: "Easy Developer IDE for The HA".
+- Simplified description: "Easy Developer IDE for The HA".
 
 ## 0.3.0
 
-- Nuovo nome: **Editha** – Easy Developer IDE for The HA. Lo slug passa da `edith` a `editha`: per Home Assistant è un add-on nuovo, quindi va installato Editha e disinstallato Edith (impostazioni e backup di Edith non vengono trasferiti).
+- New name: **Editha** – Easy Developer IDE for The HA. The slug changes from `edith` to `editha`: for Home Assistant it is a new add-on, so you need to install Editha and uninstall Edith (Edith's settings and backups are not transferred).
 
 ## 0.2.2
 
-- Telefono: colonna dei numeri di riga più stretta (da 82 a 51 px su un iPhone).
-- Con l'a capo automatico il seguito di una riga lunga resta allineato alla sua indentazione.
+- Phone: narrower line-number column (from 82 to 51 px on an iPhone).
+- With word wrap, the continuation of a long line stays aligned with its indentation.
 
 ## 0.2.1
 
-- Le cartelle di sistema in sola lettura (`.storage`, `.cloud`, `deps`, `tts`, `.git`) sono nascoste nell'albero; il pulsante a forma di occhio le mostra. La scelta resta memorizzata.
+- Read-only system folders (`.storage`, `.cloud`, `deps`, `tts`, `.git`) are hidden in the tree; the eye-shaped button shows them. The choice is remembered.
 
 ## 0.2.0
 
-- Interfaccia grafica: albero dei file, tab, editor CodeMirror 6, barra degli strumenti e barra di stato.
-- Validazione YAML in tempo reale che riconosce `!include`, `!secret` e gli altri tag di Home Assistant.
-- Menu contestuale con nuovo file, nuova cartella, rinomina, elimina e copia percorso.
-- Avviso per le modifiche non salvate e gestione dei file modificati fuori da Editha.
-- Tema automatico, chiaro o scuro; tab aperte e tema ritrovati al rientro.
-- Utilizzabile anche da telefono: l'albero diventa un pannello laterale.
-- Test nel browser per ciascun problema segnalato su File Editor Plus (#4–#19).
+- Graphical interface: file tree, tabs, CodeMirror 6 editor, toolbar and status bar.
+- Real-time YAML validation that recognises `!include`, `!secret` and the other Home Assistant tags.
+- Context menu with new file, new folder, rename, delete and copy path.
+- Warning for unsaved changes and handling of files changed outside Editha.
+- Automatic, light or dark theme; open tabs and theme restored when you come back.
+- Usable from a phone too: the tree becomes a side panel.
+- Browser tests for each issue reported on File Editor Plus (#4–#19).
 
 ## 0.1.0
 
-- Server (TypeScript, Fastify) raggiungibile solo dal proxy Ingress.
-- API dei file di `/config`: elenco, lettura, salvataggio, creazione, rinomina, eliminazione.
-- Salvataggio atomico con rilevamento dei conflitti; copia della versione precedente in `/data/backups`.
-- Cartelle `.storage`, `.cloud`, `deps`, `tts`, `.git` in sola lettura.
-- Pagina provvisoria nel pannello: l'editor arriva nella prossima versione.
+- Server (TypeScript, Fastify) reachable only through the Ingress proxy.
+- File API for `/config`: list, read, save, create, rename, delete.
+- Atomic save with conflict detection; copy of the previous version in `/data/backups`.
+- `.storage`, `.cloud`, `deps`, `tts`, `.git` folders read-only.
+- Temporary page in the panel: the editor arrives in the next version.
 
 ## 0.0.1
 
-- Struttura iniziale dell'add-on (non installabile).
+- Initial add-on structure (not installable).

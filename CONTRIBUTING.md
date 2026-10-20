@@ -46,8 +46,8 @@ requirements and the design decisions (both in Italian).
 - Safety rules are not negotiable: paths stay inside `/config`, saves are atomic, secret values
   never reach the browser, system folders stay read-only.
 - New interface text goes in both `editha/web/src/i18n/en.ts` and `it.ts`.
-- Bump `version` in `editha/config.yaml` and add an entry to `editha/CHANGELOG.md` for every
-  change users can see.
+- Bump `version` in `editha/config.yaml` and add an entry to `editha/CHANGELOG.md` (English)
+  and `editha/CHANGELOG.it.md` (Italian) for every change users can see.
 - CI must be green: it runs the tests and builds the image for `amd64` and `aarch64`.
 
 ## Screenshots
