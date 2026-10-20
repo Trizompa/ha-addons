@@ -299,4 +299,102 @@ describe('Git locale (GIT-1)', () => {
     await writeFile(path.join(sb.configDir, 'c.yaml'), 'c\n');
     assert.equal((await commit({ message: 'a\u0000b', all: true })).statusCode, 400);
   });
+
+  it('GIT-3: il file com\'era nell\'ultimo commit, mai per i segreti', async () => {
+    const head = (p: string) => app.inject({ method: 'GET', url: `/api/git/head?path=${encodeURIComponent(p)}`, remoteAddress: INGRESS });
+    assert.equal((await head('a.yaml')).statusCode, 404);
+    await call('POST', '/api/git/init');
+    await writeFile(path.join(sb.configDir, 'a.yaml'), 'a: 1\n');
+    assert.deepEqual((await head('a.yaml')).json(), { path: 'a.yaml', content: null });
+    assert.equal((await commit({ message: 'Primo', paths: ['a.yaml'] })).statusCode, 200);
+    await writeFile(path.join(sb.configDir, 'a.yaml'), 'a: 2\n');
+    assert.deepEqual((await head('a.yaml')).json(), { path: 'a.yaml', content: 'a: 1\n' });
+    assert.deepEqual((await head('nuovo.yaml')).json(), { path: 'nuovo.yaml', content: null });
+    // Una cartella non è un file.
+    await mkdir(path.join(sb.configDir, 'cartella'));
+    await writeFile(path.join(sb.configDir, 'cartella/x.yaml'), 'x\n');
+    await commit({ message: 'Cartella', paths: ['cartella/x.yaml'] });
+    assert.deepEqual((await head('cartella')).json(), { path: 'cartella', content: null });
+    for (const p of ['secrets.yaml', 'pacchetti/secrets_old.yaml', '.storage/auth']) assert.equal((await head(p)).statusCode, 403, p);
+    for (const p of ['../fuori', '/etc/passwd', 'a//b']) assert.equal((await head(p)).statusCode, 400, p);
+  });
+
+  it('GIT-5: elenco dei commit a pagine e file toccati; GIT-6: il file com\'era in un commit', async () => {
+    const get = (url: string) => app.inject({ method: 'GET', url, remoteAddress: INGRESS });
+    assert.equal((await get('/api/git/log')).statusCode, 404);
+    await call('POST', '/api/git/init');
+    assert.deepEqual((await get('/api/git/log')).json(), { commits: [], more: false });
+    await writeFile(path.join(sb.configDir, 'a.yaml'), 'a: 1\n');
+    await commit({ message: 'Primo', paths: ['a.yaml'] });
+    await writeFile(path.join(sb.configDir, 'a.yaml'), 'a: 2\n');
+    await writeFile(path.join(sb.configDir, 'b.yaml'), 'b\n');
+    await commit({ message: 'Secondo', all: true });
+    await import('node:fs/promises').then((fs) => fs.rm(path.join(sb.configDir, 'b.yaml')));
+    await commit({ message: 'Terzo', all: true });
+
+    const log = (await get('/api/git/log')).json();
+    assert.deepEqual(log.commits.map((c: { subject: string }) => c.subject), ['Terzo', 'Secondo', 'Primo']);
+    assert.equal(log.more, false);
+    assert.equal(log.commits[0].author, 'EDITHA');
+    assert.deepEqual((await get('/api/git/log?skip=2')).json().commits.map((c: { subject: string }) => c.subject), ['Primo']);
+    assert.equal((await get('/api/git/log?skip=-1')).statusCode, 400);
+
+    const [terzo, secondo, primo] = log.commits.map((c: { hash: string }) => c.hash);
+    const files = async (rev: string) => (await get(`/api/git/commit-files?rev=${rev}`)).json().files.map((f: { path: string; status: string }) => [f.path, f.status]);
+    assert.deepEqual(await files(primo), [['a.yaml', 'added']]);
+    assert.deepEqual(await files(secondo), [['.gitignore', 'added'], ['a.yaml', 'modified'], ['b.yaml', 'added']]);
+    assert.deepEqual(await files(terzo.slice(0, 7)), [['b.yaml', 'deleted']]);
+    assert.equal((await get('/api/git/commit-files?rev=HEAD')).statusCode, 400);
+    assert.equal((await get('/api/git/commit-files?rev=0000000')).statusCode, 404);
+
+    const show = async (p: string, rev: string) => (await get(`/api/git/show?path=${encodeURIComponent(p)}&rev=${rev}`)).json();
+    assert.equal((await show('a.yaml', primo)).content, 'a: 1\n');
+    assert.equal((await show('a.yaml', secondo)).content, 'a: 2\n');
+    assert.equal((await show('b.yaml', secondo)).content, 'b\n');
+    assert.equal((await show('b.yaml', terzo)).content, null);
+    assert.equal((await get(`/api/git/show?path=secrets.yaml&rev=${primo}`)).statusCode, 403);
+    assert.equal((await get('/api/git/show?path=a.yaml&rev=HEAD~1')).statusCode, 400);
+  });
+
+  it('percorsi con "./", link e testo non UTF-8: niente segreti né contenuti rovinati', async () => {
+    const get = (url: string) => app.inject({ method: 'GET', url, remoteAddress: INGRESS });
+    await call('POST', '/api/git/init');
+    await writeFile(path.join(sb.configDir, '.gitignore'), '');
+    await mkdir(path.join(sb.configDir, '.storage'));
+    await writeFile(path.join(sb.configDir, '.storage/auth'), 'TOKEN\n');
+    await writeFile(path.join(sb.configDir, 'latin1.txt'), Buffer.from([0x63, 0x69, 0x74, 0x74, 0xe0, 0x0a]));
+    await symlink('configuration.yaml', path.join(sb.configDir, 'link.yaml'));
+    await writeFile(path.join(sb.configDir, 'configuration.yaml'), 'a: 1\n');
+    // .storage committato da un terminale.
+    gitOut('add', '-A');
+    gitOut('-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '--quiet', '-m', 'Tutto');
+    for (const p of ['././.storage/auth', './.storage/auth', '.storage/./auth', 'a/./b', './configuration.yaml']) {
+      const res = await get(`/api/git/head?path=${encodeURIComponent(p)}`);
+      assert.equal(res.statusCode, 400, p);
+      assert.ok(!res.body.includes('TOKEN'), p);
+    }
+    assert.equal((await get('/api/git/head?path=.storage%2Fauth')).statusCode, 403);
+    assert.equal((await get('/api/git/head?path=link.yaml')).statusCode, 400);
+    assert.equal((await get('/api/git/head?path=latin1.txt')).statusCode, 415);
+    assert.equal((await get('/api/git/head?path=configuration.yaml')).json().content, 'a: 1\n');
+  });
+
+  it('un .git/config che chiede di scaricare oggetti mancanti (clone parziale) non fa partire niente', async () => {
+    const get = (url: string) => app.inject({ method: 'GET', url, remoteAddress: INGRESS });
+    await call('POST', '/api/git/init');
+    await writeFile(path.join(sb.configDir, 'a.yaml'), 'a: 1\n');
+    await commit({ message: 'Primo', paths: ['a.yaml'] });
+    // Il contenuto di a.yaml sparisce dagli oggetti e il repository dice di riprenderlo da "origin".
+    const blob = gitOut('rev-parse', 'HEAD:a.yaml');
+    await import('node:fs/promises').then((fs) => fs.rm(path.join(sb.configDir, '.git/objects', blob.slice(0, 2), blob.slice(2))));
+    const marker = path.join(sb.base, 'eseguito');
+    gitOut('config', 'remote.origin.url', `ext::sh -c touch% ${marker}`);
+    gitOut('config', 'remote.origin.promisor', 'true');
+    gitOut('config', 'extensions.partialClone', 'origin');
+    gitOut('config', 'protocol.ext.allow', 'always');
+    await get('/api/git/head?path=a.yaml');
+    await get('/api/git/log');
+    await get(`/api/git/commit-files?rev=${gitOut('rev-parse', 'HEAD')}`);
+    await assert.rejects(access(marker));
+  });
 });

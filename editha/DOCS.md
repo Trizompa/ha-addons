@@ -307,6 +307,13 @@ sends nothing outside (no GitHub or other servers).
   Assistant internal data and credentials (`.storage`, `.cloud`, tokens, databases), files that go
   through a git filter (`.gitattributes`, for example Git LFS or git-crypt: EDITHA runs no external
   programs, so it would store them unfiltered; commit them from a terminal) and other repositories inside `/config`.
+- The compare button (two columns) next to a file shows the changes since the last commit, in the same view
+  as the file comparison (unsaved changes included).
+- **Commit history** lists the commits, newest first. Clicking a commit shows the files it touched;
+  for each one you can **compare** that version with the current file or **restore** it as it was
+  in that commit (with confirmation). Restoring goes through EDITHA's normal save: the current
+  content stays in EDITHA's history, and a file that no longer exists is recreated. Secrets and
+  internal data are neither shown nor restored.
 - New files that appear by themselves while the panel is open (after a save or a file operation)
   arrive unticked: you decide whether to include
   them.

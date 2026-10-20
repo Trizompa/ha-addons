@@ -40,6 +40,41 @@ export function registerGitRoutes(app: FastifyInstance, git: GitService): void {
     },
   );
 
+  // GIT-3: il file com'era nell'ultimo commit, da confrontare con quello attuale.
+  app.get<{ Querystring: { path: string } }>(
+    '/api/git/head',
+    { schema: { querystring: { type: 'object', required: ['path'], properties: { path: { type: 'string', minLength: 1, maxLength: 4096 } } } } },
+    async (req) => git.contentAt(req.query.path),
+  );
+
+  // GIT-6: il file com'era in un commit qualsiasi (per confrontarlo o ripristinarlo).
+  app.get<{ Querystring: { path: string; rev: string } }>(
+    '/api/git/show',
+    {
+      schema: {
+        querystring: {
+          type: 'object',
+          required: ['path', 'rev'],
+          properties: { path: { type: 'string', minLength: 1, maxLength: 4096 }, rev: { type: 'string', pattern: '^[0-9a-f]{4,64}$' } },
+        },
+      },
+    },
+    async (req) => git.contentAt(req.query.path, req.query.rev),
+  );
+
+  // GIT-5: elenco dei commit e file toccati da ciascuno.
+  // Nell'URL i numeri sono testo.
+  app.get<{ Querystring: { skip?: string } }>(
+    '/api/git/log',
+    { schema: { querystring: { type: 'object', properties: { skip: { type: 'string', pattern: '^[0-9]{1,7}$' } } } } },
+    async (req) => git.log(Number(req.query.skip ?? 0)),
+  );
+  app.get<{ Querystring: { rev: string } }>(
+    '/api/git/commit-files',
+    { schema: { querystring: { type: 'object', required: ['rev'], properties: { rev: { type: 'string', pattern: '^[0-9a-f]{4,64}$' } } } } },
+    async (req) => git.commitFiles(req.query.rev),
+  );
+
   // .gitignore di base in un repository che non ce l'ha; quello esistente non si tocca.
   app.post('/api/git/gitignore', async () => ({ created: await git.writeGitignore(), info: await git.info() }));
 }

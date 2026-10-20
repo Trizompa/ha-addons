@@ -320,6 +320,13 @@ fuori (niente GitHub né altri server).
   dati interni e le credenziali di Home Assistant (`.storage`, `.cloud`, token, database), i file
   che passano da un filtro di git (`.gitattributes`, per esempio Git LFS o git-crypt: EDITHA non
   esegue programmi esterni, quindi li salverebbe senza filtro; vanno committati da un terminale) e gli altri repository dentro `/config`.
+- Il pulsante del confronto (le due colonne) accanto a un file mostra le differenze rispetto all'ultimo commit,
+  nella stessa vista del confronto tra file (anche con le modifiche non ancora salvate).
+- **Storia dei commit** elenca i commit, dal più recente. Un clic su un commit mostra i file che ha
+  toccato; per ciascuno puoi **confrontare** quella versione con il file attuale o
+  **ripristinarlo** com'era in quel commit (con conferma). Il ripristino passa dal normale
+  salvataggio di EDITHA: il contenuto attuale resta nella cronologia di EDITHA, e un file che ora
+  non c'è viene ricreato. Segreti e dati interni non si mostrano né si ripristinano.
 - I file nuovi che compaiono da soli mentre il pannello è aperto (dopo un salvataggio o
   un'operazione sui file) arrivano senza spunta: decidi tu se
   includerli.

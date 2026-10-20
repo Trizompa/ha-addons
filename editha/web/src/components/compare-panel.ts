@@ -11,6 +11,8 @@ const NARROW = '(max-width: 760px)';
 export interface CompareSide {
   path: string;
   content: string;
+  /** Nome da mostrare al posto di /config/<path> (es. "ultimo commit"). */
+  label?: string;
 }
 
 /**
@@ -170,20 +172,22 @@ export class EdithaComparePanel extends LitElement {
 
   override render() {
     const same = this.left.content === this.right.content;
+    const a = this.left.label ?? this.left.path;
+    const b = this.right.label ?? this.right.path;
     return html`
       <header>
         ${icon(icons.compare, 18)}
-        <h2>${t('compare.title', { a: this.left.path, b: this.right.path })}</h2>
+        <h2>${t('compare.title', { a, b })}</h2>
         <button class="icon-btn small" title=${t('common.close')} @click=${() =>
           this.dispatchEvent(new CustomEvent('compare-close', { bubbles: true, composed: true }))}>
           ${icon(icons.close, 18)}
         </button>
       </header>
       ${this.narrowQuery.matches
-        ? html`<div class="labels"><span>${t('compare.legend', { a: this.left.path, b: this.right.path })}</span></div>`
+        ? html`<div class="labels"><span>${t('compare.legend', { a, b })}</span></div>`
         : html`<div class="labels">
-            <span class="a" title=${this.left.path}>/config/${this.left.path}</span>
-            <span class="b" title=${this.right.path}>/config/${this.right.path}</span>
+            <span class="a" title=${this.left.path}>${this.left.label ?? `/config/${this.left.path}`}</span>
+            <span class="b" title=${this.right.path}>${this.right.label ?? `/config/${this.right.path}`}</span>
           </div>`}
       ${same ? html`<div class="note">${t('compare.same')}</div>` : nothing}
       <div class="merge"></div>

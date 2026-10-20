@@ -1,9 +1,11 @@
 import { LitElement, css, html, nothing } from 'lit';
-import { api, errorText, type GitChange, type GitInfo } from '../api/client.js';
+import { api, errorText, type GitChange, type GitCommit, type GitInfo } from '../api/client.js';
 import { t } from '../i18n/index.js';
 import { icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
 import { formatVersionDate } from './history-panel.js';
+
+type CommitFiles = Awaited<ReturnType<typeof api.git.commitFiles>>['files'];
 
 /**
  * GIT-1…6: Git locale sulla cartella /config, nella barra laterale al posto dell'albero.
@@ -19,6 +21,10 @@ export class EdithaGitPanel extends LitElement {
     merging: { state: true },
     unchecked: { state: true },
     message: { state: true },
+    showLog: { state: true },
+    commits: { state: true },
+    logMore: { state: true },
+    expanded: { state: true },
   };
 
   declare info: GitInfo | null;
@@ -32,6 +38,12 @@ export class EdithaGitPanel extends LitElement {
   /** File tolti dal commit con la casella: restano tolti anche dopo un aggiornamento. */
   declare unchecked: Set<string>;
   declare message: string;
+  /** GIT-5: storia dei commit aperta, commit letti finora, se ce ne sono altri. */
+  declare showLog: boolean;
+  declare commits: GitCommit[] | null;
+  declare logMore: boolean;
+  /** Commit aperti: i file toccati (o 'loading', o un errore). */
+  declare expanded: Map<string, CommitFiles | 'loading' | { error: string }>;
   /** Caricamento in corso: una risposta vecchia non sostituisce quella nuova. */
   private loadToken = 0;
 
@@ -45,6 +57,10 @@ export class EdithaGitPanel extends LitElement {
     this.merging = false;
     this.unchecked = new Set();
     this.message = '';
+    this.showLog = false;
+    this.commits = null;
+    this.logMore = false;
+    this.expanded = new Map();
   }
 
   static override styles = [
@@ -198,6 +214,57 @@ export class EdithaGitPanel extends LitElement {
         resize: vertical;
         font: inherit;
       }
+      .section-toggle {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        width: 100%;
+        margin: 4px 0 6px;
+        padding: 4px 0;
+        border: none;
+        background: none;
+        color: var(--text);
+        font: inherit;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+      }
+      ul.log {
+        list-style: none;
+        margin: 0 0 8px;
+        padding: 0;
+      }
+      ul.log > li {
+        border-bottom: 1px solid var(--border);
+      }
+      .commit-row {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        width: 100%;
+        padding: 6px 4px;
+        border: none;
+        background: none;
+        color: var(--text);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .commit-row:hover {
+        background: var(--hover);
+      }
+      .commit-row .subject {
+        overflow-wrap: anywhere;
+      }
+      .commit-row .meta {
+        font-size: 12px;
+      }
+      ul.changes.files {
+        margin: 0 0 6px 8px;
+      }
+      .small-btn {
+        margin-bottom: 12px;
+      }
       .commit {
         width: 100%;
         justify-content: center;
@@ -227,6 +294,8 @@ export class EdithaGitPanel extends LitElement {
         this.changes = status.files;
         this.truncated = status.truncated;
         this.merging = status.merging;
+        // La storia si rilegge solo se è cambiato l'ultimo commit (aperti e pagine restano).
+        if (this.showLog && info.head?.hash !== this.logHead) void this.loadLog(true);
       } else {
         this.changes = null;
         this.unchecked = new Set();
@@ -234,6 +303,128 @@ export class EdithaGitPanel extends LitElement {
     } catch (err) {
       if (token === this.loadToken) this.error = errorText(err);
     }
+  }
+
+  /** GIT-5: storia dei commit; `reset` riparte dal più recente (dopo un commit). */
+  /** Ultimo commit quando la storia è stata letta; richieste della storia in corso. */
+  private logHead: string | undefined;
+  private logToken = 0;
+
+  private async loadLog(reset = false): Promise<void> {
+    const token = ++this.logToken;
+    const skip = reset || !this.commits ? 0 : this.commits.length;
+    const head = this.info?.head?.hash;
+    try {
+      const res = await api.git.log(skip);
+      if (token !== this.logToken) return;
+      // Pagine successive: senza i commit già in elenco (uno nuovo da un terminale sposta tutto).
+      const known = new Set(skip === 0 ? [] : (this.commits ?? []).map((c) => c.hash));
+      const added = res.commits.filter((c) => !known.has(c.hash));
+      this.commits = skip === 0 ? added : [...(this.commits ?? []), ...added];
+      this.logMore = res.more;
+      if (skip === 0) {
+        this.logHead = head;
+        // I commit aperti restano aperti, se ci sono ancora.
+        const still = new Set(added.map((c) => c.hash));
+        this.expanded = new Map([...this.expanded].filter(([hash]) => still.has(hash)));
+      }
+    } catch (err) {
+      if (token === this.logToken) this.emit('git-error', { message: errorText(err) });
+    }
+  }
+
+  private async toggleCommit(hash: string): Promise<void> {
+    const next = new Map(this.expanded);
+    if (next.has(hash)) {
+      next.delete(hash);
+      this.expanded = next;
+      return;
+    }
+    next.set(hash, 'loading');
+    this.expanded = next;
+    let value: CommitFiles | { error: string };
+    try {
+      value = (await api.git.commitFiles(hash)).files;
+    } catch (err) {
+      value = { error: errorText(err) };
+    }
+    if (!this.expanded.has(hash)) return;
+    this.expanded = new Map(this.expanded).set(hash, value);
+  }
+
+  private renderLog() {
+    if (!this.info?.head) return nothing;
+    return html`
+      <button
+        class="section-toggle"
+        aria-expanded=${String(this.showLog)}
+        data-action="git-log"
+        @click=${() => {
+          this.showLog = !this.showLog;
+          if (this.showLog) void this.loadLog(true);
+        }}
+      >
+        ${icon(this.showLog ? icons.chevronDown : icons.chevronRight, 16)} ${t('git.history')}
+      </button>
+      ${this.showLog
+        ? html`${this.commits === null
+              ? html`<p class="muted small" role="status">${t('insert.loading')}</p>`
+              : this.commits.length === 0
+                ? html`<p class="muted small">${t('git.historyEmpty')}</p>`
+                : html`<ul class="log">
+                    ${this.commits.map((c) => this.renderCommit(c))}
+                  </ul>`}
+            ${this.logMore
+              ? html`<button class="btn small-btn" @click=${() => void this.loadLog()}>${t('git.more')}</button>`
+              : nothing}`
+        : nothing}
+    `;
+  }
+
+  private renderCommit(c: GitCommit) {
+    const open = this.expanded.get(c.hash);
+    return html`<li>
+      <button class="commit-row" aria-expanded=${String(open !== undefined)} @click=${() => void this.toggleCommit(c.hash)}>
+        <span class="subject">${c.subject}</span>
+        <span class="meta muted"><code>${c.hash.slice(0, 7)}</code> · ${formatVersionDate(c.date)}</span>
+      </button>
+      ${open === undefined
+        ? nothing
+        : open === 'loading'
+          ? html`<p class="muted small" role="status">${t('git.commitFilesLoading')}</p>`
+          : 'error' in open
+            ? html`<p class="warn small">${open.error}</p>`
+            : html`<ul class="changes files">
+                ${open.map(
+                  (f) => html`<li class=${f.blocked ? 'blocked' : ''}>
+                    <span class="badge ${f.status}" title=${t(EdithaGitPanel.BADGE[f.status])}>${t(EdithaGitPanel.BADGE[f.status]).slice(0, 1)}</span>
+                    <span class="path" title=${f.path}>${f.path}</span>
+                    ${f.blocked
+                      ? html`<span class="lock" title=${t('git.commitFilesBlocked')}>${icon(icons.lock, 14)}</span>`
+                      : f.status === 'deleted'
+                        ? nothing
+                        : html`<button
+                              class="icon-btn small"
+                              data-action="git-rev-diff"
+                              title=${t('git.compareRev')}
+                              aria-label=${`${t('git.compareRev')}: ${f.path}`}
+                              @click=${() => this.emit('git-rev-diff', { path: f.path, rev: c.hash })}
+                            >
+                              ${icon(icons.compare, 15)}
+                            </button>
+                            <button
+                              class="icon-btn small"
+                              data-action="git-restore"
+                              title=${t('git.restoreRev')}
+                              aria-label=${`${t('git.restoreRev')}: ${f.path}`}
+                              @click=${() => this.emit('git-restore', { path: f.path, rev: c.hash, subject: c.subject })}
+                            >
+                              ${icon(icons.restore, 15)}
+                            </button>`}
+                  </li>`,
+                )}
+              </ul>`}
+    </li>`;
   }
 
   /** File che si possono mettere in un commit (non i segreti, non quelli in conflitto). */
@@ -356,6 +547,7 @@ export class EdithaGitPanel extends LitElement {
         </div>
       </div>
       ${this.renderChanges()}
+      ${this.renderLog()}
       ${info.gitignore
         ? nothing
         : html`<p>${t('git.noGitignore')}</p>
@@ -425,6 +617,17 @@ export class EdithaGitPanel extends LitElement {
             ${c.status === 'deleted' || c.blocked === 'nested'
               ? html`<span class="path ${c.status === 'deleted' ? 'deleted' : ''}">${c.path}</span>`
               : html`<button class="path" title=${c.path} @click=${() => this.emit('git-open', { path: c.path })}>${c.path}</button>`}
+            ${c.blocked === null || c.blocked === 'conflict' || c.blocked === 'filter'
+              ? html`<button
+                  class="icon-btn small diff"
+                  data-action="git-diff"
+                  title=${t('git.diff')}
+                  aria-label=${`${t('git.diff')}: ${c.path}`}
+                  @click=${() => this.emit('git-diff', { path: c.path, deleted: c.status === 'deleted' })}
+                >
+                  ${icon(icons.compare, 15)}
+                </button>`
+              : nothing}
             ${c.blocked && c.blocked !== 'conflict'
               ? html`<span class="lock" title=${t(EdithaGitPanel.REASON[c.blocked])}>${icon(icons.lock, 14)}</span>`
               : nothing}

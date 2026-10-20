@@ -165,6 +165,14 @@ export interface GitInfo {
   gitignore: boolean;
 }
 
+/** GIT-5: un commit nell'elenco. */
+export interface GitCommit {
+  hash: string;
+  author: string;
+  date: string;
+  subject: string;
+}
+
 /** GIT-2: un file cambiato rispetto all'ultimo commit. */
 export interface GitChange {
   path: string;
@@ -271,6 +279,15 @@ export const api = {
     info: () => request<GitInfo>('GET', 'api/git/info'),
     init: () => request<{ info: GitInfo; gitignoreCreated: boolean }>('POST', 'api/git/init'),
     gitignore: () => request<{ info: GitInfo; created: boolean }>('POST', 'api/git/gitignore'),
+    head: (path: string) => request<{ path: string; content: string | null }>('GET', `api/git/head${q(path)}`),
+    show: (path: string, rev: string) =>
+      request<{ path: string; content: string | null }>('GET', `api/git/show${q(path)}&rev=${encodeURIComponent(rev)}`),
+    log: (skip = 0) => request<{ commits: GitCommit[]; more: boolean }>('GET', `api/git/log?skip=${skip}`),
+    commitFiles: (rev: string) =>
+      request<{ hash: string; files: { path: string; status: GitChange['status']; blocked: 'secret' | 'sensitive' | null }[] }>(
+        'GET',
+        `api/git/commit-files?rev=${encodeURIComponent(rev)}`,
+      ),
     status: () => request<{ files: GitChange[]; truncated: boolean; merging: boolean }>('GET', 'api/git/status'),
     commit: (message: string, paths: string[] | 'all') =>
       request<{ hash: string; subject: string; files: number; skipped: string[] }>(

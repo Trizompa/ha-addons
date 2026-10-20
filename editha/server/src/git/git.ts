@@ -93,6 +93,9 @@ const HARDENING = [
   'gpg.x509.program=false',
   'gpg.ssh.program=false',
   'protocol.allow=never',
+  // Un'impostazione per protocollo nel repository (protocol.ext.allow=always) vincerebbe su quella
+  // generale: si spengono una per una (e GIT_ALLOW_PROTOCOL vuoto le blocca comunque tutte).
+  ...['ext', 'file', 'ssh', 'git', 'http', 'https'].map((p) => `protocol.${p}.allow=never`),
   'commit.gpgSign=false',
   'tag.gpgSign=false',
   'gc.auto=0',
@@ -127,6 +130,18 @@ function isSensitive(p: string): boolean {
   );
 }
 
+/** GIT-5: un commit nell'elenco. */
+export interface GitCommit {
+  hash: string;
+  author: string;
+  date: string;
+  subject: string;
+}
+
+const LOG_PAGE = 50;
+/** Un commit indicato per codice (abbreviato o intero). */
+const REV_RE = /^[0-9a-f]{4,64}$/;
+
 /** Oltre questo numero di file lo stato si tronca (es. una cartella di immagini non ignorata). */
 const MAX_CHANGES = 2000;
 
@@ -155,6 +170,7 @@ export class GitService {
   constructor(
     private readonly root: string,
     private readonly home: string,
+    private readonly maxFileSize = 2 * 1024 * 1024,
   ) {}
 
   /**
@@ -176,6 +192,11 @@ export class GitService {
   }
 
   private async run(args: string[], input?: string): Promise<string> {
+    return (await this.runRaw(args, input)).toString('utf8');
+  }
+
+  /** Come run(), ma l'uscita resta in byte (contenuto dei file: si decodifica con cura). */
+  private async runRaw(args: string[], input?: string): Promise<Buffer> {
     await mkdir(this.home, { recursive: true });
     return new Promise((resolve, reject) => {
       const child = execFile(
@@ -183,6 +204,7 @@ export class GitService {
         ['-c', `safe.directory=${this.root}`, ...HARDENING, '-C', this.root, ...args],
         {
           timeout: TIMEOUT_MS,
+          encoding: 'buffer',
           maxBuffer: 64 * 1024 * 1024,
           env: {
             PATH: process.env.PATH ?? '/usr/bin:/bin',
@@ -196,10 +218,14 @@ export class GitService {
             GIT_WORK_TREE: this.root,
             // I percorsi passati sono nomi di file, mai modelli (*, :(glob)…).
             GIT_LITERAL_PATHSPECS: '1',
+            // Mai rete: niente recupero automatico di oggetti mancanti (clone parziale) né protocolli.
+            GIT_NO_LAZY_FETCH: '1',
+            GIT_ALLOW_PROTOCOL: '',
           },
         },
-        (err, stdout, stderr) => {
+        (err, stdout, stderrRaw) => {
           if (!err) return resolve(stdout);
+          const stderr = stderrRaw.toString('utf8');
           if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
             return reject(new EdithaError('git_unavailable', 'Il programma git non è installato'));
           }
@@ -396,6 +422,107 @@ export class GitService {
       );
       const [hash, subject] = (await this.run(['log', '-1', '--no-show-signature', '--format=%H%x00%s'])).trim().split('\0');
       return { hash: hash ?? '', subject: subject ?? '', files: commitList.length, skipped: paths === 'all' ? blocked : [] };
+    });
+  }
+
+  /**
+   * GIT-3 e GIT-6: testo di un file com'era in un commit (HEAD: l'ultimo); null se lì non c'era, o
+   * se non ci sono commit. Mai per secrets.yaml e copie o per i dati interni di Home Assistant (SEC-7).
+   */
+  async contentAt(rel: string, rev = 'HEAD'): Promise<{ path: string; content: string | null }> {
+    if (rev !== 'HEAD' && !REV_RE.test(rev)) throw new EdithaError('invalid_request', `Commit non valido: ${rev}`);
+    const p = rel;
+    // Solo percorsi già normalizzati: con "./" o "." in mezzo git li risolverebbe, ma i controlli
+    // sui segreti (cartella .storage…) guarderebbero il nome sbagliato.
+    if (p === '' || p.includes('\0') || p.startsWith('/') || p.split('/').some((part) => part === '..' || part === '.' || part === '')) {
+      throw new EdithaError('invalid_request', `Percorso non valido: ${rel}`);
+    }
+    if (isSecretsFile(path.posix.basename(p)) || isSensitive(p)) {
+      throw new EdithaError('forbidden_path', 'Questo file non si mostra dal repository (segreti o dati interni)');
+    }
+    await this.requireRepo();
+    return this.lock.run('git', async () => {
+      if (rev !== 'HEAD' && !(await this.isCommit(rev))) throw new EdithaError('not_found', `Commit non trovato: ${rev}`);
+      // ls-tree dice tipo e modo: solo file normali (100644/100755), non link né sottomoduli.
+      let entry: string;
+      try {
+        entry = (await this.run(['ls-tree', '-z', '--full-tree', rev, '--', p])).split('\0')[0] ?? '';
+      } catch {
+        // Non c'è ancora nessun commit.
+        return { path: p, content: null };
+      }
+      const m = /^(\d+) (\w+) ([0-9a-f]+)\t(.*)$/s.exec(entry);
+      if (!m || m[4] !== p) return { path: p, content: null };
+      // Una cartella non è un file da mostrare.
+      if (m[2] === 'tree') return { path: p, content: null };
+      if (m[2] !== 'blob' || (m[1] !== '100644' && m[1] !== '100755')) {
+        throw new EdithaError('not_a_file', `Nel commit non è un file normale (collegamento o altro): ${p}`);
+      }
+      const size = Number((await this.run(['cat-file', '-s', m[3]!])).trim());
+      if (size > this.maxFileSize) throw new EdithaError('too_large', p);
+      // cat-file blob dà il contenuto così com'è, senza filtri né conversioni.
+      const data = await this.runRaw(['cat-file', 'blob', m[3]!]);
+      let content: string;
+      try {
+        content = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(data);
+      } catch {
+        throw new EdithaError('binary', p);
+      }
+      if (content.includes('\0')) throw new EdithaError('binary', p);
+      return { path: p, content };
+    });
+  }
+
+  private async isCommit(rev: string): Promise<boolean> {
+    return this.run(['cat-file', '-t', rev]).then(
+      (type) => type.trim() === 'commit',
+      () => false,
+    );
+  }
+
+  /** GIT-5: elenco dei commit, dal più recente (a pagine). */
+  async log(skip = 0): Promise<{ commits: GitCommit[]; more: boolean }> {
+    await this.requireRepo();
+    return this.lock.run('git', async () => {
+      let out: string;
+      try {
+        out = await this.run(['log', '--no-show-signature', '-z', '--format=%H%x1f%an%x1f%cI%x1f%s', `--skip=${skip}`, `-n${LOG_PAGE + 1}`]);
+      } catch {
+        // Nessun commit ancora.
+        return { commits: [], more: false };
+      }
+      const commits = out
+        .split('\0')
+        .filter(Boolean)
+        .map((line) => {
+          const [hash, author, date, subject] = line.split('\x1f');
+          return { hash: hash ?? '', author: author ?? '', date: date ?? '', subject: subject ?? '' };
+        });
+      return { commits: commits.slice(0, LOG_PAGE), more: commits.length > LOG_PAGE };
+    });
+  }
+
+  /** GIT-5: file toccati da un commit (rispetto al primo genitore; tutti per il primo commit). */
+  async commitFiles(rev: string): Promise<{ hash: string; files: { path: string; status: GitChange['status']; blocked: 'secret' | 'sensitive' | null }[] }> {
+    if (!REV_RE.test(rev)) throw new EdithaError('invalid_request', `Commit non valido: ${rev}`);
+    await this.requireRepo();
+    return this.lock.run('git', async () => {
+      if (!(await this.isCommit(rev))) throw new EdithaError('not_found', `Commit non trovato: ${rev}`);
+      const hash = (await this.run(['rev-parse', '--verify', `${rev}^{commit}`])).trim();
+      // diff-tree confronta solo gli oggetti già salvati: niente filtri né programmi esterni.
+      const out = await this.run(['diff-tree', '-r', '-z', '--no-commit-id', '--name-status', '--no-renames', '--root', '-m', '--first-parent', hash]);
+      const parts = out.split('\0').filter(Boolean);
+      const files: { path: string; status: GitChange['status']; blocked: 'secret' | 'sensitive' | null }[] = [];
+      for (let i = 0; i + 1 < parts.length; i += 2) {
+        const code = parts[i]![0];
+        const p = parts[i + 1]!;
+        files.push({
+          path: p,
+          status: code === 'A' ? 'added' : code === 'D' ? 'deleted' : 'modified',
+          blocked: isSecretsFile(path.posix.basename(p)) ? 'secret' : isSensitive(p) ? 'sensitive' : null,
+        });
+      }
+      return { hash, files };
     });
   }
 

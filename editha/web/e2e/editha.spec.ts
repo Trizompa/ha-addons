@@ -1159,7 +1159,7 @@ test('HA-7 – pulsante nella barra, aggiornamento mentre si scrive, entità ine
   await expect(panel.locator('.render pre')).toHaveText('ZeroDivisionError: division by zero');
 });
 
-test('GIT-1, GIT-2, GIT-4 – pannello Git: inizializza il repository, mostra le modifiche, fa il commit dei file scelti', async ({ page }) => {
+test('GIT-1…6 – pannello Git: inizializza, modifiche, commit dei file scelti, differenze, storia, ripristino', async ({ page }) => {
   await page.locator('editha-file-tree button[data-action="git"]').click();
   const panel = page.locator('editha-git-panel');
   await expect(panel).toContainText('non c\'è ancora un repository Git');
@@ -1199,6 +1199,34 @@ test('GIT-1, GIT-2, GIT-4 – pannello Git: inizializza il repository, mostra le
   await expect(activeTab(page)).not.toHaveClass(/dirty/);
   await page.locator('editha-file-tree button[data-action="git"]').click();
   await expect(panel.locator('ul.changes')).toContainText('configuration.yaml');
+
+  // GIT-3: differenze rispetto all'ultimo commit, nella vista di confronto.
+  await panel.locator('ul.changes li', { hasText: 'configuration.yaml' }).locator('button[data-action="git-diff"]').click();
+  const compare = page.locator('editha-compare-panel');
+  await expect(compare.locator('.labels')).toContainText('configuration.yaml (ultimo commit)');
+  await expect(compare.locator('.labels')).toContainText('configuration.yaml (attuale)');
+  await expect(compare).toContainText('# git');
+  await compare.locator('button[title="Chiudi"]').click();
+  // Il pannello Git è rimasto aperto.
+  await expect(panel.locator('ul.changes')).toContainText('configuration.yaml');
+
+  // GIT-5: storia dei commit, file toccati; GIT-6: confronto con quella versione e ripristino.
+  const before = await disk('configuration.yaml');
+  await panel.locator('button[data-action="git-log"]').click();
+  const first = panel.locator('ul.log > li', { hasText: 'Prima fotografia' });
+  await first.locator('button.commit-row').click();
+  await expect(first.locator('ul.files')).toContainText('configuration.yaml');
+  await first.locator('button[data-action="git-rev-diff"]').click();
+  await expect(compare.locator('.labels')).toContainText(/configuration\.yaml \(commit [0-9a-f]{7}\)/);
+  await compare.locator('button[title="Chiudi"]').click();
+  await first.locator('button[data-action="git-restore"]').click();
+  await expect(page.locator('editha-dialog dialog[open]')).toContainText('Prima fotografia');
+  await dialogButton(page, 'Ripristina').click();
+  await expect(page.locator('editha-toasts')).toContainText('ripristinato');
+  expect(before).toContain('# git');
+  expect(await disk('configuration.yaml')).toBe(before.replace('# git\n', ''));
+  // La tab aperta mostra il contenuto ripristinato.
+  await expect(editor(page)).not.toContainText('# git');
 
   // Chiuso il pannello torna l'albero, con il .gitignore nuovo.
   await panel.locator('button[aria-label="Chiudi"]').click();

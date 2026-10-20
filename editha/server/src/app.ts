@@ -82,7 +82,7 @@ export async function buildApp(config: Config, options: AppOptions = {}): Promis
     new DraftStore(path.join(config.dataDir, 'drafts')),
     config.maxFileSize,
   );
-  registerGitRoutes(app, new GitService(config.configDir, path.join(config.dataDir, 'git-home')));
+  registerGitRoutes(app, new GitService(config.configDir, path.join(config.dataDir, 'git-home'), config.maxFileSize));
   registerHaRoutes(app, new HaClient(config.haUrl, config.haToken), (p) => files.isSecrets(p));
   await registerWebRoutes(app, config.webDir);
   return app;

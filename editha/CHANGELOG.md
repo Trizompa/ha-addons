@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.30.0
+
+- **Git locale completo.** Nel pannello Git:
+  - il pulsante del confronto accanto a ogni file cambiato: le differenze rispetto all'ultimo commit, nella vista di confronto;
+  - **Storia dei commit**: l'elenco dei commit, dal più recente; un clic mostra i file toccati;
+  - per ogni file di un commit puoi **confrontare** quella versione con il file attuale o **ripristinarla** (con conferma). Il ripristino passa dal salvataggio di EDITHA, quindi il contenuto attuale resta nella cronologia; un file che ora non c'è viene ricreato.
+- Segreti e dati interni di Home Assistant non si mostrano né si ripristinano dal repository.
+- **Sicurezza** (riguarda anche la 0.28 e la 0.29): un `.git/config` scritto da un altro programma poteva far partire un comando chiedendo a git di scaricare oggetti mancanti. Ora git non usa mai la rete né scarica oggetti, in nessun caso.
+- Il contenuto dei file dal repository si legge in modo rigoroso: un file non UTF-8 o un collegamento non vengono mostrati né ripristinati come testo rovinato.
+
 ## 0.29.0
 
 - **Git locale: modifiche e commit.** Il pannello Git ora mostra i file cambiati dall'ultimo commit (**M** modificato, **N** nuovo, **E** eliminato), ognuno con una casella. Scrivi un messaggio e premi **Commit** per salvare una «fotografia» dei file spuntati. L'elenco si aggiorna da solo quando salvi un file con il pannello aperto; un clic sul nome apre il file.
