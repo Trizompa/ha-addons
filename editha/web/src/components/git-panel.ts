@@ -25,6 +25,8 @@ export class EdithaGitPanel extends LitElement {
     commits: { state: true },
     logMore: { state: true },
     expanded: { state: true },
+    ignoredList: { state: true },
+    showIgnored: { state: true },
   };
 
   declare info: GitInfo | null;
@@ -44,6 +46,9 @@ export class EdithaGitPanel extends LitElement {
   declare logMore: boolean;
   /** Commit aperti: i file toccati (o 'loading', o un errore). */
   declare expanded: Map<string, CommitFiles | 'loading' | { error: string }>;
+  /** Esclusioni di percorsi precisi nel .gitignore (quelle dell'occhio barrato), da poter annullare. */
+  declare ignoredList: { line: string; path: string }[];
+  declare showIgnored: boolean;
   /** Caricamento in corso: una risposta vecchia non sostituisce quella nuova. */
   private loadToken = 0;
 
@@ -61,6 +66,8 @@ export class EdithaGitPanel extends LitElement {
     this.commits = null;
     this.logMore = false;
     this.expanded = new Map();
+    this.ignoredList = [];
+    this.showIgnored = false;
   }
 
   static override styles = [
@@ -215,6 +222,20 @@ export class EdithaGitPanel extends LitElement {
       .path .count {
         font-size: 12px;
       }
+      .legend {
+        margin: 0 0 8px;
+        line-height: 1.6;
+      }
+      .legend .badge {
+        display: inline-block;
+      }
+      ul.changes.ignored li {
+        gap: 6px;
+      }
+      ul.changes.ignored .small-btn {
+        margin: 0;
+        flex: none;
+      }
       .hint {
         margin: 0 0 8px;
         padding: 6px 10px;
@@ -312,6 +333,7 @@ export class EdithaGitPanel extends LitElement {
         this.changes = status.files;
         this.truncated = status.truncated;
         this.merging = status.merging;
+        this.ignoredList = (await api.git.ignored()).entries;
         // La storia si rilegge solo se è cambiato l'ultimo commit (aperti e pagine restano).
         if (this.showLog && info.head?.hash !== this.logHead) void this.loadLog(true);
       } else {
@@ -482,6 +504,55 @@ export class EdithaGitPanel extends LitElement {
     await this.load();
   }
 
+  /** Includi di nuovo: toglie la riga dal .gitignore, il file o la cartella ricompaiono. */
+  private async unignore(line: string, shown: string): Promise<void> {
+    if (this.busy) return;
+    this.busy = true;
+    try {
+      const res = await api.git.unignore(line);
+      if (res.stillIgnored) this.emit('git-error', { message: t('git.stillIgnored', { path: shown }) });
+      else this.emit('git-changed', { message: t('git.unignored', { path: shown }) });
+    } catch (err) {
+      this.emit('git-error', { message: errorText(err) });
+    } finally {
+      this.busy = false;
+    }
+    await this.load();
+  }
+
+  private renderIgnoredList() {
+    const list = this.ignoredList;
+    if (list.length === 0) return nothing;
+    return html`
+      <button
+        class="section-toggle"
+        aria-expanded=${String(this.showIgnored)}
+        data-action="git-ignored"
+        @click=${() => (this.showIgnored = !this.showIgnored)}
+      >
+        ${icon(this.showIgnored ? icons.chevronDown : icons.chevronRight, 16)} ${t('git.ignoredList', { n: list.length })}
+      </button>
+      ${this.showIgnored
+        ? html`<p class="muted small">${t('git.ignoredListHint')}</p>
+            <ul class="changes ignored">
+              ${list.map(
+                (e) => html`<li>
+                  <span class="path" title=${e.line}>${icon(e.path.endsWith('/') ? icons.folder : icons.file, 14)} ${e.path}</span>
+                  <button
+                    class="btn small-btn"
+                    data-action="git-unignore"
+                    ?disabled=${this.busy}
+                    @click=${() => void this.unignore(e.line, e.path)}
+                  >
+                    ${icon(icons.show, 14)} ${t('git.unignore')}
+                  </button>
+                </li>`,
+              )}
+            </ul>`
+        : nothing}
+    `;
+  }
+
   /** Quanti file entrano davvero nel commit (una cartella nuova conta per i file che contiene). */
   private fileCount(paths: string[]): number {
     const byPath = new Map((this.changes ?? []).map((c) => [c.path, c]));
@@ -589,6 +660,7 @@ export class EdithaGitPanel extends LitElement {
         </div>
       </div>
       ${this.renderChanges()}
+      ${this.renderIgnoredList()}
       ${this.renderLog()}
       ${info.gitignore
         ? nothing
@@ -644,6 +716,13 @@ export class EdithaGitPanel extends LitElement {
         </label>
       </div>
       ${!this.info?.head ? html`<p class="hint small">${t('git.firstCommitHint')}</p>` : nothing}
+      <p class="legend muted small">
+        <span class="badge added">N</span> ${t('git.statusAdded')} · <span class="badge modified">M</span> ${t('git.statusModified')} ·
+        <span class="badge deleted">${t('git.statusDeleted').slice(0, 1)}</span> ${t('git.statusDeleted')}<br />
+        ${t('git.legendCheck')} · ${icon(icons.hide, 13)} ${t('git.legendEye')}${this.info?.head
+          ? html` · ${icon(icons.compare, 13)} ${t('git.legendCompare')}`
+          : nothing}
+      </p>
       <ul class="changes">
         ${changes.map((c) => {
           const blocked = c.blocked !== null || this.merging;
@@ -682,7 +761,7 @@ export class EdithaGitPanel extends LitElement {
                   ${icon(icons.hide, 15)}
                 </button>`
               : nothing}
-            ${!c.folder && (c.blocked === null || c.blocked === 'conflict' || c.blocked === 'filter')
+            ${!c.folder && !c.untracked && this.info?.head && (c.blocked === null || c.blocked === 'conflict' || c.blocked === 'filter')
               ? html`<button
                   class="icon-btn small diff"
                   data-action="git-diff"

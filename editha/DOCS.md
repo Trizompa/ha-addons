@@ -304,6 +304,12 @@ sends nothing outside (no GitHub or other servers).
   folder **excludes** it from the repository: it adds a line to `.gitignore`, so it no longer
   shows up. Before the first commit, which usually contains the whole configuration, exclude the
   folders you do not need (downloaded by HACS, other add-ons' copies…).
+- **Tick or crossed-out eye?** The tick only decides what goes into the commit you are about to
+  make: an unticked file stays among the changes and you find it next time. The crossed-out eye
+  excludes for good.
+- The **Excluded** section lists files and folders excluded from the repository; **Include**
+  brings them back among the changes (it removes the line from `.gitignore`, the files are not
+  touched).
 - To make a **commit** (a «snapshot» of the files, with a message): keep the files to include
   ticked (all of them at first), write what you changed and press **Commit** (or Ctrl+Enter in the
   message).

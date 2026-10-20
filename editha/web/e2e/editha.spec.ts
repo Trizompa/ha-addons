@@ -1181,6 +1181,15 @@ test('GIT-1…6 – pannello Git: inizializza, modifiche, commit dei file scelti
   await expect(page.locator('editha-toasts')).toContainText('Escluso dal repository: tabs/');
   await expect(panel.locator('ul.changes')).not.toContainText('tabs/');
   expect(await disk('.gitignore')).toContain('\n/tabs/\n');
+  // Prima del primo commit niente confronto (non c'è niente con cui confrontare).
+  await expect(panel.locator('button[data-action="git-diff"]')).toHaveCount(0);
+  // Esclusi: l'elenco delle esclusioni, con «Includi» per annullarle.
+  await panel.locator('button[data-action="git-ignored"]').click();
+  await expect(panel.locator('ul.ignored')).toContainText('tabs/');
+  await panel.locator('ul.ignored li', { hasText: 'tabs/' }).locator('button[data-action="git-unignore"]').click();
+  await expect(page.locator('editha-toasts')).toContainText('Di nuovo nel repository: tabs/');
+  await expect(panel.locator('ul.changes').first()).toContainText('tabs/');
+  expect(await disk('.gitignore')).not.toContain('/tabs/');
   // secrets.yaml è escluso dal .gitignore: non compare nemmeno.
   await expect(panel.locator('ul.changes')).not.toContainText('secrets.yaml');
   await panel.locator('.changes-head input[type="checkbox"]').uncheck();

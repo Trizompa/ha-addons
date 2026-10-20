@@ -86,6 +86,16 @@ export function registerGitRoutes(app: FastifyInstance, git: GitService): void {
     },
   );
 
+  // Esclusioni di percorsi precisi e "Includi di nuovo".
+  app.get('/api/git/ignored', async () => ({ entries: await git.ignored() }));
+  app.post<{ Body: { line: string } }>(
+    '/api/git/unignore',
+    { schema: { body: { type: 'object', required: ['line'], properties: { line: { type: 'string', minLength: 2, maxLength: 4200 } }, additionalProperties: false } } },
+    async (req) => {
+      return { ok: true, stillIgnored: await git.unignore(req.body.line) };
+    },
+  );
+
   // .gitignore di base in un repository che non ce l'ha; quello esistente non si tocca.
   app.post('/api/git/gitignore', async () => ({ created: await git.writeGitignore(), info: await git.info() }));
 }

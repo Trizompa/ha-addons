@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.32.0
+
+- **Git, Esclusi**: nel pannello Git una sezione elenca file e cartelle esclusi con l'occhio barrato; **Includi** li fa ricomparire, senza aprire il `.gitignore` a mano. Le righe aggiunte stanno sotto un titolo nel `.gitignore`.
+- Sotto l'elenco delle modifiche una legenda spiega le lettere (N nuovo, M modificato, E eliminato), la spunta (cosa entra in questo commit) e l'occhio barrato (escludi per sempre).
+- Il pulsante di confronto compare solo quando c'è un commit con cui confrontare (non prima del primo commit né per i file nuovi).
+- Il `.gitignore` di base dei repository nuovi esclude anche i file temporanei lasciati da Home Assistant (`.nome.tmp.…`); in un repository già creato si escludono con l'occhio barrato.
+- Se dopo «Includi» un'altra regola del `.gitignore` esclude ancora lo stesso file, EDITHA lo dice.
+
 ## 0.31.0
 
 - **Git, primo commit più semplice**: una cartella che git non ha mai visto è ora una riga sola con il numero di file (per esempio `custom_components/ · 1450 file`), invece di migliaia di righe. Il commit di una cartella include i suoi file, tranne segreti e dati interni.

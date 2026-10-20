@@ -60,7 +60,8 @@ tts/
 *.log
 *.log.*
 
-# File temporanei
+# File temporanei (anche quelli lasciati da Home Assistant)
+.*.tmp.*
 __pycache__/
 *.pyc
 *.tmp
@@ -151,6 +152,8 @@ export interface GitCommit {
 }
 
 const LOG_PAGE = 50;
+/** Titolo sopra le righe aggiunte con Escludi. */
+const IGNORE_HEADER = '# Esclusi con EDITHA (occhio barrato nel pannello Git)';
 /** Un commit indicato per codice (abbreviato o intero). */
 const REV_RE = /^[0-9a-f]{4,64}$/;
 
@@ -203,12 +206,12 @@ export class GitService {
     return this.run([...overrides, ...args], input);
   }
 
-  private async run(args: string[], input?: string): Promise<string> {
-    return (await this.runRaw(args, input)).toString('utf8');
+  private async run(args: string[], input?: string, literal = true): Promise<string> {
+    return (await this.runRaw(args, input, literal)).toString('utf8');
   }
 
   /** Come run(), ma l'uscita resta in byte (contenuto dei file: si decodifica con cura). */
-  private async runRaw(args: string[], input?: string): Promise<Buffer> {
+  private async runRaw(args: string[], input?: string, literal = true): Promise<Buffer> {
     await mkdir(this.home, { recursive: true });
     return new Promise((resolve, reject) => {
       const child = execFile(
@@ -229,7 +232,8 @@ export class GitService {
             GIT_DIR: path.join(this.root, '.git'),
             GIT_WORK_TREE: this.root,
             // I percorsi passati sono nomi di file, mai modelli (*, :(glob)…).
-            GIT_LITERAL_PATHSPECS: '1',
+            // (check-ignore non le accetta: lì si passano nomi, non modelli.)
+            GIT_LITERAL_PATHSPECS: literal ? '1' : '0',
             // Mai rete: niente recupero automatico di oggetti mancanti (clone parziale) né protocolli.
             GIT_NO_LAZY_FETCH: '1',
             GIT_ALLOW_PROTOCOL: '',
@@ -614,9 +618,61 @@ export class GitService {
       } catch {
         // non c'è ancora
       }
-      if (current.split(/\r?\n/).includes(line)) return;
+      const lines = current.split(/\r?\n/);
+      if (lines.includes(line)) return;
       const sep = current === '' || current.endsWith('\n') ? '' : '\n';
-      await appendFile(file, `${sep}${line}\n`);
+      // Le esclusioni fatte da qui stanno sotto un titolo, così si ritrovano anche a mano.
+      const header = lines.includes(IGNORE_HEADER) ? '' : `${current === '' ? '' : '\n'}${IGNORE_HEADER}\n`;
+      await appendFile(file, `${sep}${header}${line}\n`);
+    });
+  }
+
+  /**
+   * Righe del .gitignore che escludono un percorso preciso di /config (quelle che iniziano con
+   * "/", come le scrive Escludi), con il percorso leggibile.
+   */
+  async ignored(): Promise<{ line: string; path: string }[]> {
+    await this.requireRepo();
+    const current = await this.lock.run('git', async () => {
+      const file = path.join(this.root, '.gitignore');
+      // Solo un file vero dentro /config: un link porterebbe a leggere altrove.
+      const st = await lstat(file).catch(() => null);
+      if (!st?.isFile()) return '';
+      return readFile(file, 'utf8').catch(() => '');
+    });
+    return current
+      .split(/\r?\n/)
+      .filter((l) => /^\/[^/]/.test(l))
+      .map((line) => ({ line, path: line.slice(1).replace(/\\(.)/g, '$1') }));
+  }
+
+  /** Includi di nuovo: toglie dal .gitignore esattamente quella riga (e il titolo, se resta vuoto). */
+  /** Restituisce true se il percorso resta escluso da un'altra regola del .gitignore. */
+  async unignore(line: string): Promise<boolean> {
+    if (!/^\/[^/]/.test(line) || /[\0\r\n]/.test(line)) throw new EdithaError('invalid_request', 'Riga non valida');
+    await this.requireRepo();
+    return this.lock.run('git', async () => {
+      const file = path.join(this.root, '.gitignore');
+      const st = await lstat(file).catch(() => null);
+      if (!st) throw new EdithaError('not_found', 'Il .gitignore non c\'è');
+      if (!st.isFile()) throw new EdithaError('not_a_file', 'Il .gitignore non è un file normale');
+      const current = await readFile(file, 'utf8');
+      const eol = current.includes('\r\n') ? '\r\n' : '\n';
+      const lines = current.split(/\r?\n/);
+      if (!lines.includes(line)) throw new EdithaError('not_found', 'Questa esclusione non c\'è più nel .gitignore');
+      let kept = lines.filter((l) => l !== line);
+      // Il titolo di Escludi senza più righe sotto se ne va.
+      const h = kept.indexOf(IGNORE_HEADER);
+      if (h !== -1 && kept.slice(h + 1).every((l) => l.trim() === '')) kept = kept.slice(0, h);
+      while (kept.length > 1 && kept[kept.length - 1] === '' && kept[kept.length - 2] === '') kept.pop();
+      // Solo gli a capo in fondo: uno spazio protetto (\ ) alla fine di una riga è parte della regola.
+      await writeFile(file, kept.join(eol).replace(/(\r?\n)+$/, '') + eol);
+      // Un'altra regola (es. *.log) può escludere ancora lo stesso percorso.
+      const target = line.slice(1).replace(/\\(.)/g, '$1');
+      return this.run(['check-ignore', '-q', '--no-index', '--', target], undefined, false).then(
+        () => true,
+        () => false,
+      );
     });
   }
 

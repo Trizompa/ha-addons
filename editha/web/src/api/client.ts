@@ -293,6 +293,8 @@ export const api = {
         `api/git/commit-files?rev=${encodeURIComponent(rev)}`,
       ),
     ignore: (path: string) => request<{ ok: true }>('POST', 'api/git/ignore', { path }),
+    ignored: () => request<{ entries: { line: string; path: string }[] }>('GET', 'api/git/ignored'),
+    unignore: (line: string) => request<{ ok: true; stillIgnored: boolean }>('POST', 'api/git/unignore', { line }),
     status: () => request<{ files: GitChange[]; truncated: boolean; merging: boolean }>('GET', 'api/git/status'),
     /** `folders`: quanti file si sono visti in ogni cartella nuova scelta (se cambiano, il commit si ferma). */
     commit: (message: string, paths: string[] | 'all', folders: Record<string, number> = {}) =>

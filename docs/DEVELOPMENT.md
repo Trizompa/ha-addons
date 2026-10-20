@@ -133,6 +133,8 @@ Per provare l'interfaccia a mano: `npm run build`, poi avviare il server come so
 | `GET /api/git/log?skip=` | | `{ commits: [{ hash, author, date, subject }], more }`: GIT-5, 50 per pagina |
 | `GET /api/git/commit-files?rev=` | | `{ hash, files: [{ path, status, blocked }] }`: file toccati (`diff-tree`, primo genitore) |
 | `POST /api/git/ignore` | `{ path }` | `{ ok }`: aggiunge `/<path>` (caratteri speciali protetti) al `.gitignore`, creato se manca; mai su un `.gitignore` che non è un file normale |
+| `GET /api/git/ignored` | | `{ entries: [{ line, path }] }`: righe del `.gitignore` che iniziano con `/` (percorsi precisi, come le scrive Escludi) |
+| `POST /api/git/unignore` | `{ line }` | `{ ok }`: toglie esattamente quella riga (e il titolo di Escludi se resta vuoto) |
 | `POST /api/git/gitignore` | | `{ info, created }`: `.gitignore` di base, mai sopra uno esistente |
 | `POST /api/ha/check` | | `{ valid, errors, warnings }` |
 | `POST /api/ha/template` | `{ template, path? }` | `{ ok: true, result }` oppure `{ ok: false, kind: 'syntax' \| 'render', message }`: HA-7, rende il template con `POST /api/template` di Core. Serve `{{`, `{%` o `{#`; 403 per secrets.yaml e copie (anche tramite link); HA non indica la riga dell'errore |

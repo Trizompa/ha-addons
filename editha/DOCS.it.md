@@ -317,6 +317,11 @@ fuori (niente GitHub né altri server).
   una cartella nuovi li **esclude** dal repository: aggiunge una riga al `.gitignore`, così non
   compaiono più. Al primo commit, che di solito contiene tutta la configurazione, conviene
   escludere prima le cartelle che non servono (scaricate da HACS, copie di altri add-on…).
+- **Spunta o occhio barrato?** La spunta decide solo cosa entra nel commit che stai per fare: un
+  file senza spunta resta tra le modifiche e lo ritrovi la volta dopo. L'occhio barrato invece
+  esclude per sempre.
+- La sezione **Esclusi** elenca file e cartelle esclusi dal repository; **Includi** li fa
+  ricomparire tra le modifiche (toglie la riga dal `.gitignore`, senza toccare i file).
 - Per fare un **commit** (una «fotografia» dei file, con un messaggio): lascia spuntati i file da
   includere (all'inizio ci sono tutti), scrivi cosa hai cambiato e premi **Commit** (o
   Ctrl+Invio nel messaggio).

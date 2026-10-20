@@ -423,7 +423,23 @@ describe('Git locale (GIT-1)', () => {
     assert.equal((await ignore('custom_components/')).statusCode, 200);
     assert.equal((await ignore('pacchetti/[strano] #1.yaml')).statusCode, 200);
     assert.equal((await ignore('custom_components/')).statusCode, 200);
-    assert.equal(await readFile(path.join(sb.configDir, '.gitignore'), 'utf8'), '*.db\n/custom_components/\n/pacchetti/\\[strano\\] \\#1.yaml\n');
+    const header = '# Esclusi con EDITHA (occhio barrato nel pannello Git)';
+    assert.equal(
+      await readFile(path.join(sb.configDir, '.gitignore'), 'utf8'),
+      `*.db\n\n${header}\n/custom_components/\n/pacchetti/\\[strano\\] \\#1.yaml\n`,
+    );
+    const listed = (await call('GET', '/api/git/ignored')).json().entries;
+    assert.deepEqual(listed, [
+      { line: '/custom_components/', path: 'custom_components/' },
+      { line: '/pacchetti/\\[strano\\] \\#1.yaml', path: 'pacchetti/[strano] #1.yaml' },
+    ]);
+    // Includi di nuovo: la riga se ne va e la cartella ricompare.
+    const unignore = (line: string) => app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line }, remoteAddress: INGRESS });
+    assert.equal((await unignore('/custom_components/')).statusCode, 200);
+    assert.equal((await unignore('/custom_components/')).statusCode, 404);
+    assert.equal((await unignore('*.db')).statusCode, 400);
+    assert.ok((await call('GET', '/api/git/status')).json().files.some((f: { path: string }) => f.path === 'custom_components/'));
+    assert.equal((await ignore('custom_components/')).statusCode, 200);
     for (const p of ['../x', '/etc', 'a\nb', './a']) assert.equal((await ignore(p)).statusCode, 400, p);
     const st2 = (await call('GET', '/api/git/status')).json();
     assert.deepEqual(st2.files.map((f: { path: string; folder?: { files: number } }) => [f.path, f.folder?.files ?? null]), [
@@ -473,5 +489,32 @@ describe('Git locale (GIT-1)', () => {
     const ok = await commit({ message: 'Backup', paths: ['.ha_mcp/'], folders: { '.ha_mcp/': 2 } });
     assert.equal(ok.statusCode, 200, ok.body);
     assert.equal(gitOut('ls-files'), '.ha_mcp/backups/1/automations.yaml\n.ha_mcp/backups/1/scripts.yaml');
+  });
+
+  it('Includi di nuovo: l\'ultima esclusione toglie anche il titolo', async () => {
+    await call('POST', '/api/git/init');
+    await writeFile(path.join(sb.configDir, '.gitignore'), '*.db\r\n');
+    await mkdir(path.join(sb.configDir, 'x'));
+    await writeFile(path.join(sb.configDir, 'x/a.yaml'), 'a\n');
+    await app.inject({ method: 'POST', url: '/api/git/ignore', payload: { path: 'x/' }, remoteAddress: INGRESS });
+    await app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line: '/x/' }, remoteAddress: INGRESS });
+    assert.equal(await readFile(path.join(sb.configDir, '.gitignore'), 'utf8'), '*.db\r\n');
+  });
+
+  it('Includi: uno spazio protetto in fondo resta; dice se un\'altra regola esclude ancora', async () => {
+    await call('POST', '/api/git/init');
+    await writeFile(path.join(sb.configDir, '.gitignore'), '*.log\n');
+    await writeFile(path.join(sb.configDir, 'a '), 'x');
+    await writeFile(path.join(sb.configDir, 'b.log'), 'x');
+    const ignore = (p: string) => app.inject({ method: 'POST', url: '/api/git/ignore', payload: { path: p }, remoteAddress: INGRESS });
+    const unignore = (line: string) => app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line }, remoteAddress: INGRESS });
+    await writeFile(path.join(sb.configDir, 'c.yaml'), 'c');
+    await ignore('c.yaml');
+    await ignore('a ');
+    assert.equal((await unignore('/c.yaml')).json().stillIgnored, false);
+    assert.ok((await readFile(path.join(sb.configDir, '.gitignore'), 'utf8')).endsWith('/a\\ \n'));
+    assert.equal((await call('GET', '/api/git/status')).json().files.some((f: { path: string }) => f.path === 'a '), false);
+    await ignore('b.log');
+    assert.equal((await unignore('/b.log')).json().stillIgnored, true);
   });
 });
