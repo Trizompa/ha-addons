@@ -238,6 +238,8 @@ export const en: Record<keyof Dictionary, string> = {
   'git.unignore': 'Include',
   'git.unignored': 'Back in the repository: {path}',
   'git.stillIgnored': 'Removed the exclusion of {path}, but another .gitignore rule still excludes it (for example *.log): edit .gitignore to include it.',
+  'download.secretsExcludedOne': 'The ZIP does not contain {path}: passwords never leave in a ZIP (download the file on its own if you need it).',
+  'download.secretsExcludedMany': 'The ZIP does not contain {n} files with passwords (secrets.yaml and copies): download them on their own if you need them.',
   'git.truncated': 'There are more than 2000 rows: exclude with the crossed-out eye the folders you do not want to keep, then commit.',
   'git.messageLabel': 'Commit message',
   'git.messagePlaceholder': 'What did you change? (e.g. New blinds automation)',

@@ -1,7 +1,7 @@
 import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { readFile, symlink } from 'node:fs/promises';
+import { readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { inflateRawSync } from 'node:zlib';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.js';
@@ -137,6 +137,24 @@ describe('upload e download (FS-6)', () => {
     const names = [...readZip(res.rawPayload).keys()];
     assert.ok(names.includes('configuration.yaml'));
     assert.ok(!names.some((n) => n.startsWith('.storage/')));
+  });
+
+  it('SEC-7: lo ZIP di una cartella non contiene secrets.yaml né le sue copie, e si sa prima quali restano fuori', async () => {
+    await writeFile(path.join(sb.configDir, 'secrets.yaml'), 'pw: x\n');
+    await writeFile(path.join(sb.configDir, 'packages/secrets_old.yaml'), 'pw: y\n');
+    const names = [...readZip((await download('')).rawPayload).keys()];
+    assert.ok(names.includes('configuration.yaml'));
+    assert.ok(!names.some((n) => /secrets/.test(n)), names.join(','));
+    assert.ok(![...readZip((await download('packages')).rawPayload).keys()].includes('secrets_old.yaml'));
+    const info = await app.inject({ method: 'GET', url: '/api/download/excluded?path=', remoteAddress: INGRESS });
+    assert.deepEqual(info.json().excluded.sort(), ['packages/secrets_old.yaml', 'secrets.yaml']);
+    const sub = await app.inject({ method: 'GET', url: '/api/download/excluded?path=packages', remoteAddress: INGRESS });
+    assert.deepEqual(sub.json().excluded, ['packages/secrets_old.yaml']);
+    // Da solo, secrets.yaml si scarica (lo chiede chi lo vuole).
+    assert.equal((await download('secrets.yaml')).statusCode, 200);
+    // Gli altri test di questo file usano la stessa cartella.
+    await rm(path.join(sb.configDir, 'secrets.yaml'));
+    await rm(path.join(sb.configDir, 'packages/secrets_old.yaml'));
   });
 
   it('crc32 nativo e in JS danno lo stesso risultato', () => {

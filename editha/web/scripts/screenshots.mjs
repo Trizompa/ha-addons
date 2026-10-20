@@ -250,6 +250,11 @@ const fakeHa = http.createServer((req, res) => {
   if (req.url === '/api/services') return json(services);
   if (req.url === '/api/config/core/check_config') return json({ result: 'valid', errors: null });
   if (req.url?.startsWith('/api/services/')) return json([]);
+  // Template preview: a plausible result for the sample template.
+  if (req.method === 'POST' && req.url === '/api/template') {
+    req.resume();
+    return res.writeHead(200, { 'content-type': 'text/plain' }).end('21.4');
+  }
   res.writeHead(404).end();
 });
 await new Promise((r) => fakeHa.listen(HA_PORT, '127.0.0.1', r));
@@ -310,6 +315,8 @@ const row = (page, p) => page.locator(`editha-file-tree .row[data-path="${p}"]`)
 const tool = (page, title) => page.locator(`editha-toolbar button[title^="${title}"]`);
 const editor = (page) => page.locator('editha-editor-pane .cm-content');
 const shot = async (page, name, clip) => {
+  // Messaggi di conferma: non nelle immagini.
+  for (const b of await page.locator('editha-toasts button').all()) await b.click().catch(() => undefined);
   await wait(400);
   await page.screenshot({ path: path.join(out, `${name}.png`), clip });
   console.log('saved', name);
@@ -477,7 +484,40 @@ try {
     await page.context().close();
   }
 
-  // 14. Cover image: desktop window and phone side by side.
+  // 14. Jinja template preview (Alt+T on the "Average temperature" template).
+  {
+    const page = await session('dark', { tabs: ['configuration.yaml'], active: 'configuration.yaml' });
+    await goToLine(page, 26);
+    await page.keyboard.press('Alt+t');
+    await page.locator('editha-template-panel .ok').waitFor();
+    await shot(page, 'template-preview');
+    await page.context().close();
+  }
+
+  // 15. Local Git: repository, first commit, then a modified file with the legend.
+  {
+    const page = await session('dark', { tabs: ['automations.yaml'], active: 'automations.yaml' });
+    await page.locator('editha-file-tree button[data-action="git"]').click();
+    const panel = page.locator('editha-git-panel');
+    await panel.locator('button[data-action="git-init"]').click();
+    await panel.locator('button[data-action="git-ignore"]').first().waitFor();
+    // www/ only holds images: excluded with the crossed-out eye.
+    await panel.locator('ul.changes li', { hasText: 'www/' }).locator('button[data-action="git-ignore"]').click();
+    await wait(600);
+    await panel.locator('textarea.message').fill('Initial configuration');
+    await panel.locator('button[data-action="git-commit"]').click();
+    await panel.locator('.card', { hasText: 'Initial configuration' }).waitFor();
+    await goToLine(page, 17);
+    await page.keyboard.press('Control+Shift+ArrowLeft');
+    await page.keyboard.type('75');
+    await page.keyboard.press('Control+s');
+    await panel.locator('ul.changes li', { hasText: 'automations.yaml' }).waitFor();
+    await panel.locator('textarea.message').fill('Sunset lights: higher brightness');
+    await shot(page, 'git-panel');
+    await page.context().close();
+  }
+
+  // 16. Cover image: desktop window and phone side by side.
   {
     const img = async (name) => `data:image/png;base64,${(await readFile(path.join(out, `${name}.png`))).toString('base64')}`;
     const page = await (await browser.newContext({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1.5 })).newPage();

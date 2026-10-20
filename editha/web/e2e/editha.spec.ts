@@ -1265,6 +1265,14 @@ test('il pulsante Cronologia della barra apre e, al secondo clic, chiude la cron
   await expect(button).toHaveAttribute('aria-pressed', 'false');
 });
 
+test('SEC-7 – scaricando una cartella come ZIP, secrets.yaml resta fuori e lo si dice', async ({ page }) => {
+  await row(page, 'links').click({ button: 'right' });
+  const download = page.waitForEvent('download');
+  await menuItem(page, 'Scarica come zip').click();
+  await (await download).cancel();
+  await expect(page.locator('editha-toasts')).toContainText('Lo ZIP non contiene links/secrets.yaml');
+});
+
 // In fondo: tocca la cronologia, che altri test usano.
 test('BK-7 – elimina le versioni più vecchie: anteprima, conferma, spazio liberato', async ({ page, request }) => {
   // spazio/pulisci.yaml ha una versione di due anni fa (serve.mjs); ne aggiungiamo una di oggi.

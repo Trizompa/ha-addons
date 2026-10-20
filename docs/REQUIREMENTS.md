@@ -101,7 +101,7 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 | --- | --- | --- |
 | ACT-1 | Verifica della configurazione con risultato leggibile (errori con file e riga quando HA li fornisce). | P0 |
 | ACT-2 | Ricarica di tutta la configurazione YAML (`homeassistant.reload_all`), preceduta da ACT-1: se la verifica fallisce non si ricarica. La ricarica ha effetto come l'equivalente in Strumenti per sviluppatori e l'esito mostrato è quello reale restituito da HA, non un "avviato" a prescindere (FEP #16). Una ricarica mirata per dominio non serve (tolta in 0.13.0). | P2 |
-| ACT-3 | Suggerimento della ricarica giusta in base al file salvato (es. `automations.yaml` → `automation.reload`). | P2 |
+| ACT-3 | Suggerimento della ricarica giusta in base al file salvato (es. `automations.yaml` → `automation.reload`). Per ora non serve (decisione dell'utente, 0.34.0). | P2 |
 | ACT-4 | Riavvio di HA con conferma, preceduto obbligatoriamente da ACT-1: se la verifica fallisce il riavvio è bloccato. | P1 |
 | ACT-5 | Visualizzazione del log di Core (ultime righe, filtro). | P2 |
 
@@ -116,7 +116,7 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 | BK-5 | Politica di conservazione: 10 versioni per file (configurabile con `EDITHA_BACKUP_KEEP`). | P1 |
 | BK-6 | Confronto tra due file qualsiasi. | P2 |
 | BK-7 | Manutenzione della cronologia: spazio occupato (in tutto e per file), cancellazione delle versioni più vecchie di una data, cancellazione completa; sempre con conferma, solo le copie, mai i file di /config. | P2 |
-| BK-7 | Backup completi di HA tramite Supervisor (crea/elenca). | P2 |
+| BK-8 | Backup completi di HA tramite Supervisor (crea/elenca). | P2 |
 
 ## 6b. Git locale
 
@@ -272,6 +272,7 @@ editha/
 | 0.21.0 | Revisione del codice: SEC-7 (copie di secrets.yaml escluse da ricerca e sostituzione), HA-9 (template senza virgolette, chiavi complesse, alias senza ancora), scorciatoie per tasto fisico (anche su Mac), bozze non più salvabili scartate con un avviso. |
 | 0.22.0 | Seconda revisione: BK-1 (nessuna eliminazione senza copia senza conferma, versioni senza doppioni, id monotoni), SEC-3/SEC-4 (conflitto anche durante la scrittura), SEC-7 (copie di secrets.yaml in ogni forma), ED-14 (bozze ritentate, attesa massima, ricrea il file sparito), CRLF conservato, HA-9 (spazi invisibili, tag sconosciuti, errori da principiante), scorciatoie per lettera della tastiera. |
 | 0.22.3 | ED-14: bozze per finestra (più finestre o dispositivi non si scartano né sovrascrivono le bozze a vicenda), segnale di finestra aperta, proposta delle bozze di finestre chiuse; Esc sulla domanda rimanda davvero (0.22.2). |
+| 0.34.0 | SEC-7: secrets.yaml e copie mai negli ZIP delle cartelle, con avviso; requisiti riordinati (BK-8 per i backup del Supervisor); immagini della documentazione aggiornate. |
 | 0.33.0 | Ritocchi: anteprima template tolta dal menu di Home Assistant; pulsante Cronologia che si chiude al secondo clic; legenda Git in un riquadro, una voce per riga; pagina iniziale e Informazioni più essenziali; motto tra virgolette. |
 | 0.32.0 | GIT-2: sezione Esclusi con «Includi» (niente più .gitignore da modificare a mano), legenda di lettere, spunta e occhio; confronto solo se c'è un commit con cui confrontare. |
 | 0.31.0 | GIT-2: cartelle nuove raggruppate su una riga, «Escludi» (riga nel .gitignore), avviso al primo commit; pannello Git opaco sul telefono. |

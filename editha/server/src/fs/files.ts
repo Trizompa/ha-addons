@@ -420,6 +420,28 @@ export class FileService {
     return { ...(await this.download(input)), zip: false };
   }
 
+  /**
+   * File di segreti (secrets.yaml e copie) che lo ZIP di una cartella lascerebbe fuori, per avvisare
+   * prima di scaricarlo. Solo i percorsi, mai il contenuto.
+   */
+  async zipExcluded(input: string): Promise<string[]> {
+    const dir = await this.guard.resolveExisting(input);
+    if (!(await stat(dir.abs)).isDirectory()) return [];
+    const out: string[] = [];
+    const walk = async (abs: string, prefix: string): Promise<void> => {
+      for (const d of await readdir(abs, { withFileTypes: true })) {
+        if (d.isSymbolicLink()) continue;
+        if (abs === this.guard.root && d.isDirectory() && READ_ONLY_DIRS.includes(d.name)) continue;
+        const name = prefix ? `${prefix}/${d.name}` : d.name;
+        if (d.isDirectory()) await walk(path.join(abs, d.name), name);
+        else if (d.isFile() && isSecretsFile(d.name)) out.push(dir.rel ? `${dir.rel}/${name}` : name);
+        if (out.length >= 100) return;
+      }
+    };
+    await walk(dir.abs, '');
+    return out;
+  }
+
   /** FS-6: una cartella come archivio ZIP (link simbolici esclusi, dimensione limitata). */
   async downloadFolder(input: string): Promise<{ name: string; data: Buffer }> {
     const dir = await this.guard.resolveExisting(input);
@@ -434,6 +456,8 @@ export class FileService {
         // Scaricando tutta /config le cartelle di sistema (SEC-8) restano fuori: dati interni
         // di HA, token, dipendenze. Si possono scaricare chiedendo la cartella da sola.
         if (abs === this.guard.root && d.isDirectory() && READ_ONLY_DIRS.includes(d.name)) continue;
+        // SEC-7: secrets.yaml e le sue copie non escono mai in uno ZIP (si scaricano solo da soli).
+        if (d.isFile() && isSecretsFile(d.name)) continue;
         const childAbs = path.join(abs, d.name);
         const name = prefix ? `${prefix}/${d.name}` : d.name;
         if (d.isDirectory()) {

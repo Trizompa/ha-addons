@@ -2213,6 +2213,28 @@ export class EdithaApp extends LitElement {
     this.flash(done.length === 1 ? t('upload.doneOne', { name: done[0]! }) : t('upload.doneMany', { n: done.length }));
   }
 
+  /**
+   * Cartella come ZIP: secrets.yaml e le sue copie restano fuori, e lo si dice (SEC-7). Lo
+   * scaricamento parte subito, nel clic (Safari blocca quelli avviati dopo un'attesa).
+   */
+  private async downloadFolder(path: string): Promise<void> {
+    this.download(path);
+    let excluded: string[] = [];
+    try {
+      excluded = (await api.zipExcluded(path)).excluded;
+    } catch {
+      // l'avviso non è indispensabile: lo ZIP li esclude comunque
+    }
+    if (excluded.length > 0) {
+      this.toasts.show(
+        excluded.length === 1
+          ? t('download.secretsExcludedOne', { path: excluded[0]! })
+          : t('download.secretsExcludedMany', { n: excluded.length }),
+        'warning',
+      );
+    }
+  }
+
   /** Il browser scarica il file (o lo ZIP della cartella) sul PC da cui si usa Editha. */
   private download(path: string): void {
     const link = document.createElement('a');
@@ -2306,7 +2328,8 @@ export class EdithaApp extends LitElement {
       case 'upload':
         return this.pickUpload(this.targetDir(entry));
       case 'download':
-        return entry ? this.download(entry.path) : undefined;
+        if (!entry) return undefined;
+        return entry.type === 'directory' ? void this.downloadFolder(entry.path) : this.download(entry.path);
       case 'delete':
         return entry ? this.deleteEntry(entry) : undefined;
       case 'duplicate':

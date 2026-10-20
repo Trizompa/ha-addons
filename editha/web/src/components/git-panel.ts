@@ -353,7 +353,8 @@ export class EdithaGitPanel extends LitElement {
         const status = await api.git.status();
         if (token !== this.loadToken) return;
         // File comparsi con un aggiornamento automatico: non spuntati, così non entrano a sorpresa.
-        if (auto && this.changes) {
+        // Solo se c'era già un elenco da scegliere: dopo un commit (elenco vuoto) i file arrivano spuntati.
+        if (auto && this.changes && this.selectable().length > 0) {
           // Anche una cartella nuova che nel frattempo contiene altri file torna senza spunta.
           const seen = new Map(this.changes.map((c) => [c.path, c.folder?.files]));
           const fresh = status.files.filter((c) => !seen.has(c.path) || seen.get(c.path) !== c.folder?.files).map((c) => c.path);

@@ -285,6 +285,11 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
       .send(data);
   });
 
+  // SEC-7: quali segreti lo ZIP di una cartella lascerà fuori (per l'avviso prima del download).
+  app.get<{ Querystring: PathQuery }>('/api/download/excluded', { schema: { querystring: pathQuery } }, async (req) => ({
+    excluded: await files.zipExcluded(req.query.path),
+  }));
+
   // FS-10: anteprima di immagini e PDF, mostrati dal browser invece che scaricati.
   app.get<{ Querystring: PathQuery }>('/api/preview', { schema: { querystring: pathQuery } }, async (req, reply) => {
     const type = previewType(req.query.path);

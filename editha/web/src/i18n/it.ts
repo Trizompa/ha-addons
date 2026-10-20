@@ -248,6 +248,8 @@ export const it = {
   'git.unignore': 'Includi',
   'git.unignored': 'Di nuovo nel repository: {path}',
   'git.stillIgnored': 'Tolta l\'esclusione di {path}, ma un\'altra regola del .gitignore lo esclude ancora (per esempio *.log): per includerlo modifica il .gitignore.',
+  'download.secretsExcludedOne': 'Lo ZIP non contiene {path}: le password non escono mai in uno ZIP (scarica il file da solo, se ti serve).',
+  'download.secretsExcludedMany': 'Lo ZIP non contiene {n} file con password (secrets.yaml e copie): scaricali da soli, se ti servono.',
   'git.truncated': 'Ci sono più di 2000 righe: escludi con l\'occhio barrato le cartelle che non vuoi conservare, poi fai il commit.',
   'git.messageLabel': 'Messaggio del commit',
   'git.messagePlaceholder': 'Cosa hai cambiato? (es. Nuova automazione tapparelle)',

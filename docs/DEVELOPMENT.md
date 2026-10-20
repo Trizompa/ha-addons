@@ -136,6 +136,7 @@ Per provare l'interfaccia a mano: `npm run build`, poi avviare il server come so
 | `GET /api/git/ignored` | | `{ entries: [{ line, path }] }`: righe del `.gitignore` che iniziano con `/` (percorsi precisi, come le scrive Escludi) |
 | `POST /api/git/unignore` | `{ line }` | `{ ok }`: toglie esattamente quella riga (e il titolo di Escludi se resta vuoto) |
 | `POST /api/git/gitignore` | | `{ info, created }`: `.gitignore` di base, mai sopra uno esistente |
+| `GET /api/download/excluded?path=` | | `{ excluded: [path] }`: secrets.yaml e copie che lo ZIP di quella cartella lascerà fuori (SEC-7), al massimo 100 |
 | `POST /api/ha/check` | | `{ valid, errors, warnings }` |
 | `POST /api/ha/template` | `{ template, path? }` | `{ ok: true, result }` oppure `{ ok: false, kind: 'syntax' \| 'render', message }`: HA-7, rende il template con `POST /api/template` di Core. Serve `{{`, `{%` o `{#`; 403 per secrets.yaml e copie (anche tramite link); HA non indica la riga dell'errore |
 | `POST /api/ha/reload` / `POST /api/ha/restart` | | `{ ok, warnings }`: verifica e poi ricarica / riavvia; 409 `config_invalid` con gli errori |

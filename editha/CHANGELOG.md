@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.34.0
+
+- **ZIP senza password**: scaricando una cartella come zip, `secrets.yaml` e le sue copie restano sempre fuori, ed EDITHA lo dice con un avviso. Il file da solo si scarica come prima.
+- Git: dopo un commit, il primo file salvato compare già spuntato (prima arrivava senza spunta e il pulsante diceva «Commit (0 file)»).
+- Documentazione: immagini rifatte con l'interfaccia di oggi, più le nuove per l'anteprima template e il pannello Git; requisiti riordinati.
+
 ## 0.33.0
 
 - L'anteprima template non è più nel menu di Home Assistant (che ora ha solo verifica, ricarica e riavvio): resta il pulsante `{}` nella barra e Alt+T.

@@ -75,7 +75,7 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 | Duplica… | Solo file. EDITHA propone `nome_copia.est`, che puoi cambiare. Una copia YAML prende anche `.bak` in fondo (`automations_copia.yaml.bak`), così Home Assistant non la carica due volte; un nome che finisce in `.yaml` chiede conferma. |
 | Sposta in… | Scegli la cartella di destinazione da un elenco. Niente trascinamento, apposta: troppo facile sbagliare cartella. La cronologia segue il file. |
 | Elimina (Canc) | Chiede conferma. Una copia resta nella cronologia di EDITHA (vedi [Cronologia](#cronologia-e-confronto)); per gli elementi oltre 50 MB non si può tenere una copia: EDITHA lo dice e chiede di nuovo prima di eliminarli. |
-| Scarica sul PC / Scarica come zip | Un file, oppure un'intera cartella come archivio zip, fino a 50 MB. |
+| Scarica sul PC / Scarica come zip | Un file, oppure un'intera cartella come archivio zip, fino a 50 MB. Lo zip non contiene mai `secrets.yaml` né le sue copie (EDITHA lo dice); quel file si scarica da solo. |
 | Copia percorso | Il percorso completo `/config/...`. |
 | Cronologia… | Le versioni salvate del file (vedi [Cronologia](#cronologia-e-confronto)). |
 | Seleziona per il confronto / Confronta con *nome* | Confronta due file affiancati. |
@@ -241,6 +241,8 @@ sintassi, in arancione un errore di valutazione (per esempio una divisione per z
 come `trigger`, `this` o quelle di un'automazione esistono solo mentre l'automazione gira: qui
 risultano vuote. Da `secrets.yaml` e dalle sue copie l'anteprima non parte mai.
 
+![Anteprima di un template](../docs/images/template-preview.png)
+
 ## Cerca e sostituisci in tutti i file
 
 La lente sopra l'esplora file (Ctrl+Maiusc+F) apre **Cerca nei file**: cerca in tutti i file di
@@ -346,6 +348,8 @@ fuori (niente GitHub né altri server).
 
 La cronologia di EDITHA (le copie automatiche a ogni salvataggio) resta separata e continua a
 funzionare come prima.
+
+![Pannello Git](../docs/images/git-panel.png)
 
 ## Telefono e tablet
 

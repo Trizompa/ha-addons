@@ -71,7 +71,7 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 | Duplicate… | Files only. EDITHA proposes `name_copy.ext`, which you can change. A YAML copy also gets `.bak` at the end (`automations_copy.yaml.bak`), so Home Assistant does not load it twice; a name ending in `.yaml` asks for confirmation. |
 | Move to… | Pick the destination folder from a list. There is no drag-and-drop on purpose: too easy to drop in the wrong place. The history goes with the file. |
 | Delete (Del) | Asks first. A copy is kept in EDITHA's history (see [History](#history-and-comparison)); for items larger than 50 MB no copy can be kept, and EDITHA says so and asks again before deleting. |
-| Download to your PC / Download as zip | A file, or a whole folder as a zip archive, up to 50 MB. |
+| Download to your PC / Download as zip | A file, or a whole folder as a zip archive, up to 50 MB. The zip never contains `secrets.yaml` or its copies (EDITHA tells you); download that file on its own. |
 | Copy path | The full `/config/...` path. |
 | History… | The saved versions of the file (see [History](#history-and-comparison)). |
 | Select for compare / Compare with *name* | Compare two files side by side. |
@@ -234,6 +234,8 @@ for an evaluation error (for example a division by zero).
 automation only exist while the automation runs: here they are empty. The preview never starts
 from `secrets.yaml` or its copies.
 
+![Template preview](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/template-preview.png)
+
 ## Search and replace in all files
 
 The magnifier above the file explorer (Ctrl+Shift+F) opens **Search in files**: it searches every
@@ -332,6 +334,8 @@ sends nothing outside (no GitHub or other servers).
   the terminal.
 
 EDITHA's history (the automatic copies on every save) stays separate and keeps working as before.
+
+![Git panel](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/git-panel.png)
 
 ## Phone and tablet
 
