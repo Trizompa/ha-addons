@@ -225,8 +225,12 @@ Il risultato lo calcola Home Assistant con lo stato attuale delle entità, come 
 sviluppatori, e compare in un pannello sotto l'editor: in verde il risultato, in rosso un errore di
 sintassi, in arancione un errore di valutazione (per esempio una divisione per zero).
 
-- Mentre modifichi il template l'anteprima si aggiorna da sola, poco dopo che smetti di scrivere.
-  Il pulsante di aggiornamento ricalcola dal punto in cui si trova il cursore.
+- Con il pannello aperto l'anteprima si aggiorna da sola: mentre modifichi il template, poco dopo
+  che smetti di scrivere, e quando sposti il cursore (o fai clic) su un altro template, anche in
+  un altro file. Su una riga senza template resta il risultato di prima. Un testo selezionato si
+  manda solo con Alt+T o il pulsante (così selezionare per copiare non fa partire niente), e nei
+  file YAML molto grandi l'aggiornamento automatico è spento. Il pulsante di aggiornamento
+  ricalcola dal punto in cui si trova il cursore.
 - **Copia** copia il risultato.
 - Se il template cita entità che non esistono (per esempio `states('sensor.sbagliato')`), sotto il
   risultato compare un avviso: Home Assistant in quel caso non dà errore, risponde `unknown`.

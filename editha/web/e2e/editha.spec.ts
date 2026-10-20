@@ -1143,6 +1143,19 @@ test('HA-7 – pulsante nella barra, aggiornamento mentre si scrive, entità ine
   await expect(panel.locator('.syntax')).toBeVisible();
   await panel.locator('button[data-action="template-goto"]').click();
   await expect(page.locator('editha-status-bar')).toContainText('Riga 10');
+
+  // Basta un clic su un altro template: l'anteprima lo segue da sola.
+  await lineOf(11).click();
+  await expect(panel.locator('.render pre')).toHaveText('ZeroDivisionError: division by zero');
+  await expect(panel.locator('.source')).toHaveText('auto.yaml, riga 11');
+  // Su una riga senza template resta il risultato di prima.
+  await lineOf(1).click();
+  await page.waitForTimeout(900);
+  await expect(panel.locator('.render pre')).toHaveText('ZeroDivisionError: division by zero');
+  // Una selezione (per esempio per copiare) non parte da sola: solo con Alt+T.
+  await page.keyboard.press('Control+a');
+  await page.waitForTimeout(900);
+  await expect(panel.locator('.render pre')).toHaveText('ZeroDivisionError: division by zero');
 });
 
 // In fondo: tocca la cronologia, che altri test usano.

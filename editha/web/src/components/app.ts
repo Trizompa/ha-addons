@@ -42,7 +42,7 @@ import './insert-panel.js';
 import './history-panel.js';
 import './template-panel.js';
 import type { TemplateView } from './template-panel.js';
-import { entitiesIn, syntaxErrorLine, templateAt } from '../editor/jinja-template.js';
+import { JINJA, entitiesIn, syntaxErrorLine, templateAt, type TemplateSource } from '../editor/jinja-template.js';
 import './side-pane.js';
 import './about-dialog.js';
 import './history-space.js';
@@ -1967,6 +1967,8 @@ export class EdithaApp extends LitElement {
 
   private closeHistory(): void {
     this.history = null;
+    // Modifiche fatte mentre la cronologia copriva l'editor: l'anteprima si rimette in pari.
+    this.scheduleTemplate(null);
     if (!this.touchQuery.matches) this.pane.focusEditor();
   }
 
@@ -2323,33 +2325,82 @@ export class EdithaApp extends LitElement {
   /** Anteprima in corso: una risposta arrivata dopo un'altra richiesta (o dopo la chiusura) si ignora. */
   private templateRun = 0;
 
-  /** Aggiornamento automatico dell'anteprima mentre si scrive (HA-7). */
+  /** Aggiornamento automatico dell'anteprima (HA-7): mentre si scrive e spostando il cursore. */
   private templateTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Il file dell'anteprima è stato modificato dall'ultimo aggiornamento. */
+  private templateEdited = false;
+  /** Ultimo template mandato: muovendosi dentro lo stesso template non si richiama HA. */
+  private templateSent: { file: string; template: string; head: number; failed: boolean } | null = null;
+
+  /**
+   * Template selezionato o sotto il cursore in una tab (null in secrets.yaml e dove non c'è).
+   * `live`: aggiornamento automatico, solo dal cursore (una selezione per copiare non si manda) e
+   * non nei file molto grandi o senza nessun template.
+   */
+  private templateIn(tab: EditorTab | null, live = false): { tab: EditorTab; src: TemplateSource; head: number } | null {
+    if (!tab || isSecretsFile(tab.path)) return null;
+    const onSide = this.side?.shown === tab && (tab !== this.tabs.active || (this.split && this.sideFocused));
+    const s = (onSide ? this.side?.viewState : null) ?? this.pane.stateOf(tab);
+    if (live && s.doc.length > LINT_MAX_CHARS) return null;
+    const doc = s.doc.toString();
+    if (live && !JINJA.test(doc)) return null;
+    const sel = s.selection.main;
+    const src = live
+      ? templateAt(doc, sel.head, sel.head, languageOf(tab.path).id)
+      : templateAt(doc, sel.from, sel.to, languageOf(tab.path).id);
+    return src ? { tab, src, head: sel.head } : null;
+  }
 
   /**
    * Manda a Home Assistant il template selezionato o sotto il cursore e ne mostra il risultato.
-   * `live`: aggiornamento automatico dopo una modifica; non avvisa e tiene il risultato di prima
-   * finché arriva il nuovo (o se il cursore non è più su un template).
+   * `live`: aggiornamento automatico (dopo una modifica o uno spostamento del cursore). Non avvisa,
+   * segue il cursore sul template su cui si trova e, se lì non ce n'è uno, tiene il risultato di prima
+   * (dopo una modifica al file dell'anteprima ricalcola il template di quel file).
    */
   private async previewTemplate(live = false): Promise<void> {
-    const warn = (key: Parameters<typeof t>[0]): void => {
-      if (!live) this.toasts.show(t(key), 'warning');
-    };
     if (live && !this.template) return;
     // Con cronologia o confronto aperti il pannello resterebbe nascosto sotto di loro.
-    if (this.history || this.compare) return warn('template.covered');
-    // Aggiornamento automatico: il file dell'anteprima, anche se nel frattempo il focus è altrove.
-    const tab = live ? (this.tabs.find(this.template!.file) ?? null) : this.focusedTab();
-    if (!tab) return warn('template.noFile');
-    if (isSecretsFile(tab.path)) return warn('template.secrets');
-    const onSide = this.side?.shown === tab && (tab !== this.tabs.active || (this.split && this.sideFocused));
-    const s = (onSide ? this.side?.viewState : null) ?? this.pane.stateOf(tab);
-    const sel = s.selection.main;
-    const src = templateAt(s.doc.toString(), sel.from, sel.to, languageOf(tab.path).id);
-    if (!src) return warn('template.none');
+    if (this.history || this.compare) {
+      if (!live) this.toasts.show(t('template.covered'), 'warning');
+      return;
+    }
+    let found: { tab: EditorTab; src: TemplateSource; head: number } | null;
+    if (live) {
+      const edited = this.templateEdited;
+      this.templateEdited = false;
+      found =
+        this.templateIn(this.focusedTab(), true) ??
+        (edited ? this.templateIn(this.tabs.find(this.template!.file) ?? null, true) : null);
+      if (!found) return;
+      const last = this.templateSent;
+      // Dopo un errore di connessione si riprova solo se il cursore si è spostato (non a ogni
+      // aggiornamento dell'editor, per esempio quando il pannello cambia altezza).
+      const retry = last?.failed === true && last.head !== found.head;
+      if (last && last.file === found.tab.path && last.template === found.src.template && !retry) {
+        // Stesso template (magari spostato da righe aggiunte sopra): si spostano solo le righe.
+        const shown = this.template;
+        const shift = shown ? found.src.line - shown.line : 0;
+        // Con una richiesta in corso il pannello mostra ancora il template di prima: niente spostamenti.
+        if (shown && !shown.updating && shown.file === found.tab.path && shift !== 0) {
+          const v = shown.view;
+          const view = v.status === 'syntax' && v.line !== null ? { ...v, line: v.line + shift } : v;
+          this.template = { ...shown, view, line: found.src.line };
+        }
+        return;
+      }
+    } else {
+      const tab = this.focusedTab();
+      if (!tab) return void this.toasts.show(t('template.noFile'), 'warning');
+      if (isSecretsFile(tab.path)) return void this.toasts.show(t('template.secrets'), 'warning');
+      found = this.templateIn(tab);
+      if (!found) return void this.toasts.show(t('template.none'), 'warning');
+    }
+    const { tab, src } = found;
     clearTimeout(this.templateTimer);
+    this.templateEdited = false;
+    this.templateSent = { file: tab.path, template: src.template, head: found.head, failed: false };
     const run = ++this.templateRun;
-    // La riga in alto cambia insieme al risultato: fino ad allora resta quella del risultato mostrato.
+    // File e riga in alto cambiano insieme al risultato: fino ad allora restano quelli mostrati.
     this.template =
       live && this.template
         ? { ...this.template, updating: true }
@@ -2373,18 +2424,33 @@ export class EdithaApp extends LitElement {
         view = { status: 'failed', message: this.errorText(err) };
       }
     }
-    if (run === this.templateRun && this.template) this.template = { ...this.template, view, line: src.line, updating: false };
+    if (run === this.templateRun && this.template) {
+      this.template = { ...this.template, view, file: tab.path, line: src.line, updating: false };
+      // Non riuscita (HA non raggiungibile, in riavvio…): al prossimo spostamento del cursore si riprova.
+      if (view.status === 'failed' && this.templateSent) this.templateSent = { ...this.templateSent, failed: true };
+    }
   }
 
-  /** Dopo una modifica al file dell'anteprima, la ricalcola con una breve pausa. */
-  private scheduleTemplate(tab: EditorTab): void {
-    if (!this.template || tab.path !== this.template.file) return;
+  /**
+   * Con l'anteprima aperta, dopo una modifica (`edited`: la tab modificata) o uno spostamento del
+   * cursore la ricalcola con una breve pausa.
+   */
+  private scheduleTemplate(edited: EditorTab | null): void {
+    if (!this.template) return;
+    if (edited?.path === this.template.file) this.templateEdited = true;
     clearTimeout(this.templateTimer);
-    this.templateTimer = setTimeout(() => void this.previewTemplate(true), 700);
+    this.templateTimer = setTimeout(() => void this.previewTemplate(true), 600);
+  }
+
+  private closeCompare(): void {
+    this.compare = null;
+    this.scheduleTemplate(null);
   }
 
   private closeTemplate(): void {
     clearTimeout(this.templateTimer);
+    this.templateEdited = false;
+    this.templateSent = null;
     this.templateRun++;
     this.template = null;
   }
@@ -2565,7 +2631,7 @@ export class EdithaApp extends LitElement {
     const target = path[0];
     if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
     if (this.history) this.closeHistory();
-    else if (this.compare) this.compare = null;
+    else if (this.compare) this.closeCompare();
     else if (this.previewShown) this.closePreview();
     else if (this.template) this.closeTemplate();
     else return;
@@ -2629,6 +2695,8 @@ export class EdithaApp extends LitElement {
   }
 
   private refreshStatus(state?: EditorState): void {
+    // Cursore spostato, altra tab o altra colonna: l'anteprima segue il template sotto il cursore.
+    this.scheduleTemplate(null);
     const tab = this.focusedTab();
     if (!tab) {
       this.status = null;
@@ -2763,7 +2831,7 @@ export class EdithaApp extends LitElement {
               .left=${this.compare.left}
               .right=${this.compare.right}
               .prefs=${{ wordWrap: this.settings.wordWrap, fontSize: this.settings.fontSize }}
-              @compare-close=${() => (this.compare = null)}
+              @compare-close=${() => this.closeCompare()}
             ></editha-compare-panel>`
           : null}
         ${this.history

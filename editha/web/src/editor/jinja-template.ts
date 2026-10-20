@@ -22,10 +22,19 @@ export const JINJA = /\{\{|\{%|\{#/;
 
 const BLOCK = new Set(['BLOCK_LITERAL', 'BLOCK_FOLDED']);
 
+/** Ultimo documento letto: spostando il cursore nello stesso testo non si rilegge tutto. */
+let parsed: { doc: string; docs: ReturnType<typeof parseAllDocuments> } | null = null;
+
+function documents(doc: string): ReturnType<typeof parseAllDocuments> {
+  if (parsed?.doc !== doc) parsed = { doc, docs: parseAllDocuments(doc, { prettyErrors: false, uniqueKeys: false, strict: false }) };
+  return parsed.docs;
+}
+
 /** Il valore di testo che contiene `pos`; sulla chiave di una coppia, il suo valore. */
 function scalarAt(doc: string, pos: number): Scalar<string> | null {
   let found = null as Scalar<string> | null;
-  for (const d of parseAllDocuments(doc, { prettyErrors: false, uniqueKeys: false, strict: false })) {
+  const docs = documents(doc);
+  for (const d of Array.isArray(docs) ? docs : [docs]) {
     if (!('contents' in d)) continue;
     visit(d, {
       Scalar(key, node, path) {

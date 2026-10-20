@@ -219,8 +219,11 @@ Home Assistant renders it with the current state of the entities, as in Develope
 result appears in a panel below the editor: green for the result, red for a syntax error, orange
 for an evaluation error (for example a division by zero).
 
-- While you edit the template the preview updates by itself, shortly after you stop typing. The
-  refresh button renders again from where the cursor is.
+- While the panel is open the preview updates by itself: while you edit the template, shortly
+  after you stop typing, and when you move the cursor (or click) onto another template, also in
+  another file. On a line without a template the previous result stays. Selected text is only sent
+  with Alt+T or the button (so selecting to copy starts nothing), and in very large YAML files the
+  automatic update is off. The refresh button renders again from where the cursor is.
 - **Copy** copies the result.
 - If the template mentions entities that do not exist (for example `states('sensor.wrong')`), a
   warning appears below the result: Home Assistant gives no error in that case, it returns `unknown`.
