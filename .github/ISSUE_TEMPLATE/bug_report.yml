@@ -47,6 +47,20 @@ body:
     attributes:
       label: Home Assistant version
       placeholder: "2026.10.1"
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation type
+      options:
+        - Home Assistant OS
+        - Supervised
+        - Other / not sure
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware
+      description: The device Home Assistant runs on.
+      placeholder: "Raspberry Pi 4 (4 GB), Home Assistant Green, mini PC N100, VM on Proxmox…"
   - type: textarea
     id: log
     attributes:
