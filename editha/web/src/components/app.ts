@@ -10,7 +10,7 @@ import type { Entry, Session, Settings, ThemeMode } from '../api/types.js';
 import { createEditorState, docText, reconfigureEffects } from '../editor/setup.js';
 import { languageOf } from '../editor/languages.js';
 import { LINT_MAX_CHARS } from '../editor/yaml-lint.js';
-import { basename, dirname, isSecretsFile, resolvePath } from '../state/paths.js';
+import { basename, dirname, resolvePath } from '../state/paths.js';
 import { previewKind } from '../state/preview.js';
 import { MAC, shortcutKey } from '../state/keys.js';
 import { forgetSecrets, secretKeys } from '../state/secrets.js';
@@ -43,7 +43,6 @@ import './history-panel.js';
 import './template-panel.js';
 import './git-panel.js';
 import type { TemplateView } from './template-panel.js';
-import { JINJA, entitiesIn, syntaxErrorLine, templateAt, type TemplateSource } from '../editor/jinja-template.js';
 import './side-pane.js';
 import './about-dialog.js';
 import './history-space.js';
@@ -72,6 +71,7 @@ import { formatVersionDate, type EdithaHistoryPanel } from './history-panel.js';
 import { DraftsController, PERMANENT_OPEN_ERRORS } from '../app/drafts.js';
 import { FileOpsController } from '../app/file-ops.js';
 import { GitController } from '../app/git.js';
+import { HaController } from '../app/ha.js';
 
 /** Tasti della pagina iniziale: sul Mac ⌘ ⌥ ⇧ al posto di Ctrl, Alt e Shift. */
 const KEY = MAC ? { mod: '⌘', alt: '⌥', shift: '⇧' } : { mod: 'Ctrl', alt: 'Alt', shift: 'Shift' };
@@ -170,6 +170,7 @@ export class EdithaApp extends LitElement {
   readonly drafts = new DraftsController(this);
   readonly fileOps = new FileOpsController(this);
   readonly git = new GitController(this);
+  readonly ha = new HaController(this);
 
   readonly tabs = new TabsModel<EditorState>();
   /** Testo salvato su disco per ogni tab: serve a sapere se ci sono modifiche. */
@@ -413,13 +414,13 @@ export class EdithaApp extends LitElement {
   }
 
   /** Colonna su cui agiscono barra e scorciatoie: quella usata per ultima. */
-  private get editor(): EdithaEditorPane {
+  get editor(): EdithaEditorPane {
     const side = this.side;
     return this.split && this.sideFocused && side?.shown ? side : this.pane;
   }
 
   /** Tab della colonna in uso. */
-  private focusedTab(): EditorTab | null {
+  focusedTab(): EditorTab | null {
     if (this.previewShown) return null;
     const side = this.side;
     return this.split && this.sideFocused && side?.shown ? side.shown : this.tabs.active;
@@ -824,7 +825,7 @@ export class EdithaApp extends LitElement {
       }
       // Dell'utente ogni modifica che Editha non ha fatto da sé (anche quelle scritte nella colonna destra).
       this.drafts.scheduleDraft(tab, 1000, update.transactions.some((tr) => tr.docChanged && !tr.annotation(programmatic)));
-      this.scheduleTemplate(tab);
+      this.ha.scheduleTemplate(tab);
     }
     if (tab !== this.tabs.active) return;
     this.refreshStatus(update.state);
@@ -1033,7 +1034,7 @@ export class EdithaApp extends LitElement {
       this.refreshTabs();
     }
     this.drafts.scheduleDraft(tab, 1000, true);
-    this.scheduleTemplate(tab);
+    this.ha.scheduleTemplate(tab);
   }
 
   private async showInSide(tab: EditorTab): Promise<void> {
@@ -1280,7 +1281,7 @@ export class EdithaApp extends LitElement {
   private closeHistory(): void {
     this.history = null;
     // Modifiche fatte mentre la cronologia copriva l'editor: l'anteprima si rimette in pari.
-    this.scheduleTemplate(null);
+    this.ha.scheduleTemplate(null);
     if (!this.touchQuery.matches) this.pane.focusEditor();
   }
 
@@ -1394,250 +1395,9 @@ export class EdithaApp extends LitElement {
     if (ok && (await this.saveSnippets(this.userSnippets.filter((s) => s.id !== id)))) this.flash(t('snippet.deleted'));
   }
 
-  // ——— Home Assistant: verifica, ricarica, riavvio (ACT-1, ACT-2, ACT-4) ———
-
-  private async haMenu(rect?: DOMRect): Promise<void> {
-    // Fuori da Home Assistant (sviluppo) le voci restano visibili ma disattivate.
-    const off = !haData.available;
-    const items: MenuEntry[] = [
-      { id: 'check', label: t('ha.check'), icon: icons.check, disabled: off },
-      { id: 'reload', label: t('ha.reload'), icon: icons.reload, disabled: off },
-      'separator',
-      { id: 'restart', label: t('ha.restart'), icon: icons.restart, danger: true, disabled: off },
-    ];
-    const x = rect ? rect.left : 16;
-    const y = rect ? rect.bottom + 4 : 56;
-    const choice = await this.menu.show(items, x, y);
-    if (choice === 'check') await this.haCheck();
-    else if (choice === 'reload') await this.haReload();
-    else if (choice === 'restart') await this.haRestart();
-  }
-
-  // ——— anteprima dei template (HA-7) ———
-
-  /** Anteprima in corso: una risposta arrivata dopo un'altra richiesta (o dopo la chiusura) si ignora. */
-  private templateRun = 0;
-
-  /** Aggiornamento automatico dell'anteprima (HA-7): mentre si scrive e spostando il cursore. */
-  private templateTimer: ReturnType<typeof setTimeout> | undefined;
-  /** Il file dell'anteprima è stato modificato dall'ultimo aggiornamento. */
-  private templateEdited = false;
-  /** Ultimo template mandato: muovendosi dentro lo stesso template non si richiama HA. */
-  private templateSent: { file: string; template: string; head: number; failed: boolean } | null = null;
-
-  /**
-   * Template selezionato o sotto il cursore in una tab (null in secrets.yaml e dove non c'è).
-   * `live`: aggiornamento automatico, solo dal cursore (una selezione per copiare non si manda) e
-   * non nei file molto grandi o senza nessun template.
-   */
-  private templateIn(tab: EditorTab | null, live = false): { tab: EditorTab; src: TemplateSource; head: number } | null {
-    if (!tab || isSecretsFile(tab.path)) return null;
-    const onSide = this.side?.shown === tab && (tab !== this.tabs.active || (this.split && this.sideFocused));
-    const s = (onSide ? this.side?.viewState : null) ?? this.pane.stateOf(tab);
-    if (live && s.doc.length > LINT_MAX_CHARS) return null;
-    const doc = s.doc.toString();
-    if (live && !JINJA.test(doc)) return null;
-    const sel = s.selection.main;
-    const src = live
-      ? templateAt(doc, sel.head, sel.head, languageOf(tab.path).id)
-      : templateAt(doc, sel.from, sel.to, languageOf(tab.path).id);
-    return src ? { tab, src, head: sel.head } : null;
-  }
-
-  /**
-   * Manda a Home Assistant il template selezionato o sotto il cursore e ne mostra il risultato.
-   * `live`: aggiornamento automatico (dopo una modifica o uno spostamento del cursore). Non avvisa,
-   * segue il cursore sul template su cui si trova e, se lì non ce n'è uno, tiene il risultato di prima
-   * (dopo una modifica al file dell'anteprima ricalcola il template di quel file).
-   */
-  private async previewTemplate(live = false): Promise<void> {
-    if (live && !this.template) return;
-    // Con cronologia o confronto aperti il pannello resterebbe nascosto sotto di loro.
-    if (this.history || this.compare) {
-      if (!live) this.toasts.show(t('template.covered'), 'warning');
-      return;
-    }
-    let found: { tab: EditorTab; src: TemplateSource; head: number } | null;
-    if (live) {
-      const edited = this.templateEdited;
-      this.templateEdited = false;
-      found =
-        this.templateIn(this.focusedTab(), true) ??
-        (edited ? this.templateIn(this.tabs.find(this.template!.file) ?? null, true) : null);
-      if (!found) return;
-      const last = this.templateSent;
-      // Dopo un errore di connessione si riprova solo se il cursore si è spostato (non a ogni
-      // aggiornamento dell'editor, per esempio quando il pannello cambia altezza).
-      const retry = last?.failed === true && last.head !== found.head;
-      if (last && last.file === found.tab.path && last.template === found.src.template && !retry) {
-        // Stesso template (magari spostato da righe aggiunte sopra): si spostano solo le righe.
-        const shown = this.template;
-        const shift = shown ? found.src.line - shown.line : 0;
-        // Con una richiesta in corso il pannello mostra ancora il template di prima: niente spostamenti.
-        if (shown && !shown.updating && shown.file === found.tab.path && shift !== 0) {
-          const v = shown.view;
-          const view = v.status === 'syntax' && v.line !== null ? { ...v, line: v.line + shift } : v;
-          this.template = { ...shown, view, line: found.src.line };
-        }
-        return;
-      }
-    } else {
-      const tab = this.focusedTab();
-      if (!tab) return void this.toasts.show(t('template.noFile'), 'warning');
-      if (isSecretsFile(tab.path)) return void this.toasts.show(t('template.secrets'), 'warning');
-      found = this.templateIn(tab);
-      if (!found) return void this.toasts.show(t('template.none'), 'warning');
-    }
-    const { tab, src } = found;
-    clearTimeout(this.templateTimer);
-    this.templateEdited = false;
-    this.templateSent = { file: tab.path, template: src.template, head: found.head, failed: false };
-    const run = ++this.templateRun;
-    // File e riga in alto cambiano insieme al risultato: fino ad allora restano quelli mostrati.
-    this.template =
-      live && this.template
-        ? { ...this.template, updating: true }
-        : { view: { status: 'loading' }, file: tab.path, line: src.line, updating: false };
-    let view: TemplateView;
-    if (!haData.available) view = { status: 'failed', message: t('template.noHa') };
-    else {
-      try {
-        const res = await api.ha.template(src.template, tab.path);
-        // Le entità citate che HA non ha (solo se l'elenco delle entità è già arrivato).
-        const known = haData.loaded && haData.entities.length > 0 ? new Set(haData.entities.map((e) => e.entity_id)) : null;
-        const missing = known ? entitiesIn(src.template).filter((id) => !known.has(id)) : [];
-        if (res.ok) view = { status: 'ok', result: res.result, missing };
-        else if (res.kind === 'render') view = { status: 'render', message: res.message, missing };
-        else {
-          // HA non dice in che riga: la cerca EDITHA, se le righe del template sono quelle del file.
-          const at = src.linear ? syntaxErrorLine(src.template) : null;
-          view = { status: 'syntax', message: res.message, line: at === null ? null : src.line + at - 1 };
-        }
-      } catch (err) {
-        view = { status: 'failed', message: this.errorText(err) };
-      }
-    }
-    if (run === this.templateRun && this.template) {
-      this.template = { ...this.template, view, file: tab.path, line: src.line, updating: false };
-      // Non riuscita (HA non raggiungibile, in riavvio…): al prossimo spostamento del cursore si riprova.
-      if (view.status === 'failed' && this.templateSent) this.templateSent = { ...this.templateSent, failed: true };
-    }
-  }
-
-  /**
-   * Con l'anteprima aperta, dopo una modifica (`edited`: la tab modificata) o uno spostamento del
-   * cursore la ricalcola con una breve pausa.
-   */
-  private scheduleTemplate(edited: EditorTab | null): void {
-    if (!this.template) return;
-    if (edited?.path === this.template.file) this.templateEdited = true;
-    clearTimeout(this.templateTimer);
-    this.templateTimer = setTimeout(() => void this.previewTemplate(true), 600);
-  }
-
   private closeCompare(): void {
     this.compare = null;
-    this.scheduleTemplate(null);
-  }
-
-  private closeTemplate(): void {
-    clearTimeout(this.templateTimer);
-    this.templateEdited = false;
-    this.templateSent = null;
-    this.templateRun++;
-    this.template = null;
-  }
-
-  /** Porta alla riga dell'errore, nel file del template. */
-  private async templateGoTo(line: number): Promise<void> {
-    const file = this.template?.file;
-    if (!file) return;
-    if (this.focusedTab()?.path !== file) await this.openFile(file);
-    if (this.focusedTab()?.path === file) this.editor.goToLine(line, 'start');
-  }
-
-  private async withHa<T>(label: string, task: () => Promise<T>): Promise<T | null> {
-    this.haBusy = true;
-    this.refreshToolbar();
-    this.toasts.show(label, 'info');
-    try {
-      return await task();
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'config_invalid') {
-        await this.dialog.inform({
-          title: t('ha.invalidTitle'),
-          message: t('ha.invalidAborted'),
-          detail: String(err.details.errors ?? err.message),
-        });
-      } else {
-        this.toasts.show(this.errorText(err), 'error');
-      }
-      return null;
-    } finally {
-      this.haBusy = false;
-      this.refreshToolbar();
-    }
-  }
-
-  /** Ricarica e riavvio leggono i file su disco: prima si decide cosa fare delle modifiche non salvate. */
-  private async ensureSaved(): Promise<boolean> {
-    const dirty = this.tabs.tabs.filter((t) => t.dirty && !t.readOnly);
-    if (dirty.length === 0) return true;
-    const choice = await this.dialog.choose({
-      title: t('unsaved.title'),
-      message: t(dirty.length === 1 ? 'unsaved.messageOne' : 'unsaved.messageMany', {
-        names: dirty.map((d) => d.name).join(', '),
-      }),
-      choices: [
-        { id: 'cancel', label: t('common.cancel') },
-        { id: 'skip', label: t('unsaved.skip') },
-        { id: 'save', label: t('unsaved.save'), variant: 'primary' },
-      ],
-      defaultId: 'save',
-    });
-    if (choice === null) return false;
-    if (choice === 'save') {
-      await this.saveAll();
-      return !this.tabs.tabs.some((t) => t.dirty && !t.readOnly);
-    }
-    return true;
-  }
-
-  private async haCheck(): Promise<void> {
-    if (!(await this.ensureSaved())) return;
-    const res = await this.withHa(t('ha.checking'), () => api.ha.check());
-    if (!res) return;
-    if (res.valid) {
-      if (res.warnings) {
-        await this.dialog.inform({ title: t('ha.validWithWarnings'), detail: res.warnings });
-      } else {
-        this.toasts.show(t('ha.valid'), 'success');
-      }
-    } else {
-      await this.dialog.inform({
-        title: t('ha.invalidTitle'),
-        message: t('ha.invalidFix'),
-        detail: res.errors ?? t('ha.unknownError'),
-      });
-    }
-  }
-
-  private async haReload(): Promise<void> {
-    if (!(await this.ensureSaved())) return;
-    const res = await this.withHa(t('ha.reloading'), () => api.ha.reload());
-    if (res) this.toasts.show(t('ha.reloaded'), 'success');
-  }
-
-  private async haRestart(): Promise<void> {
-    const ok = await this.dialog.confirm({
-      title: t('ha.restartTitle'),
-      message: t('ha.restartMessage'),
-      confirmLabel: t('ha.restartConfirm'),
-      danger: true,
-    });
-    if (!ok || !(await this.ensureSaved())) return;
-    const res = await this.withHa(t('ha.restarting'), () => api.ha.restart());
-    if (res) this.toasts.show(t('ha.restarted'), 'success');
+    this.ha.scheduleTemplate(null);
   }
 
   private onToolbarAction(e: CustomEvent<{ action: string; rect?: DOMRect }>): void {
@@ -1673,9 +1433,9 @@ export class EdithaApp extends LitElement {
       case 'insert':
         return this.toggleInsert();
       case 'template':
-        return void this.previewTemplate();
+        return void this.ha.previewTemplate();
       case 'ha-menu':
-        return void this.haMenu(e.detail.rect);
+        return void this.ha.haMenu(e.detail.rect);
       case 'language':
         return void this.languageMenu(e.detail.rect);
     }
@@ -1705,7 +1465,7 @@ export class EdithaApp extends LitElement {
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
       e.preventDefault();
       if (modal()) return;
-      void this.previewTemplate();
+      void this.ha.previewTemplate();
     } else if (e.altKey && !mod && key === 'w') {
       // In un campo di testo Alt+W resta un carattere (su Mac Option+W scrive ∑).
       const target = e.composedPath()[0];
@@ -1731,7 +1491,7 @@ export class EdithaApp extends LitElement {
     if (this.history) this.closeHistory();
     else if (this.compare) this.closeCompare();
     else if (this.previewShown) this.closePreview();
-    else if (this.template) this.closeTemplate();
+    else if (this.template) this.ha.closeTemplate();
     else return;
     e.preventDefault();
   };
@@ -1798,7 +1558,7 @@ export class EdithaApp extends LitElement {
 
   refreshStatus(state?: EditorState): void {
     // Cursore spostato, altra tab o altra colonna: l'anteprima segue il template sotto il cursore.
-    this.scheduleTemplate(null);
+    this.ha.scheduleTemplate(null);
     const tab = this.focusedTab();
     if (!tab) {
       this.status = null;
@@ -2022,9 +1782,9 @@ export class EdithaApp extends LitElement {
                 .file=${this.template.file}
                 .line=${this.template.line}
                 .updating=${this.template.updating}
-                @template-refresh=${() => void this.previewTemplate()}
-                @template-close=${() => this.closeTemplate()}
-                @template-goto=${(e: CustomEvent<{ line: number }>) => void this.templateGoTo(e.detail.line)}
+                @template-refresh=${() => void this.ha.previewTemplate()}
+                @template-close=${() => this.ha.closeTemplate()}
+                @template-goto=${(e: CustomEvent<{ line: number }>) => void this.ha.templateGoTo(e.detail.line)}
                 @template-copy-failed=${() => this.toasts.show(t('copy.failed'), 'warning')}
               ></editha-template-panel>`
             : null}
