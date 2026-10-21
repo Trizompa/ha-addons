@@ -464,7 +464,7 @@ export class DraftsController {
       return null;
     }
     await api.deleteDraft(draft.path).catch(() => undefined);
-    this.app.scheduleGitRefresh();
+    this.app.git.scheduleGitRefresh();
     await this.app.tree.refresh(dirname(draft.path));
     const tab = await this.app.loadTab(draft.path, undefined, true);
     if (tab) {

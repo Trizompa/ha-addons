@@ -42,7 +42,6 @@ import './insert-panel.js';
 import './history-panel.js';
 import './template-panel.js';
 import './git-panel.js';
-import type { EdithaGitPanel } from './git-panel.js';
 import type { TemplateView } from './template-panel.js';
 import { JINJA, entitiesIn, syntaxErrorLine, templateAt, type TemplateSource } from '../editor/jinja-template.js';
 import './side-pane.js';
@@ -72,6 +71,7 @@ import type { EdithaSidePane } from './side-pane.js';
 import { formatVersionDate, type EdithaHistoryPanel } from './history-panel.js';
 import { DraftsController, PERMANENT_OPEN_ERRORS } from '../app/drafts.js';
 import { FileOpsController } from '../app/file-ops.js';
+import { GitController } from '../app/git.js';
 
 /** Tasti della pagina iniziale: sul Mac ⌘ ⌥ ⇧ al posto di Ctrl, Alt e Shift. */
 const KEY = MAC ? { mod: '⌘', alt: '⌥', shift: '⇧' } : { mod: 'Ctrl', alt: 'Alt', shift: 'Shift' };
@@ -169,6 +169,7 @@ export class EdithaApp extends LitElement {
   /** Controller delle singole funzioni (src/app/): ricevono l'elemento e lavorano sui suoi membri. */
   readonly drafts = new DraftsController(this);
   readonly fileOps = new FileOpsController(this);
+  readonly git = new GitController(this);
 
   readonly tabs = new TabsModel<EditorState>();
   /** Testo salvato su disco per ogni tab: serve a sapere se ci sono modifiche. */
@@ -860,151 +861,6 @@ export class EdithaApp extends LitElement {
     else this.searchPanel.focusInput();
   }
 
-  // ——— Git locale (GIT-1…6) ———
-
-  async openGit(): Promise<void> {
-    if (this.narrow) this.drawerOpen = true;
-    else if (!this.settings.sidebarVisible) await this.updateSettings({ sidebarVisible: true });
-    this.searchOpen = false;
-    this.gitOpen = true;
-    this.refreshToolbar();
-    await this.updateComplete;
-    const panel = this.renderRoot.querySelector('editha-git-panel') as EdithaGitPanel;
-    panel.focusPanel();
-    await panel.load();
-  }
-
-  private gitTimer: ReturnType<typeof setTimeout> | undefined;
-
-  /** Con il pannello Git aperto, dopo un salvataggio lo stato dei file si rilegge (una volta sola). */
-  scheduleGitRefresh(): void {
-    if (!this.gitOpen) return;
-    clearTimeout(this.gitTimer);
-    this.gitTimer = setTimeout(() => {
-      if (this.gitOpen) void (this.renderRoot.querySelector('editha-git-panel') as EdithaGitPanel).load(true);
-    }, 400);
-  }
-
-  /** GIT-3: il file com'era nell'ultimo commit accanto a quello attuale (anche non salvato). */
-  private async openGitDiff(path: string, deleted: boolean): Promise<void> {
-    let head: string | null;
-    try {
-      head = (await api.git.head(path)).content;
-    } catch (err) {
-      this.toasts.show(this.errorText(err), 'error');
-      return;
-    }
-    const current = deleted ? { path, content: '' } : await this.compareSide(path);
-    if (!current) return;
-    if (this.narrow) this.drawerOpen = false;
-    this.history = null;
-    this.previewShown = false;
-    this.compare = {
-      left: { path, content: head ?? '', label: head === null ? t('git.diffNotInHead', { path }) : t('git.diffHead', { path }) },
-      right: { ...current, label: deleted ? t('git.diffDeleted', { path }) : t('git.diffCurrent', { path }) },
-    };
-  }
-
-  /** GIT-5: un file com'era in un commit accanto a quello attuale (vuoto se ora non c'è). */
-  private async openGitRevDiff(path: string, rev: string): Promise<void> {
-    let old: string | null;
-    try {
-      old = (await api.git.show(path, rev)).content;
-    } catch (err) {
-      return void this.toasts.show(this.errorText(err), 'error');
-    }
-    const tab = this.tabs.find(path);
-    let current: string | null;
-    if (tab) current = docText(this.pane.stateOf(tab));
-    else {
-      try {
-        current = (await api.read(path)).content;
-      } catch (err) {
-        if (!(err instanceof ApiError && err.code === 'not_found')) return void this.toasts.show(this.openErrorText(path, err), 'error');
-        current = null;
-      }
-    }
-    if (this.narrow) this.drawerOpen = false;
-    this.history = null;
-    this.previewShown = false;
-    const short = rev.slice(0, 7);
-    this.compare = {
-      left: { path, content: old ?? '', label: t(old === null ? 'git.diffNotInRev' : 'git.diffRev', { path, rev: short }) },
-      right: { path, content: current ?? '', label: t(current === null ? 'git.diffDeleted' : 'git.diffCurrent', { path }) },
-    };
-  }
-
-  /**
-   * GIT-6: riporta un file com'era in un commit, con conferma. Passa dal salvataggio di EDITHA:
-   * il contenuto attuale resta nella sua cronologia; un file che ora non c'è viene ricreato.
-   */
-  private async restoreFromGit(path: string, rev: string, subject: string): Promise<void> {
-    const name = basename(path);
-    const short = rev.slice(0, 7);
-    const tab = this.tabs.find(path);
-    const ok = await this.dialog.confirm({
-      title: t('git.restoreTitle'),
-      message: t('git.restoreMessage', { name, rev: short, subject }) + (tab?.dirty ? t('history.dirtyWarning') : ''),
-      confirmLabel: t('git.restore'),
-    });
-    if (!ok) return;
-    try {
-      const content = (await api.git.show(path, rev)).content;
-      if (content === null) throw new Error(t('git.restoreMissing'));
-      let exists = true;
-      let etag = '';
-      try {
-        etag = (await api.read(path)).etag;
-      } catch (err) {
-        if (!(err instanceof ApiError && err.code === 'not_found')) throw err;
-        exists = false;
-      }
-      if (exists) await api.save(path, content, etag);
-      else {
-        // Le cartelle che nel frattempo sono state eliminate si ricreano.
-        const parts = dirname(path).split('/').filter(Boolean);
-        // L'albero si aggiorna dalla cartella sopra la prima ricreata (o da quella del file).
-        let refreshFrom: string | null = null;
-        for (let i = 1; i <= parts.length; i++) {
-          const dir = parts.slice(0, i).join('/');
-          await api.create(dir, 'directory').then(
-            () => (refreshFrom ??= dirname(dir)),
-            (err: unknown) => {
-              if (!(err instanceof ApiError && err.code === 'already_exists')) throw err;
-            },
-          );
-        }
-        await api.create(path, 'file', content);
-        await this.tree.refresh(refreshFrom ?? dirname(path));
-      }
-    } catch (err) {
-      const error = err instanceof ApiError ? this.errorText(err) : (err as Error).message;
-      return void this.toasts.show(t('history.failed', { name, error }), 'error');
-    }
-    // La tab aperta mostra il contenuto ripristinato; Annulla nell'editor lo riporta indietro.
-    if (tab) await this.reloadFromDisk(tab, true);
-    this.scheduleGitRefresh();
-    this.flash(t('git.restored', { name, rev: short }));
-  }
-
-  private closeGit(): void {
-    this.gitOpen = false;
-    this.refreshToolbar();
-    // Il focus torna dove si era partiti: il pulsante Git dell'esplora file.
-    void this.updateComplete.then(() =>
-      this.tree.shadowRoot?.querySelector<HTMLButtonElement>('button[data-action="git"]')?.focus(),
-    );
-  }
-
-  /** Dopo un'operazione Git: messaggio e albero aggiornato (.gitignore nuovo, cartella .git). */
-  private async afterGitChange(message: string): Promise<void> {
-    this.flash(message);
-    await this.tree.refresh('');
-    // Un .gitignore aperto (senza modifiche) mostra subito le righe aggiunte da Escludi.
-    const ignore = this.tabs.find('.gitignore');
-    if (ignore && !ignore.dirty) await this.reloadFromDisk(ignore, true);
-  }
-
   private closeSearch(): void {
     this.searchOpen = false;
     this.refreshToolbar();
@@ -1061,7 +917,7 @@ export class EdithaApp extends LitElement {
   // ——— confronto tra due file (BK-6) ———
 
   /** Testo da confrontare: quello della tab aperta (anche non salvato) o quello su disco. */
-  private async compareSide(path: string): Promise<CompareSide | null> {
+  async compareSide(path: string): Promise<CompareSide | null> {
     const tab = this.tabs.find(path);
     if (tab) return { path, content: docText(this.pane.stateOf(tab)) };
     try {
@@ -1317,14 +1173,14 @@ export class EdithaApp extends LitElement {
       this.toasts.show(t('save.failed', { name: tab.name, error: this.errorText(err) }), 'error');
       return false;
     }
-    this.scheduleGitRefresh();
+    this.git.scheduleGitRefresh();
     await this.tree.refresh(dirname(tab.path));
     this.flash(t('save.done', { name: tab.name }));
     return true;
   }
 
   private markSaved(tab: EditorTab, doc: Text, etag: string): void {
-    this.scheduleGitRefresh();
+    this.git.scheduleGitRefresh();
     tab.etag = etag;
     this.saved.set(tab, doc);
     tab.dirty = !this.pane.stateOf(tab).doc.eq(doc);
@@ -1996,7 +1852,7 @@ export class EdithaApp extends LitElement {
     };
   }
 
-  private refreshToolbar(state?: EditorState): void {
+  refreshToolbar(state?: EditorState): void {
     this.toolbar = this.computeToolbar(state);
   }
 
@@ -2009,7 +1865,7 @@ export class EdithaApp extends LitElement {
     return errorText(err);
   }
 
-  private openErrorText(path: string, err: unknown): string {
+  openErrorText(path: string, err: unknown): string {
     const name = basename(path);
     if (err instanceof ApiError) {
       if (err.code === 'binary') return t('open.binary', { name });
@@ -2065,13 +1921,15 @@ export class EdithaApp extends LitElement {
           ></editha-search-panel>
           <editha-git-panel
             ?hidden=${!this.gitOpen}
-            @git-close=${() => this.closeGit()}
+            @git-close=${() => this.git.closeGit()}
             @git-open=${(e: CustomEvent<{ path: string }>) => void this.openFile(e.detail.path)}
-            @git-diff=${(e: CustomEvent<{ path: string; deleted: boolean }>) => void this.openGitDiff(e.detail.path, e.detail.deleted)}
-            @git-rev-diff=${(e: CustomEvent<{ path: string; rev: string }>) => void this.openGitRevDiff(e.detail.path, e.detail.rev)}
+            @git-diff=${(e: CustomEvent<{ path: string; deleted: boolean }>) =>
+              void this.git.openGitDiff(e.detail.path, e.detail.deleted)}
+            @git-rev-diff=${(e: CustomEvent<{ path: string; rev: string }>) =>
+              void this.git.openGitRevDiff(e.detail.path, e.detail.rev)}
             @git-restore=${(e: CustomEvent<{ path: string; rev: string; subject: string }>) =>
-              void this.restoreFromGit(e.detail.path, e.detail.rev, e.detail.subject)}
-            @git-changed=${(e: CustomEvent<{ message: string }>) => void this.afterGitChange(e.detail.message)}
+              void this.git.restoreFromGit(e.detail.path, e.detail.rev, e.detail.subject)}
+            @git-changed=${(e: CustomEvent<{ message: string }>) => void this.git.afterGitChange(e.detail.message)}
             @git-error=${(e: CustomEvent<{ message: string }>) => this.toasts.show(e.detail.message, 'error')}
           ></editha-git-panel>
           <editha-file-tree

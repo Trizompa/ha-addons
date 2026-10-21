@@ -44,7 +44,7 @@ export class FileOpsController {
       this.app.toasts.show(t('create.failed', { name, error: this.app.errorText(err) }), 'error');
       return;
     }
-    this.app.scheduleGitRefresh();
+    this.app.git.scheduleGitRefresh();
     await this.app.tree.refresh(dir);
     await this.app.tree.reveal(path, type);
     if (type === 'file') await this.app.openFile(path);
@@ -101,7 +101,7 @@ export class FileOpsController {
       return;
     }
     await this.afterMove(entry, to);
-    this.app.scheduleGitRefresh();
+    this.app.git.scheduleGitRefresh();
     await this.app.tree.refresh(dest);
     await this.app.tree.reveal(to, entry.type as 'file' | 'directory');
     this.app.flash(t('move.done', { name, where: dest ? `/config/${dest}` : '/config' }));
@@ -148,7 +148,7 @@ export class FileOpsController {
       this.app.preview = to + this.app.preview.slice(entry.path.length);
     }
     this.app.tree.forget(entry.path);
-    this.app.scheduleGitRefresh();
+    this.app.git.scheduleGitRefresh();
     await this.app.tree.refresh(dirname(entry.path));
     await this.app.tree.reveal(to, entry.type as 'file' | 'directory');
     this.app.refreshTabs();
@@ -207,7 +207,7 @@ export class FileOpsController {
       this.app.closePreview();
     }
     this.app.tree.forget(entry.path);
-    this.app.scheduleGitRefresh();
+    this.app.git.scheduleGitRefresh();
     await this.app.tree.refresh(dirname(entry.path));
     this.app.flash(t('delete.done', { name }));
   }
@@ -252,7 +252,7 @@ export class FileOpsController {
       this.app.toasts.show(t('duplicate.failed', { name: old, error: this.app.errorText(err) }), 'error');
       return;
     }
-    this.app.scheduleGitRefresh();
+    this.app.git.scheduleGitRefresh();
     await this.app.tree.refresh(dir);
     await this.app.tree.reveal(to, 'file');
     await this.app.openFile(to);
@@ -327,7 +327,7 @@ export class FileOpsController {
 
   private async afterUpload(dir: string, done: string[]): Promise<void> {
     if (done.length === 0) return;
-    this.app.scheduleGitRefresh();
+    this.app.git.scheduleGitRefresh();
     await this.app.tree.refresh(dir);
     // Le tab aperte sui file sostituiti mostrano subito il nuovo contenuto, se non hanno modifiche.
     for (const name of done) {
@@ -495,7 +495,7 @@ export class FileOpsController {
         void this.app.openSearch();
         break;
       case 'git':
-        void this.app.openGit();
+        void this.app.git.openGit();
         break;
       case 'toggle-system':
         void this.app.updateSettings({ showSystem: !this.app.settings.showSystem });
