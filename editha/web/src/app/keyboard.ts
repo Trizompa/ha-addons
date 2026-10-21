@@ -24,7 +24,7 @@ export class KeyboardController {
       case 'search':
         return this.app.editor.command('search');
       case 'search-all':
-        return this.app.searchOpen ? this.app.closeSearch() : void this.app.openSearch();
+        return this.app.searchOpen ? this.app.search.closeSearch() : void this.app.search.openSearch();
       case 'split':
         return void (this.app.split ? this.app.closeSplit() : this.app.tabs.active && this.app.showInSide(this.app.tabs.active));
       case 'about':
@@ -62,7 +62,7 @@ export class KeyboardController {
       this.app.dialog.busy || e.composedPath().some((n) => n instanceof HTMLDialogElement && n.open);
     if (mod && e.shiftKey && key === 'f') {
       e.preventDefault();
-      void this.app.openSearch();
+      void this.app.search.openSearch();
     } else if (mod && key === 's') {
       e.preventDefault();
       if (modal()) return;

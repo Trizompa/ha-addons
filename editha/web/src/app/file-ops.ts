@@ -492,7 +492,7 @@ export class FileOpsController {
         this.pickUpload(this.targetDir());
         break;
       case 'search':
-        void this.app.openSearch();
+        void this.app.search.openSearch();
         break;
       case 'git':
         void this.app.git.openGit();

@@ -10,10 +10,9 @@ import type { Entry, Settings, ThemeMode } from '../api/types.js';
 import { createEditorState, docText, reconfigureEffects } from '../editor/setup.js';
 import { languageOf } from '../editor/languages.js';
 import { LINT_MAX_CHARS } from '../editor/yaml-lint.js';
-import { basename, dirname, resolvePath } from '../state/paths.js';
+import { basename } from '../state/paths.js';
 import { previewKind } from '../state/preview.js';
 import { MAC } from '../state/keys.js';
-import { secretKeys } from '../state/secrets.js';
 import type { LinkKind } from '../editor/links.js';
 import { TabsModel } from '../state/tabs.js';
 import { icon, icons } from '../ui/icons.js';
@@ -53,14 +52,6 @@ import './outline-panel.js';
 import { activeOutlineIndex, buildOutline, type OutlineItem } from '../editor/outline.js';
 import './snippet-editor.js';
 import type { CompareSide } from './compare-panel.js';
-import {
-  ENTITY_ID,
-  replaceConfirmMessage,
-  replaceDoneMessage,
-  replaceSkippedMessage,
-  type EdithaSearchPanel,
-  type SearchRequest,
-} from './search-panel.js';
 import type { SearchMatch } from '../api/types.js';
 import type { EdithaAboutDialog } from './about-dialog.js';
 import type { EdithaSidePane } from './side-pane.js';
@@ -73,6 +64,7 @@ import { HistoryController } from '../app/history.js';
 import { SessionController } from '../app/session.js';
 import { SaveController } from '../app/save.js';
 import { KeyboardController } from '../app/keyboard.js';
+import { SearchController } from '../app/search.js';
 
 /** Tasti della pagina iniziale: sul Mac ⌘ ⌥ ⇧ al posto di Ctrl, Alt e Shift. */
 const KEY = MAC ? { mod: '⌘', alt: '⌥', shift: '⇧' } : { mod: 'Ctrl', alt: 'Alt', shift: 'Shift' };
@@ -178,6 +170,7 @@ export class EdithaApp extends LitElement {
   readonly session = new SessionController(this);
   readonly saver = new SaveController(this);
   readonly keys = new KeyboardController(this);
+  readonly search = new SearchController(this);
 
   readonly tabs = new TabsModel<EditorState>();
   /** Testo salvato su disco per ogni tab: serve a sapere se ci sono modifiche. */
@@ -774,88 +767,6 @@ export class EdithaApp extends LitElement {
     if (update.selectionSet || update.docChanged) this.session.scheduleSession();
   }
 
-  // ——— ricerca in tutti i file (SR-1, SR-2, SR-4) ———
-
-  private get searchPanel(): EdithaSearchPanel {
-    return this.renderRoot.querySelector('editha-search-panel') as EdithaSearchPanel;
-  }
-
-  /**
-   * Apre la ricerca nella barra laterale. Senza richiesta parte dal testo selezionato,
-   * o dall'entity_id sotto il cursore (in quel caso cerca dove è usata l'entità).
-   */
-  async openSearch(req?: SearchRequest): Promise<void> {
-    if (this.narrow) this.drawerOpen = true;
-    else if (!this.settings.sidebarVisible) await this.updateSettings({ sidebarVisible: true });
-    this.searchOpen = true;
-    this.gitOpen = false;
-    this.refreshToolbar();
-    await this.updateComplete;
-    if (!req && this.focusedTab()) {
-      const selected = this.editor.selectedText();
-      if (selected && !selected.includes('\n')) req = { query: selected };
-      else {
-        const word = this.editor.wordAtCursor();
-        if (ENTITY_ID.test(word)) req = { query: word, wholeWord: true, caseSensitive: true };
-      }
-    }
-    if (req) this.searchPanel.searchFor(req);
-    else this.searchPanel.focusInput();
-  }
-
-  closeSearch(): void {
-    this.searchOpen = false;
-    this.refreshToolbar();
-  }
-
-  /** SR-3: sostituzione nei file trovati, dopo conferma; i file con modifiche non salvate si saltano. */
-  private async replaceInFiles(
-    e: CustomEvent<{ paths: string[]; counts: Record<string, number>; request: SearchRequest; replacement: string; truncated: boolean }>,
-  ): Promise<void> {
-    const { request, replacement, counts, truncated } = e.detail;
-    const dirty = e.detail.paths.filter((p) => this.tabs.find(p)?.dirty);
-    const paths = e.detail.paths.filter((p) => !dirty.includes(p));
-    if (paths.length === 0) {
-      this.toasts.show(t('replace.allDirty'), 'warning');
-      return;
-    }
-    const ok = await this.dialog.confirm({
-      title: t('replace.confirmTitle'),
-      message:
-        replaceConfirmMessage({
-          matches: paths.reduce((n, p) => n + (counts[p] ?? 0), 0),
-          files: paths.length,
-          query: request.query,
-          replacement,
-          truncated,
-        }) + (dirty.length ? t('replace.skipDirty', { names: dirty.map((p) => basename(p)).join(', ') }) : ''),
-      confirmLabel: t('replace.all'),
-      danger: true,
-    });
-    if (!ok) return;
-    let res;
-    try {
-      res = await api.replace(paths, request, replacement);
-    } catch (err) {
-      this.toasts.show(t('replace.failed', { error: this.errorText(err) }), 'error');
-      return;
-    }
-    // Le tab aperte (senza modifiche) mostrano subito il testo nuovo.
-    for (const f of res.files) {
-      const tab = this.tabs.find(f.path);
-      if (tab && !tab.dirty) await this.saver.reloadFromDisk(tab, true);
-    }
-    const count = res.files.reduce((n, f) => n + f.count, 0);
-    this.flash(replaceDoneMessage(count, res.files.length));
-    if (res.skipped.length) this.toasts.show(replaceSkippedMessage(res.skipped.length), 'warning');
-    await this.searchPanel.rerun();
-  }
-
-  private async openSearchResult(path: string, match: SearchMatch): Promise<void> {
-    await this.openFile(path);
-    if (this.tabs.active?.path === path) this.pane.selectMatch(match.line, match.column, match.length);
-  }
-
   // ——— confronto tra due file (BK-6) ———
 
   /** Testo da confrontare: quello della tab aperta (anche non salvato) o quello su disco. */
@@ -907,39 +818,6 @@ export class EdithaApp extends LitElement {
     this.previewShown = false;
     this.refreshToolbar();
     this.refreshStatus();
-  }
-
-  // ——— collegamenti: !include e !secret (HA-4, HA-5) ———
-
-  private async followLink(e: CustomEvent<{ kind: LinkKind; target: string; file: string }>): Promise<void> {
-    const { kind, target, file } = e.detail;
-    if (kind === 'secret') {
-      const key = (await secretKeys(file)).find((k) => k.key === target);
-      if (!key) {
-        this.toasts.show(t('link.secretMissing', { key: target }), 'warning');
-        return;
-      }
-      await this.openFile(key.path);
-      if (this.tabs.active?.path === key.path) this.pane.goToLine(key.line);
-      return;
-    }
-    // Come in HA, il percorso è relativo alla cartella del file che contiene l'include.
-    const path = resolvePath(dirname(file), target);
-    // '' è /config stessa: va bene solo per una cartella (!include_dir_… ..), non per un file.
-    if (path === null || (path === '' && kind === 'include')) {
-      this.toasts.show(t('link.outside', { path: target }), 'warning');
-      return;
-    }
-    if (kind === 'include') {
-      await this.openFile(path);
-      return;
-    }
-    // !include_dir_…: si mostra la cartella nell'albero.
-    if (this.narrow) this.drawerOpen = true;
-    else if (!this.settings.sidebarVisible) await this.updateSettings({ sidebarVisible: true });
-    await this.updateComplete;
-    if (path === '') return;
-    if (!(await this.tree.reveal(path, 'directory', true))) this.toasts.show(t('link.dirMissing', { path }), 'warning');
   }
 
   // ——— salvataggio (ED-5, SEC-4): in SaveController ———
@@ -1236,10 +1114,10 @@ export class EdithaApp extends LitElement {
         <aside style="width:${this.settings.sidebarWidth}px" ?hidden=${!showSidebar}>
           <editha-search-panel
             ?hidden=${!this.searchOpen}
-            @search-close=${() => this.closeSearch()}
-            @search-replace=${(e: Parameters<EdithaApp['replaceInFiles']>[0]) => void this.replaceInFiles(e)}
+            @search-close=${() => this.search.closeSearch()}
+            @search-replace=${(e: Parameters<SearchController['replaceInFiles']>[0]) => void this.search.replaceInFiles(e)}
             @search-open=${(e: CustomEvent<{ path: string; match: SearchMatch }>) =>
-              void this.openSearchResult(e.detail.path, e.detail.match)}
+              void this.search.openSearchResult(e.detail.path, e.detail.match)}
           ></editha-search-panel>
           <editha-git-panel
             ?hidden=${!this.gitOpen}
@@ -1305,7 +1183,10 @@ export class EdithaApp extends LitElement {
             @preview-activate=${() => this.showPreview()}
             @preview-close=${() => this.closePreview()}
           ></editha-tab-bar>
-          <div class="editors" @editha-link=${(e: CustomEvent<{ kind: LinkKind; target: string; file: string }>) => void this.followLink(e)}>
+          <div
+            class="editors"
+            @editha-link=${(e: CustomEvent<{ kind: LinkKind; target: string; file: string }>) => void this.search.followLink(e)}
+          >
           <editha-editor-pane>
             <div class="welcome" slot="empty">
               <div class="keys">
@@ -1364,7 +1245,7 @@ export class EdithaApp extends LitElement {
                   void this.snippets.deleteSnippet(e.detail.id, e.detail.name)}
                 @panel-close=${() => this.snippets.toggleInsert()}
                 @entity-usages=${(e: CustomEvent<{ id: string }>) =>
-                  void this.openSearch({ query: e.detail.id, wholeWord: true, caseSensitive: true })}
+                  void this.search.openSearch({ query: e.detail.id, wholeWord: true, caseSensitive: true })}
               ></editha-insert-panel>`
             : null}
         </main>
