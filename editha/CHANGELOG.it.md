@@ -2,6 +2,11 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.39.0
+
+- **Installazione e aggiornamenti più veloci**: EDITHA ora arriva come immagine già pronta, sia per `amd64` sia per `aarch64` (Raspberry Pi e simili). Home Assistant la scarica invece di costruirla sul tuo dispositivo: installare o aggiornare richiede secondi invece di minuti.
+- Nella scheda Documentazione di Home Assistant ora si vedono le immagini.
+
 ## 0.38.0
 
 - Pannello Git e guida: una breve nota spiega la differenza tra la cronologia dei file di EDITHA, Git e un backup di Home Assistant.

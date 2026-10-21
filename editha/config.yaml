@@ -1,5 +1,5 @@
 name: EDITHA
-version: "0.38.0"
+version: "0.39.0"
 slug: editha
 description: "Smart file editor for Home Assistant"
 url: https://github.com/Trizompa/ha-addons/tree/main/editha
@@ -8,6 +8,8 @@ arch:
   - aarch64
   - amd64
 init: false
+# Ready-made images (Publish images workflow): installs and updates are a download, not a build.
+image: "ghcr.io/trizompa/{arch}-addon-editha"
 
 # Solo Ingress: nessuna porta esposta sull'host.
 ingress: true

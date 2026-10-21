@@ -2,6 +2,11 @@
 
 Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
+## 0.39.0
+
+- **Faster installs and updates**: EDITHA now comes as a ready-made image for both `amd64` and `aarch64` (Raspberry Pi and similar). Home Assistant downloads it instead of building it on your device, so installing or updating takes seconds instead of minutes.
+- The images in the Documentation tab of Home Assistant now show up.
+
 ## 0.38.0
 
 - Git panel and guide: a short note explains the difference between EDITHA's file history, Git and a Home Assistant backup.
