@@ -191,9 +191,13 @@ of these two expressions:
 ## Image
 
 `editha/Dockerfile` uses the HA base image set in `build.yaml`. CI
-(`.github/workflows/editha.yaml`) runs the tests, builds the image for `amd64` and checks that
-the server responds. The `aarch64` build is emulated (QEMU), slow and uses many GitHub Actions
-minutes: it only runs manually (Actions → Editha → *Run workflow*).
+(`.github/workflows/editha.yaml`) runs the tests, builds the image for `amd64` and `aarch64`
+(on a native ARM runner, no emulation) and checks that the server responds.
+
+Home Assistant does not build the add-on on the device: `image:` in `config.yaml` points to the
+ready-made images `ghcr.io/trizompa/{arch}-addon-editha`, published by
+`.github/workflows/publish.yaml` (run by hand, see RELEASING.md). To try a local build in Home
+Assistant (development only), remove the `image:` line from a local copy of the add-on.
 
 Local build:
 

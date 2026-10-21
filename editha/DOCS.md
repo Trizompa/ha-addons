@@ -2,7 +2,7 @@
 
 *Every Day I Tweak HA*
 
-![EDITHA on desktop and phone](../docs/images/cover.png)
+![EDITHA on desktop and phone](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/cover.png)
 
 EDITHA is a file editor for your Home Assistant configuration. It runs as an add-on, opens from
 the sidebar and works on a PC, a tablet or a phone. It knows Home Assistant: it explains YAML
@@ -43,7 +43,7 @@ through Home Assistant (Ingress), with your Home Assistant login.
 
 ## The window at a glance
 
-![Main window](../docs/images/main-dark.png)
+![Main window](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-dark.png)
 
 - **Toolbar** (top): file explorer, save and save all, undo and redo, find and replace, file
   history, word wrap, split view, outline, insert panel, template preview and the Home Assistant
@@ -57,7 +57,7 @@ through Home Assistant (Ingress), with your Home Assistant login.
 Open tabs, the active tab, the theme and the language are remembered when you leave EDITHA or
 restart the add-on.
 
-![Light theme](../docs/images/main-light.png)
+![Light theme](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-light.png)
 
 ## Files and folders
 
@@ -88,7 +88,7 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
   saves the file to your PC. Close the preview with its tab's × or Esc. To edit an SVG, use
   **Open as text** in its menu.
 
-  ![Image preview](../docs/images/preview.png)
+  ![Image preview](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/preview.png)
 - **System folders** (`.storage`, `.cloud`, `deps`, `tts`, `.git`) are hidden. The eye button shows
   them, **read-only**: Home Assistant manages them and a manual change can break it.
 
@@ -101,7 +101,7 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
   two parts of the same file: changes made in one column appear in the other. **Open on the
   right** in a file's menu puts it straight into the right column.
 
-  ![Split view](../docs/images/split-view.png)
+  ![Split view](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/split-view.png)
 
 - **Outline**: the list button in the toolbar opens, next to the editor, the outline of the YAML
   file: in `automations.yaml` one entry per automation, by alias; in `scripts.yaml` one per script;
@@ -110,7 +110,7 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
   outline follows your edits. With many entries a filter appears on top. The button turns the
   outline on and off, and EDITHA remembers your choice. It is not available on phones.
 
-  ![Outline](../docs/images/outline.png)
+  ![Outline](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/outline.png)
 
 - **Languages**: YAML, JSON, Python, JavaScript, TypeScript, CSS, Markdown and Jinja templates
   (`.jinja`, `.jinja2`, `.j2`) are highlighted; other files open as plain text. Images and PDFs
@@ -150,7 +150,7 @@ list or `{ }` block used as a key, an alias `*name` with no anchor `&name` befor
 tag (`!secrets` instead of `!secret`). In the `esphome` folder the ESPHome tags (`!lambda`,
 `!extend`, `!remove`, …) are accepted too.
 
-![A YAML error explained](../docs/images/problems.png)
+![A YAML error explained](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/problems.png)
 
 It also warns about common Home Assistant mistakes that are valid YAML, such as unquoted
 `on`/`off`/`yes`/`no` (YAML turns them into true/false) or `name:Casa` without a space after the
@@ -173,9 +173,9 @@ Press Ctrl+Space, or just type:
   suggestions);
 - **Material Design icons** after `mdi:`, with a preview.
 
-![Entity suggestions](../docs/images/autocomplete-entities.png)
+![Entity suggestions](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/autocomplete-entities.png)
 
-![Icon suggestions](../docs/images/autocomplete-icons.png)
+![Icon suggestions](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/autocomplete-icons.png)
 
 ### Follow includes and secrets
 
@@ -192,7 +192,7 @@ The insert button opens a side panel with two tabs:
   actions, helpers). Tab moves between the fields to fill in. Select some text and save it as a
   **personal snippet**; the pencil edits it.
 
-![Insert panel](../docs/images/insert-panel.png)
+![Insert panel](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/insert-panel.png)
 
 ### Check, reload, restart
 
@@ -209,7 +209,7 @@ The Home Assistant button in the toolbar:
 Home Assistant reads the files on disk: if some tabs have unsaved changes, EDITHA first asks
 whether to **Save all and continue** or **Continue without saving**.
 
-![Home Assistant menu](../docs/images/ha-menu.png)
+![Home Assistant menu](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/ha-menu.png)
 
 ### Template preview
 
@@ -237,7 +237,7 @@ for an evaluation error (for example a division by zero).
   while the automation runs: here they are empty. The preview is not available in `secrets.yaml`
   or its copies.
 
-![Template preview](../docs/images/template-preview.png)
+![Template preview](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/template-preview.png)
 
 ## Search and replace in all files
 
@@ -245,7 +245,7 @@ The magnifier above the file explorer (Ctrl+Shift+F) opens **Search in files**: 
 file in `/config`, with match case, whole word and regular expressions. Click a result to open the
 file at that line. Search for an `entity_id` with *whole word* to find everywhere it is used.
 
-![Search in all files](../docs/images/search.png)
+![Search in all files](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/search.png)
 
 The search skips system folders, links, files over 5 MB and binary files (databases, archives,
 images and the like). It lists at most 200 matches per file; with too many results (2000 in all)
@@ -269,7 +269,7 @@ takes its history along, without adding a version. The history button in the too
 differences highlighted; **Restore this version** brings one back (and can itself be undone,
 because the current content is kept too). History works on text files up to 5 MB.
 
-![File history](../docs/images/history.png)
+![File history](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/history.png)
 
 **Bring back a deleted file**: create a new file with the same name in the same folder, then open
 **History…** on it: its versions are still there, including the one kept when it was deleted.
@@ -356,7 +356,7 @@ sends nothing outside (no GitHub or other servers).
 EDITHA's history (the automatic copies on every save) stays separate and works independently of
 Git.
 
-![Git panel](../docs/images/git-panel.png)
+![Git panel](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/git-panel.png)
 
 ## Phone and tablet
 
@@ -369,7 +369,7 @@ phones and tablets a small button next to the cursor hides the keyboard.
 
 | Editor | File explorer |
 | --- | --- |
-| ![Editor on a phone](../docs/images/phone-editor.png) | ![File explorer on a phone](../docs/images/phone-tree.png) |
+| ![Editor on a phone](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/phone-editor.png) | ![File explorer on a phone](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/phone-tree.png) |
 
 ## Keyboard shortcuts
 

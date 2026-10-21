@@ -2,7 +2,7 @@
 
 *Every Day I Tweak HA*
 
-![EDITHA su computer e telefono](../docs/images/cover.png)
+![EDITHA su computer e telefono](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/cover.png)
 
 EDITHA è un editor di file per la configurazione di Home Assistant. È un add-on: si apre dalla
 barra laterale e funziona su PC, tablet e telefono. Conosce Home Assistant: spiega gli errori YAML
@@ -44,7 +44,7 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
 
 ## La finestra in breve
 
-![Finestra principale](../docs/images/main-dark.png)
+![Finestra principale](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-dark.png)
 
 - **Barra degli strumenti** (in alto): esplora file, salva e salva tutto, annulla e ripeti, cerca
   e sostituisci, cronologia del file, a capo automatico, vista divisa, schema, pannello Inserisci,
@@ -60,7 +60,7 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
 Tab aperte, tab attiva, tema e lingua restano memorizzati quando esci da EDITHA o riavvii
 l'add-on.
 
-![Tema chiaro](../docs/images/main-light.png)
+![Tema chiaro](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-light.png)
 
 ## File e cartelle
 
@@ -92,7 +92,7 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
   chiude con la × della sua tab o con Esc. Per modificare un SVG usa **Apri come testo** nel suo
   menu.
 
-  ![Anteprima di un'immagine](../docs/images/preview.png)
+  ![Anteprima di un'immagine](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/preview.png)
 - **Cartelle di sistema** (`.storage`, `.cloud`, `deps`, `tts`, `.git`): sono nascoste. Il
   pulsante con l'occhio le mostra, **in sola lettura**: le gestisce Home Assistant e una modifica a
   mano può romperlo.
@@ -106,7 +106,7 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
   affiancati, oppure due punti dello stesso file: le modifiche fatte in una colonna compaiono
   nell'altra. **Apri a destra** nel menu di un file lo mette subito nella colonna destra.
 
-  ![Vista divisa](../docs/images/split-view.png)
+  ![Vista divisa](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/split-view.png)
 
 - **Schema del file**: il pulsante con l'elenco puntato apre, a fianco dell'editor, lo schema del
   file YAML: in `automations.yaml` una voce per automazione, con il suo alias; in `scripts.yaml`
@@ -115,7 +115,7 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
   schema segue le modifiche mentre scrivi. Con molte voci compare in alto un filtro. Il pulsante
   accende e spegne lo schema, e EDITHA ricorda la scelta. Sul telefono non è disponibile.
 
-  ![Schema del file](../docs/images/outline.png)
+  ![Schema del file](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/outline.png)
 
 - **Linguaggi**: YAML, JSON, Python, JavaScript, TypeScript, CSS, Markdown e template Jinja
   (`.jinja`, `.jinja2`, `.j2`) sono colorati; gli altri file si aprono come testo semplice.
@@ -155,7 +155,7 @@ un `: ` dentro un testo senza virgolette, un elenco o un blocco `{ }` usato come
 `*nome` senza un'ancora `&nome` prima, un tag sconosciuto (`!secrets` invece di `!secret`). Nella
 cartella `esphome` sono accettati anche i tag di ESPHome (`!lambda`, `!extend`, `!remove`, …).
 
-![Un errore YAML spiegato](../docs/images/problems.png)
+![Un errore YAML spiegato](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/problems.png)
 
 Avvisa anche di errori tipici di Home Assistant che sono YAML valido, come `on`/`off`/`yes`/`no`
 senza virgolette (lo YAML li trasforma in vero/falso) o `name:Casa` senza lo spazio dopo i due
@@ -178,9 +178,9 @@ Premi Ctrl+Spazio, oppure scrivi e basta:
   suggerimenti);
 - **icone Material Design** dopo `mdi:`, con l'anteprima.
 
-![Suggerimenti delle entità](../docs/images/autocomplete-entities.png)
+![Suggerimenti delle entità](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/autocomplete-entities.png)
 
-![Suggerimenti delle icone](../docs/images/autocomplete-icons.png)
+![Suggerimenti delle icone](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/autocomplete-icons.png)
 
 ### Seguire include e secret
 
@@ -197,7 +197,7 @@ Il pulsante Inserisci apre un pannello laterale con due schede:
   helper). Tab passa da un campo da compilare al successivo. Seleziona del testo e salvalo come
   **snippet personale**; la matita lo modifica.
 
-![Pannello Inserisci](../docs/images/insert-panel.png)
+![Pannello Inserisci](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/insert-panel.png)
 
 ### Verifica, ricarica, riavvia
 
@@ -214,7 +214,7 @@ Il pulsante di Home Assistant nella barra:
 Home Assistant legge i file su disco: se alcune tab hanno modifiche non salvate, EDITHA chiede prima
 se **Salva tutto e continua** o **Continua senza salvare**.
 
-![Menu di Home Assistant](../docs/images/ha-menu.png)
+![Menu di Home Assistant](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/ha-menu.png)
 
 ### Anteprima dei template
 
@@ -243,7 +243,7 @@ sintassi, in arancione un errore di valutazione (per esempio una divisione per z
   mentre l'automazione gira: qui risultano vuote. In `secrets.yaml` e nelle sue copie l'anteprima
   non è disponibile.
 
-![Anteprima di un template](../docs/images/template-preview.png)
+![Anteprima di un template](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/template-preview.png)
 
 ## Cerca e sostituisci in tutti i file
 
@@ -252,7 +252,7 @@ La lente sopra l'esplora file (Ctrl+Maiusc+F) apre **Cerca nei file**: cerca in 
 il file a quella riga. Cerca un `entity_id` con *parola intera* per trovare tutti i punti in cui è
 usato.
 
-![Cerca in tutti i file](../docs/images/search.png)
+![Cerca in tutti i file](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/search.png)
 
 La ricerca salta le cartelle di sistema, i collegamenti, i file oltre 5 MB e i file binari
 (database, archivi, immagini e simili). Mostra al massimo 200 risultati per file; con troppi
@@ -277,7 +277,7 @@ versioni accanto al contenuto attuale, con le differenze evidenziate; **Ripristi
 versione** la riporta indietro (e si può annullare a sua volta, perché anche il contenuto attuale
 viene conservato). La cronologia funziona sui file di testo fino a 5 MB.
 
-![Cronologia del file](../docs/images/history.png)
+![Cronologia del file](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/history.png)
 
 **Recuperare un file eliminato**: crea un nuovo file con lo stesso nome nella stessa cartella, poi
 apri **Cronologia…** su di lui: le sue versioni sono ancora lì, compresa quella conservata
@@ -366,7 +366,7 @@ fuori (niente GitHub né altri server).
 La cronologia di EDITHA (le copie automatiche a ogni salvataggio) resta separata e funziona
 indipendentemente da Git.
 
-![Pannello Git](../docs/images/git-panel.png)
+![Pannello Git](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/git-panel.png)
 
 ## Telefono e tablet
 
@@ -380,7 +380,7 @@ la tastiera.
 
 | Editor | Esplora file |
 | --- | --- |
-| ![Editor sul telefono](../docs/images/phone-editor.png) | ![Esplora file sul telefono](../docs/images/phone-tree.png) |
+| ![Editor sul telefono](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/phone-editor.png) | ![Esplora file sul telefono](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/phone-tree.png) |
 
 ## Scorciatoie da tastiera
 

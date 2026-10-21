@@ -1,0 +1,68 @@
+name: Publish images
+
+# Ready-made images for Home Assistant (the `image:` line in editha/config.yaml): with them an
+# install or update is a download instead of a build on the device.
+# Started by hand (Actions → Publish images → Run workflow) on the branch that carries the new
+# version, BEFORE that version reaches main: Home Assistant looks for the image of the version it
+# reads in config.yaml, and installing fails if it does not exist yet. See docs/RELEASING.md.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Publish ${{ matrix.arch }}
+    # aarch64 on a native ARM runner (free for public repositories): no emulation, no hangs.
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    steps:
+      - uses: actions/checkout@v5
+      - name: Version and base image
+        id: info
+        run: |
+          version=$(sed -n 's/^version: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' editha/config.yaml)
+          base=$(sed -n "s/^  ${{ matrix.arch }}: *//p" editha/build.yaml)
+          owner=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          test -n "$version" && test -n "$base"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/$owner/${{ matrix.arch }}-addon-editha" >> "$GITHUB_OUTPUT"
+          echo "version $version, base $base"
+      - name: The image name must match config.yaml
+        run: |
+          grep -q '^image: "\{0,1\}ghcr.io/'"$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"'/{arch}-addon-editha"\{0,1\} *$' editha/config.yaml
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        run: |
+          docker buildx build editha \
+            --platform ${{ matrix.platform }} \
+            --build-arg BUILD_FROM=${{ steps.info.outputs.base }} \
+            --build-arg BUILD_VERSION=${{ steps.info.outputs.version }} \
+            --build-arg BUILD_ARCH=${{ matrix.arch }} \
+            --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
+            --tag ${{ steps.info.outputs.image }}:${{ steps.info.outputs.version }} \
+            --tag ${{ steps.info.outputs.image }}:latest \
+            --push
+      - name: The published image starts
+        run: |
+          image=${{ steps.info.outputs.image }}:${{ steps.info.outputs.version }}
+          docker pull "$image"
+          docker run --rm --entrypoint sh "$image" -c 'test -f /app/dist/main.js && test -f /app/web/index.html && node --version && git --version'

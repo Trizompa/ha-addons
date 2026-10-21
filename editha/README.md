@@ -2,7 +2,7 @@
 
 *Every Day I Tweak HA*
 
-![EDITHA](../docs/images/cover.png)
+![EDITHA](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/cover.png)
 
 A file editor for your Home Assistant configuration, from the sidebar, on PC, tablet and phone.
 

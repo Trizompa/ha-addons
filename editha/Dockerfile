@@ -38,8 +38,10 @@ ENV NODE_ENV=production
 CMD ["node", "/app/dist/main.js"]
 
 ARG BUILD_VERSION
+ARG BUILD_ARCH
 LABEL \
-    io.hass.name="Editha" \
+    io.hass.name="EDITHA" \
+    io.hass.arch="${BUILD_ARCH}" \
     io.hass.description="Smart file editor for Home Assistant" \
     io.hass.type="addon" \
     io.hass.version="${BUILD_VERSION}" \

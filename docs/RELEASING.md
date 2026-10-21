@@ -12,11 +12,14 @@ Reminder for the maintainer. Items marked ☐ are done only once, at the first p
    `editha/CHANGELOG.it.md` (Italian).
 3. Documentation updated if something the user sees changes (`editha/DOCS.md` and
    `editha/DOCS.it.md`). If the look changes, regenerate the images (see CONTRIBUTING.md).
-4. CI green on GitHub. If `Dockerfile`, `build.yaml` or the dependencies changed, also run the
-   aarch64 build by hand (Actions → Editha → Run workflow): it is emulated and slow, so it does
-   not start on its own.
-5. Merge into the `main` branch (pull request).
-6. Tag and release: on `main` create the tag `v` + version (e.g. `v1.0.0`) from **Releases → Draft
+4. CI green on GitHub (tests and both image builds).
+5. **Ready-made images**: on the branch that carries the new version, run **Actions → Publish
+   images → Run workflow** and wait until both jobs are green. It publishes
+   `ghcr.io/trizompa/{amd64,aarch64}-addon-editha:<version>`. This must happen BEFORE the
+   version reaches `main`: Home Assistant downloads the image of the version it reads in
+   `config.yaml`, and the install or update fails if that image does not exist yet.
+6. Merge into the `main` branch (pull request or fast-forward).
+7. Tag and release: on `main` create the tag `v` + version (e.g. `v1.0.0`) from **Releases → Draft
    a new release → Choose a tag**, or `git tag v1.0.0 && git push origin v1.0.0`. The *Release*
    workflow checks that the number matches `config.yaml` and publishes the release with the
    CHANGELOG text.
@@ -32,10 +35,9 @@ tag is only for the releases page on GitHub.
 - ☐ On GitHub: **Settings → Emails → Keep my email addresses private**, so future commits made
   from the website use the `noreply` address. (The history contains no personal data.)
 - ☐ **Make public**: Settings → General → Danger Zone → *Change repository visibility*.
-- ☐ Documentation images: once the repository is public, in the links of `editha/DOCS.md`,
-  `editha/DOCS.it.md` and `editha/README.md` replace `../docs/images/` with
-  `https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/` (the Home Assistant
-  Documentation tab does not resolve relative paths).
+- ☐ **Images public**: after the first run of *Publish images*, on GitHub open your profile →
+  **Packages** → `amd64-addon-editha` and `aarch64-addon-editha` → **Package settings → Change
+  visibility → Public** (once per package; otherwise Home Assistant cannot download them).
 - ☐ **Security**: Settings → Code security → enable *Private vulnerability reporting* (needed
   for SECURITY.md) and *Dependabot alerts*.
 - ☐ **Repository presentation** (gear next to *About* on the main page):
@@ -46,8 +48,8 @@ tag is only for the releases page on GitHub.
     the link is shared).
 - ☐ **Protect `main`** (after making it public): Settings → Rules → Rulesets → *New branch
   ruleset*, target *Default branch*, with *Restrict deletions*, *Block force pushes* and
-  *Require status checks to pass* (the checks "Server tests", "Web tests", "Build amd64";
-  "Build aarch64" only runs by hand, so it must not be among the required ones).
+  *Require status checks to pass* (the checks "Server tests", "Web tests", "Build amd64",
+  "Build aarch64").
 - ☐ **Labels** for issues: `bug` and `enhancement` already exist by default.
 - ☐ Tag `v1.0.0` and release (see above).
 - ☐ **Announcement** (optional): Home Assistant forum, *Share your Projects* category, and

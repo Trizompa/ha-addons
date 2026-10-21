@@ -1,7 +1,6 @@
 name: Editha
 
 on:
-  # Manual run (Actions → Editha → Run workflow): also builds the aarch64 image.
   workflow_dispatch:
   push:
     paths:
@@ -74,33 +73,29 @@ jobs:
     # ENG-4 / ENG-7: the image must build on both architectures,
     # with the same base image the Supervisor uses.
     name: Build ${{ matrix.arch }}
-    runs-on: ubuntu-latest
+    # aarch64 on a native ARM runner (free for public repositories): no emulation.
+    runs-on: ${{ matrix.runner }}
     needs: [test, web]
-    # The aarch64 build is emulated (QEMU): slow, sometimes hangs, and uses up GitHub Actions
-    # minutes. It only runs manually (workflow_dispatch); every push builds amd64.
-    # Each attempt has a time limit, and up to three attempts are made.
-    timeout-minutes: 55
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '[{"arch":"amd64","platform":"linux/amd64"},{"arch":"aarch64","platform":"linux/arm64"}]' || '[{"arch":"amd64","platform":"linux/amd64"}]') }}
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
     steps:
       - uses: actions/checkout@v5
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - name: Build
-        # On the device the Supervisor builds without emulation: the problem is only here.
         run: |
-          for attempt in 1 2 3; do
-            if timeout 15m docker buildx build editha \
-              --platform ${{ matrix.platform }} \
-              --build-arg BUILD_FROM=ghcr.io/home-assistant/base:3.22 \
-              --load --tag editha:${{ matrix.arch }}; then
-              exit 0
-            fi
-            echo "::warning::Build ${{ matrix.arch }}, attempt $attempt failed or hung: retrying"
-          done
-          exit 1
+          docker buildx build editha \
+            --platform ${{ matrix.platform }} \
+            --build-arg BUILD_FROM=ghcr.io/home-assistant/base:3.22 \
+            --load --tag editha:${{ matrix.arch }}
       - name: Start and access check
         # Reproduces the Supervisor network: the Ingress proxy has address 172.30.32.2
         # and the server uses the default configuration (EDITHA_ALLOWED_IPS not set).
