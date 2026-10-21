@@ -1,331 +1,331 @@
-# EDITHA – requisiti
+# EDITHA – requirements
 
-Every Day I Tweak HA. Add-on per Home Assistant che offre un
-editor/IDE per i file di `/config`.
+Every Day I Tweak HA. A Home Assistant add-on that provides an
+editor/IDE for the files in `/config`.
 
-Stato: **concordato** (ottobre 2026). Le modifiche successive passano da questo documento.
+Status: **agreed** (October 2026). Later changes go through this document.
 
-## Principi
+## Principles
 
-- Scritto da zero. File Editor Plus (FEP) è solo un riferimento per le funzionalità:
-  non ha licenza, quindi niente codice, asset o testi copiati.
-- Editor basato su CodeMirror 6: undo/redo, Tab, indentazione, guide, evidenziazione e
-  ricerca vengono dalle sue estensioni, non da implementazioni fatte a mano.
-- Backend raggiungibile solo via Ingress e confinato a `/config`.
-- Moduli piccoli con una responsabilità ciascuno; la logica che tocca il filesystem o le
-  API di HA sta nel backend e ha test.
+- Written from scratch. File Editor Plus (FEP) is only a reference for features:
+  it has no license, so no code, assets or text are copied.
+- Editor based on CodeMirror 6: undo/redo, Tab, indentation, guides, highlighting and
+  search come from its extensions, not from hand-made implementations.
+- Backend reachable only through Ingress and confined to `/config`.
+- Small modules with one responsibility each; logic that touches the filesystem or the
+  HA APIs lives in the backend and has tests.
 
-## Priorità
+## Priorities
 
-| Livello | Significato |
+| Level | Meaning |
 | --- | --- |
-| **P0** | Indispensabile per la prima versione utilizzabile (MVP). |
-| **P1** | Necessario per la 1.0. |
-| **P2** | Utile, da pianificare dopo la 1.0. |
-| **—** | Fuori ambito (motivato). |
+| **P0** | Essential for the first usable version (MVP). |
+| **P1** | Required for 1.0. |
+| **P2** | Useful, to be planned after 1.0. |
+| **—** | Out of scope (with a reason). |
 
-Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
+The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits.
 
 ---
 
-## 1. Sicurezza e backend
+## 1. Security and backend
 
-| ID | Requisito | Pr. |
+| ID | Requirement | Pr. |
 | --- | --- | --- |
-| SEC-1 | Nessuna porta esposta: il server ascolta solo sulla porta Ingress e accetta richieste solo dal proxy Ingress del Supervisor (`172.30.32.2`); rifiutate quelle che il browser segna come partite da un altro sito (`Sec-Fetch-Site: cross-site`). | P0 |
-| SEC-2 | Ogni percorso ricevuto è risolto (incluso `realpath` per i symlink) e rifiutato se esce da `/config`. Niente `..`, percorsi assoluti esterni, byte nulli. | P0 |
-| SEC-3 | Scrittura atomica: file temporaneo nella stessa cartella + `rename`, preservando permessi. Un salvataggio interrotto non lascia mai un file troncato. | P0 |
-| SEC-4 | Rilevamento conflitti: il client invia l'etag (SHA-256 del contenuto letto); se il file è cambiato su disco nel frattempo il backend risponde 409 e l'UI chiede cosa fare (annulla / ricarica dal disco / sovrascrivi; sovrascrivendo, la versione su disco finisce nella cronologia). | P0 |
-| SEC-5 | Limiti: dimensione massima apribile nell'editor (configurabile), rilevamento file binari (aperti in sola lettura o solo scaricabili). | P0 |
-| SEC-6 | Il token del Supervisor non arriva mai al browser; le chiamate a Core passano dal backend. | P0 |
-| SEC-7 | `secrets.yaml`: modificabile, ma i valori non finiscono nei log né nelle risposte dell'autocompletamento (solo le chiavi). `secrets.yaml` e le sue copie (vedi `isSecretsFile` in `server/src/fs/search.ts`: nomi che contengono `secrets` seguito, in un punto qualsiasi, da `.yaml`/`.yml`, come `secrets_copia.yaml.bak`, `secrets.yaml~` o `old_secrets.yaml`; il singolare `secret` solo con un suffisso da copia, come `secret.yaml` o `secret_old.yaml`; anche raggiunti da un collegamento) sono esclusi da ricerca e sostituzione, mai negli ZIP delle cartelle (0.34.0), mai nei commit Git, niente anteprima template. | P0 |
-| SEC-8 | Cartelle delicate (`.storage`, `.cloud`, `deps`, `tts`, `.git`) nascoste nell'albero per default, visibili con un pulsante (scelta memorizzata) e sempre in sola lettura; sblocco esplicito della scrittura da valutare. | P1 |
-| SEC-9 | Log del backend senza contenuto dei file. | P0 |
+| SEC-1 | No exposed port: the server listens only on the Ingress port and accepts requests only from the Supervisor's Ingress proxy (`172.30.32.2`); requests the browser marks as coming from another site (`Sec-Fetch-Site: cross-site`) are rejected. | P0 |
+| SEC-2 | Every received path is resolved (including `realpath` for symlinks) and rejected if it leaves `/config`. No `..`, no outside absolute paths, no null bytes. | P0 |
+| SEC-3 | Atomic write: temporary file in the same folder + `rename`, preserving permissions. An interrupted save never leaves a truncated file. | P0 |
+| SEC-4 | Conflict detection: the client sends the etag (SHA-256 of the content read); if the file has changed on disk in the meantime the backend responds 409 and the UI asks what to do (cancel / reload from disk / overwrite; when overwriting, the version on disk goes into the history). | P0 |
+| SEC-5 | Limits: maximum size that can be opened in the editor (configurable), binary file detection (opened read-only or download-only). | P0 |
+| SEC-6 | The Supervisor token never reaches the browser; calls to Core go through the backend. | P0 |
+| SEC-7 | `secrets.yaml`: editable, but the values never end up in the logs or in autocompletion responses (keys only). `secrets.yaml` and its copies (see `isSecretsFile` in `server/src/fs/search.ts`: names that contain `secrets` followed, anywhere, by `.yaml`/`.yml`, such as `secrets_copia.yaml.bak`, `secrets.yaml~` or `old_secrets.yaml`; the singular `secret` only with a copy suffix, such as `secret.yaml` or `secret_old.yaml`; also when reached through a link) are excluded from search and replace, never in folder ZIPs (0.34.0), never in Git commits, no template preview. | P0 |
+| SEC-8 | Sensitive folders (`.storage`, `.cloud`, `deps`, `tts`, `.git`) hidden in the tree by default, visible with a button (choice remembered) and always read-only; an explicit write unlock is to be evaluated. | P1 |
+| SEC-9 | Backend logs without file content. | P0 |
 
-## 2. Esplora file
+## 2. File explorer
 
-| ID | Requisito | Pr. |
+| ID | Requirement | Pr. |
 | --- | --- | --- |
-| FS-1 | Albero di `/config` con caricamento pigro delle cartelle e ordinamento cartelle → file; l'albero scorre indipendentemente dall'editor anche con molti file, con mouse e tastiera (FEP #4). | P0 |
-| FS-2 | Crea file e cartella dai pulsanti sopra l'albero e dal menu contestuale (tasto destro). La destinazione è la cartella selezionata, anche se vuota (o la cartella del file selezionato); l'albero si aggiorna e il nuovo file si apre (FEP #11, #12). | P0 |
-| FS-3 | **Rinomina** file e cartelle dal menu contestuale e con F2 nell'albero, aggiornando le tab aperte sul percorso vecchio; la cronologia (BK-1) segue il file (FEP #18). | P0 |
-| FS-4 | Elimina con conferma (menu contestuale o Canc nell'albero); il file eliminato finisce nei backup di Editha (BK-1), non sparisce. Oltre 50 MB (limite di trasferimento) si elimina senza copia, con un avviso. | P0 |
-| FS-5 | Sposta con la voce "Sposta in…" del menu contestuale (niente trascinamento: troppo facile sbagliare), con aggiornamento delle tab aperte. | P1 |
-| FS-6 | Upload dal PC (anche trascinando i file) e download sul PC; download di una cartella come zip. Limite di 50 MB per trasferimento (`EDITHA_MAX_TRANSFER`). | P1 |
-| FS-7 | Filtro per nome nell'albero; aggiornamento dell'albero quando i file cambiano su disco. | P1 |
-| FS-8 | Duplica un file (solo file) dal menu contestuale, con nome proposto da confermare (`nome_copy.est`, `_copia` in italiano). Le copie YAML finiscono in `.bak`, così HA non le carica; un nome `.yaml` va confermato. | P1 |
-| FS-9 | Elenco di esclusioni configurabile (pattern glob). | P2 |
-| FS-10 | Anteprima di immagini (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG) e PDF al posto dell'editor, con dimensioni e grandezza reale; gli SVG non possono eseguire script. | P1 |
+| FS-1 | Tree of `/config` with lazy loading of folders and folders → files ordering; the tree scrolls independently of the editor even with many files, with mouse and keyboard (FEP #4). | P0 |
+| FS-2 | Create file and folder from the buttons above the tree and from the context menu (right click). The destination is the selected folder, even if empty (or the folder of the selected file); the tree refreshes and the new file opens (FEP #11, #12). | P0 |
+| FS-3 | **Rename** files and folders from the context menu and with F2 in the tree, updating tabs open on the old path; the history (BK-1) follows the file (FEP #18). | P0 |
+| FS-4 | Delete with confirmation (context menu or Del in the tree); the deleted file goes into Editha's backups (BK-1), it does not vanish. Above 50 MB (transfer limit) it is deleted without a copy, with a warning. | P0 |
+| FS-5 | Move with the "Move to…" context menu item (no drag and drop: too easy to get wrong), updating open tabs. | P1 |
+| FS-6 | Upload from the PC (also by dragging files) and download to the PC; download of a folder as a zip. 50 MB limit per transfer (`EDITHA_MAX_TRANSFER`). | P1 |
+| FS-7 | Name filter in the tree; tree refresh when files change on disk. | P1 |
+| FS-8 | Duplicate a file (files only) from the context menu, with a proposed name to confirm (`name_copy.ext`, `_copia` in Italian). YAML copies end in `.bak`, so HA does not load them; a `.yaml` name must be confirmed. | P1 |
+| FS-9 | Configurable exclusion list (glob patterns). | P2 |
+| FS-10 | Preview of images (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG) and PDFs instead of the editor, with dimensions and actual size; SVGs cannot run scripts. | P1 |
 
 ## 3. Editor
 
-| ID | Requisito | Pr. |
+| ID | Requirement | Pr. |
 | --- | --- | --- |
-| ED-1 | CodeMirror 6 con: undo/redo che annulla anche le indentazioni fatte con Tab, senza errori; Tab/Shift-Tab su una selezione indenta il blocco (mai lo cancella); indentazione automatica, guide di indentazione, numeri di riga, evidenziazione delle parentesi, folding (FEP #8, #9, #14). | P0 |
-| ED-2 | Modalità per YAML, JSON, Python, JavaScript, TypeScript, CSS, Markdown, Jinja; testo semplice per il resto. | P0 |
-| ED-3 | Più tab: indicatore di modifiche non salvate, stato (undo, cursore, scroll) conservato per tab, chiusura del file con pulsante e scorciatoia. La tab attiva e quella inattiva sono chiaramente distinguibili in entrambi i temi, con lo stesso linguaggio visivo della barra degli strumenti (FEP #15). | P0 |
-| ED-4 | **Chiudendo la tab attiva si attiva la tab adiacente e l'editor mostra il suo contenuto**; chiudendo l'ultima si mostra lo stato vuoto. "Salva" scrive sempre il contenuto della tab attiva nel suo file, mai quello di un'altra tab (FEP #19). Coperto da test e2e. | P0 |
-| ED-5 | Salvataggio con Ctrl/Cmd+S e pulsante; "salva tutto". | P0 |
-| ED-6 | Avviso prima di chiudere una tab o la pagina con modifiche non salvate (FEP #10). | P0 |
-| ED-7 | Trova/sostituisci nel file (estensione `search` di CM6). | P0 |
-| ED-8 | Tema Auto (segue HA) / Chiaro / Scuro; la scelta resta memorizzata uscendo e rientrando nell'add-on (CFG-1, FEP #6). In entrambi i temi il testo selezionato resta leggibile, senza caratteri sovrapposti, su Chrome, Firefox, Safari e app di HA (FEP #7). | P0 |
-| ED-9 | Avviso quando il file aperto cambia su disco (vedi SEC-4), con ricarica. | P1 |
-| ED-10 | A capo automatico, dimensione carattere, spazi per indentazione: impostazioni per utente. | P1 |
-| ED-11 | Uscendo dall'add-on (o al riavvio) e rientrando si ritrovano le tab aperte, con la stessa tab attiva e la posizione del cursore (FEP #13). | P0 |
-| ED-14 | Le modifiche non salvate sopravvivono alla chiusura della pagina come bozza, che si può recuperare o scartare alla riapertura (FEP #13). | P1 |
-| ED-15 | L'editor occupa tutta l'altezza disponibile e scorre fino all'ultima riga di qualsiasi file (FEP #15). | P0 |
-| ED-16 | Controllo ortografico, correzione automatica e traduzione del browser disattivati nell'editor: le uniche sottolineature sono quelle del validatore (FEP #5). | P0 |
-| ED-12 | Palette dei comandi e scorciatoie elencate in un aiuto. | P2 |
-| ED-13 | Minimappa. | P2 |
-| ED-17 | Vista divisa in due colonne: due file (o due punti dello stesso file) affiancati. | P1 |
-| ED-18 | Schema del file YAML a fianco dell'editor (voci per alias: automazioni, script, sezioni, helper), con salto alla riga e voce attiva; si accende e spegne e la scelta resta. | P1 |
+| ED-1 | CodeMirror 6 with: undo/redo that also undoes indentation done with Tab, without errors; Tab/Shift-Tab on a selection indents the block (never deletes it); automatic indentation, indentation guides, line numbers, bracket matching, folding (FEP #8, #9, #14). | P0 |
+| ED-2 | Modes for YAML, JSON, Python, JavaScript, TypeScript, CSS, Markdown, Jinja; plain text for the rest. | P0 |
+| ED-3 | Multiple tabs: unsaved changes indicator, state (undo, cursor, scroll) kept per tab, closing the file with a button and a shortcut. The active and inactive tabs are clearly distinguishable in both themes, with the same visual language as the toolbar (FEP #15). | P0 |
+| ED-4 | **Closing the active tab activates the adjacent tab and the editor shows its content**; closing the last one shows the empty state. "Save" always writes the active tab's content to its own file, never another tab's (FEP #19). Covered by e2e tests. | P0 |
+| ED-5 | Save with Ctrl/Cmd+S and a button; "Save all". | P0 |
+| ED-6 | Warning before closing a tab or the page with unsaved changes (FEP #10). | P0 |
+| ED-7 | Find/replace in the file (CM6 `search` extension). | P0 |
+| ED-8 | Theme Automatic (follows HA) / Light / Dark; the choice is remembered when leaving and re-entering the add-on (CFG-1, FEP #6). In both themes selected text stays readable, without overlapping characters, on Chrome, Firefox, Safari and the HA app (FEP #7). | P0 |
+| ED-9 | Warning when the open file changes on disk (see SEC-4), with reload. | P1 |
+| ED-10 | Line wrapping, font size, spaces for indentation: per-user settings. | P1 |
+| ED-11 | Leaving the add-on (or after a restart) and coming back restores the open tabs, with the same active tab and cursor position (FEP #13). | P0 |
+| ED-14 | Unsaved changes survive closing the page as a draft, which can be recovered or discarded on reopening (FEP #13). | P1 |
+| ED-15 | The editor fills all the available height and scrolls to the last line of any file (FEP #15). | P0 |
+| ED-16 | Browser spell check, autocorrect and translation turned off in the editor: the only underlines are the validator's (FEP #5). | P0 |
+| ED-12 | Command palette and shortcuts listed in a help screen. | P2 |
+| ED-13 | Minimap. | P2 |
+| ED-17 | Split view in two columns: two files (or two places in the same file) side by side. | P1 |
+| ED-18 | Outline of the YAML file next to the editor (entries by alias: automations, scripts, sections, helpers), with jump to line and active entry; it can be turned on and off and the choice is kept. | P1 |
 
-## 4. YAML e Home Assistant
+## 4. YAML and Home Assistant
 
-| ID | Requisito | Pr. |
+| ID | Requirement | Pr. |
 | --- | --- | --- |
-| HA-1 | Validazione YAML in tempo reale (sintassi) che riconosce i tag di HA: `!include`, `!include_dir_*`, `!secret`, `!input`, `!env_var`. Errori sottolineati nel punto esatto (riga e colonna) con messaggio; nessuna segnalazione su codice corretto; la sottolineatura si aggiorna/scompare mentre si corregge (FEP #5). | P0 |
-| HA-2 | Autocompletamento degli `entity_id` dagli stati di Core, con nome e stato nel suggerimento. | P0 |
-| HA-3 | Autocompletamento di servizi/azioni (`domain.service`). | P1 |
-| HA-4 | Autocompletamento delle chiavi di `!secret` da `secrets.yaml`. | P1 |
-| HA-5 | Ctrl/Cmd+clic su `!include path` apre il file incluso. | P1 |
-| HA-6 | Hover su un `entity_id`: stato e attributi correnti. | P2 |
-| HA-7 | Anteprima dei template Jinja tramite l'API di rendering di Core. | P2 |
-| HA-8 | Cache di entità/servizi aggiornata su richiesta e periodicamente (o via WebSocket `state_changed`). | P1 |
-| HA-9 | Controllo con spiegazioni concrete (righe coinvolte, rientro atteso) e avvisi per errori tipici di HA che restano YAML valido: `on`/`off`/`yes`/`no` senza virgolette, `chiave:valore` senza spazio, rientri dispari. Spiegati anche: template `{{ }}` senza virgolette (letto come chiave), chiave che è un elenco o un blocco `{ }`, alias `*nome` senza ancora, chiavi ripetute, due punti mancanti tra chiave e valore. Elenco dei problemi con riga e collegamento. | P1 |
-| HA-10 | Autocompletamento delle icone Material Design dopo `mdi:`, con anteprima. | P1 |
+| HA-1 | Real-time YAML validation (syntax) that recognizes HA tags: `!include`, `!include_dir_*`, `!secret`, `!input`, `!env_var`. Errors underlined at the exact spot (line and column) with a message; no reports on correct code; the underline updates/disappears while fixing (FEP #5). | P0 |
+| HA-2 | Autocompletion of `entity_id` from Core states, with name and state in the suggestion. | P0 |
+| HA-3 | Autocompletion of services/actions (`domain.service`). | P1 |
+| HA-4 | Autocompletion of `!secret` keys from `secrets.yaml`. | P1 |
+| HA-5 | Ctrl/Cmd+click on `!include path` opens the included file. | P1 |
+| HA-6 | Hover on an `entity_id`: current state and attributes. | P2 |
+| HA-7 | Jinja template preview through Core's rendering API. | P2 |
+| HA-8 | Entity/service cache refreshed on request and periodically (or via WebSocket `state_changed`). | P1 |
+| HA-9 | Check with concrete explanations (lines involved, expected indentation) and warnings for typical HA mistakes that are still valid YAML: unquoted `on`/`off`/`yes`/`no`, `key:value` without a space, odd indentation. Also explained: unquoted `{{ }}` templates (read as a key), a key that is a list or a `{ }` block, `*name` alias without an anchor, repeated keys, missing colon between key and value. List of problems with line and link. | P1 |
+| HA-10 | Autocompletion of Material Design icons after `mdi:`, with preview. | P1 |
 
-## 5. Azioni su Home Assistant
+## 5. Home Assistant actions
 
-| ID | Requisito | Pr. |
+| ID | Requirement | Pr. |
 | --- | --- | --- |
-| ACT-1 | Verifica della configurazione con risultato leggibile (errori con file e riga quando HA li fornisce). | P0 |
-| ACT-2 | Ricarica di tutta la configurazione YAML (`homeassistant.reload_all`), preceduta da ACT-1: se la verifica fallisce non si ricarica. La ricarica ha effetto come l'equivalente in Strumenti per sviluppatori e l'esito mostrato è quello reale restituito da HA, non un "avviato" a prescindere (FEP #16). Una ricarica mirata per dominio non serve (tolta in 0.13.0). | P2 |
-| ACT-3 | Suggerimento della ricarica giusta in base al file salvato (es. `automations.yaml` → `automation.reload`). Per ora non serve (decisione dell'utente, 0.34.0). | P2 |
-| ACT-4 | Riavvio di HA con conferma, preceduto obbligatoriamente da ACT-1: se la verifica fallisce il riavvio è bloccato. | P1 |
-| ACT-5 | Visualizzazione del log di Core (ultime righe, filtro). | P2 |
+| ACT-1 | Configuration check with a readable result (errors with file and line when HA provides them). | P0 |
+| ACT-2 | Reload of the whole YAML configuration (`homeassistant.reload_all`), preceded by ACT-1: if the check fails there is no reload. The reload takes effect like its equivalent in Developer tools, and the result shown is the actual one returned by HA, not a blanket "started" (FEP #16). A per-domain reload is not needed (removed in 0.13.0). | P2 |
+| ACT-3 | Suggestion of the right reload based on the saved file (e.g. `automations.yaml` → `automation.reload`). Not needed for now (user's decision, 0.34.0). | P2 |
+| ACT-4 | HA restart with confirmation, always preceded by ACT-1: if the check fails the restart is blocked. | P1 |
+| ACT-5 | Core log view (last lines, filter). | P2 |
 
-## 6. Backup, confronto e ripristino
+## 6. Backup, compare and restore
 
-| ID | Requisito | Pr. |
+| ID | Requirement | Pr. |
 | --- | --- | --- |
-| BK-1 | Prima di ogni salvataggio, sostituzione (SR-3), ripristino, eliminazione e upload che sovrascrive Editha conserva la versione precedente del file (eliminazione e upload solo entro 50 MB). Rinomina e spostamento portano con sé la cronologia, senza creare una versione. Un file eliminato si recupera ricreandolo con lo stesso percorso e aprendo la sua cronologia; le cartelle eliminate non si ripristinano dall'interfaccia. | P0 |
-| BK-2 | Elenco delle versioni di un file (data, dimensione). | P1 |
-| BK-3 | Confronto affiancato versione ↔ attuale (merge view di CM6), anche per il conflitto di SEC-4. | P1 |
-| BK-4 | Ripristino di una versione (a sua volta crea una versione, quindi è annullabile). | P1 |
-| BK-5 | Politica di conservazione: 10 versioni per file (configurabile con `EDITHA_BACKUP_KEEP`). | P1 |
-| BK-6 | Confronto tra due file qualsiasi. | P2 |
-| BK-7 | Manutenzione della cronologia: spazio occupato (in tutto e per file), cancellazione delle versioni più vecchie di una data, cancellazione completa; sempre con conferma, solo le copie, mai i file di /config. | P2 |
-| BK-8 | Backup completi di HA tramite Supervisor (crea/elenca). | P2 |
+| BK-1 | Before every save, replace (SR-3), restore, delete and overwriting upload, Editha keeps the previous version of the file (delete and upload only up to 50 MB). Rename and move carry the history along, without creating a version. A deleted file is recovered by recreating it at the same path and opening its history; deleted folders cannot be restored from the web interface. | P0 |
+| BK-2 | List of a file's versions (date, size). | P1 |
+| BK-3 | Side-by-side comparison version ↔ current (CM6 merge view), also for the SEC-4 conflict. | P1 |
+| BK-4 | Restore of a version (which itself creates a version, so it can be undone). | P1 |
+| BK-5 | Retention policy: 10 versions per file (configurable with `EDITHA_BACKUP_KEEP`). | P1 |
+| BK-6 | Comparison between any two files. | P2 |
+| BK-7 | History maintenance: space used (in total and per file), deletion of versions older than a date, full deletion; always with confirmation, only the copies, never the files in /config. | P2 |
+| BK-8 | Full HA backups through the Supervisor (create/list). | P2 |
 
-## 6b. Git locale
+## 6b. Local Git
 
-Solo il repository in `/config`, sul dispositivo: nessun comando di rete (niente push, pull o fetch).
+Only the repository in `/config`, on the device: no network commands (no push, pull or fetch).
 
-| ID | Requisito | Pr. |
+| ID | Requirement | Pr. |
 | --- | --- | --- |
-| GIT-1 | Inizializzazione di un repository in `/config` (ramo `main`) con un `.gitignore` di base (segreti, dati interni di HA, database, registri, temporanei); un repository o un `.gitignore` esistenti si usano così come sono. | P2 |
-| GIT-2 | Stato dei file (modificati, nuovi, eliminati), calcolato su richiesta; una cartella nuova è una riga sola, apribile per vedere e scegliere i suoi file. | P2 |
-| GIT-3 | Differenze di un file rispetto all'ultimo commit, nella vista di confronto. | P2 |
-| GIT-4 | Commit con messaggio, di tutti i file o di quelli scelti (anche singoli file dentro una cartella nuova); secrets.yaml e copie rifiutati sempre. | P2 |
-| GIT-5 | Elenco dei commit; per ciascuno i file toccati. | P2 |
-| GIT-6 | Ripristino di un file da un commit, con conferma, passando dal salvataggio di EDITHA (quindi anche nella sua cronologia). | P2 |
+| GIT-1 | Initialization of a repository in `/config` (branch `main`) with a basic `.gitignore` (secrets, HA internal data, databases, logs, temporary files); an existing repository or `.gitignore` is used as is. | P2 |
+| GIT-2 | File status (modified, new, deleted), computed on request; a new folder is a single line, which can be opened to see and pick its files. | P2 |
+| GIT-3 | Differences of a file against the latest commit, in the compare view. | P2 |
+| GIT-4 | Commit with a message, of all files or the chosen ones (also single files inside a new folder); secrets.yaml and copies always refused. | P2 |
+| GIT-5 | List of commits; for each one, the files touched. | P2 |
+| GIT-6 | Restore of a file from a commit, with confirmation, through EDITHA's save (so it is also in its history). | P2 |
 
-## 7. Ricerca
+## 7. Search
 
-| ID | Requisito | Pr. |
+| ID | Requirement | Pr. |
 | --- | --- | --- |
-| SR-1 | Ricerca testuale in tutti i file (rispettando esclusioni e limiti), risultati cliccabili alla riga. | P1 |
-| SR-2 | Espressioni regolari e distinzione maiuscole/minuscole. | P1 |
-| SR-3 | Sostituisci in più file (con anteprima e backup BK-1). | P2 |
-| SR-4 | "Trova riferimenti" di un `entity_id` in tutta la configurazione. | P2 |
+| SR-1 | Text search across all files (respecting exclusions and limits), results clickable to the line. | P1 |
+| SR-2 | Regular expressions and case sensitivity. | P1 |
+| SR-3 | Replace in multiple files (with preview and BK-1 backup). | P2 |
+| SR-4 | "Find references" of an `entity_id` across the whole configuration. | P2 |
 
-## 8. Impostazioni
+## 8. Settings
 
-| ID | Requisito | Pr. |
+| ID | Requirement | Pr. |
 | --- | --- | --- |
-| CFG-1 | Le impostazioni di Editha hanno un'unica fonte (backend, in `/data`), si applicano subito senza ricaricare la pagina e sopravvivono al riavvio dell'add-on. | P0 |
-| CFG-2 | Le opzioni dell'add-on nel pannello di HA si limitano a quelle che servono prima dell'avvio (es. livello di log); il resto sta nelle impostazioni dell'UI. | P1 |
+| CFG-1 | Editha's settings have a single source (backend, in `/data`), apply immediately without reloading the page and survive an add-on restart. | P0 |
+| CFG-2 | The add-on options in the HA panel are limited to those needed before startup (e.g. log level); the rest is in the UI settings. | P1 |
 
-## 9. Interfaccia
+## 9. Web interface
 
-| ID | Requisito | Pr. |
+| ID | Requirement | Pr. |
 | --- | --- | --- |
-| UI-1 | Layout: albero a sinistra (ridimensionabile e richiudibile), tab ed editor al centro, barra di stato (percorso, posizione cursore, esito validazione). | P0 |
-| UI-2 | Utilizzabile da tablet e dall'app mobile di HA (albero come pannello a scomparsa). | P1 |
-| UI-3 | Interfaccia in italiano e inglese, con selettore; "Automatica" segue la lingua del browser. | P1 |
-| UI-4 | Notifiche non bloccanti per esiti (salvato, verifica ok/ko, ricarica eseguita). | P0 |
-| UI-5 | Accessibilità di base: navigazione da tastiera nell'albero e nelle tab. | P2 |
-| UI-6 | La barra degli strumenti agisce sempre sulla tab attiva; i pulsanti hanno stato coerente (es. "Salva" disabilitato se non ci sono modifiche) e lo stesso stile di attivo/inattivo delle tab (FEP #15). | P0 |
-| UI-8 | Finestra "Informazioni": autore, repository, versione, licenza, riconoscimenti. | P2 |
-| UI-7 | "Copia tutto" nella barra o nel menu contestuale dell'editor (FEP #15). | P2 |
+| UI-1 | Layout: tree on the left (resizable and collapsible), tabs and editor in the center, status bar (path, cursor position, validation result). | P0 |
+| UI-2 | Usable from tablets and from the HA mobile app (tree as a slide-out panel). | P1 |
+| UI-3 | Interface in Italian and English, with a selector; "Automatic" follows the browser language. | P1 |
+| UI-4 | Non-blocking notifications for results (saved, check ok/failed, reload done). | P0 |
+| UI-5 | Basic accessibility: keyboard navigation in the tree and tabs. | P2 |
+| UI-6 | The toolbar always acts on the active tab; buttons have a consistent state (e.g. "Save" disabled if there are no changes) and the same active/inactive style as the tabs (FEP #15). | P0 |
+| UI-8 | "About" dialog: author, repository, version, license, credits. | P2 |
+| UI-7 | "Copy all" in the toolbar or in the editor context menu (FEP #15). | P2 |
 
-## 10. Ingegneria
+## 10. Engineering
 
-| ID | Requisito | Pr. |
+| ID | Requirement | Pr. |
 | --- | --- | --- |
-| ENG-1 | Moduli piccoli e separati (vedi struttura proposta sotto); nessun file "tuttofare". | P0 |
-| ENG-2 | Test unitari del backend, in particolare confinamento dei percorsi (SEC-2) e scrittura atomica (SEC-3). | P0 |
-| ENG-3 | Test e2e (Playwright) dei flussi principali, incluso ED-4. | P1 |
-| ENG-4 | CI su GitHub Actions: lint, test, build dell'immagine per `amd64` e `aarch64`. | P0 |
-| ENG-7 | L'aggiornamento dell'add-on non deve poter fallire in fase di build sul dispositivo: il frontend si compila in uno stage indipendente dall'architettura (o in CI) e l'immagine finale contiene solo i file già compilati; nessuna dipendenza nativa legata a musl/glibc nel frontend. Verificato su `aarch64` prima di ogni rilascio (FEP #17). | P0 |
-| ENG-5 | Versionamento semantico, `CHANGELOG.md` aggiornato a ogni rilascio. | P0 |
-| ENG-6 | Immagine leggera basata sulle base image di HA; asset del frontend compilati in fase di build, nessun download a runtime. | P0 |
+| ENG-1 | Small, separate modules (see the proposed structure below); no "do-everything" file. | P0 |
+| ENG-2 | Backend unit tests, in particular path confinement (SEC-2) and atomic write (SEC-3). | P0 |
+| ENG-3 | e2e tests (Playwright) of the main flows, including ED-4. | P1 |
+| ENG-4 | CI on GitHub Actions: lint, tests, image build for `amd64` and `aarch64`. | P0 |
+| ENG-7 | Updating the add-on must not be able to fail at build time on the device: the frontend is built in an architecture-independent stage (or in CI) and the final image contains only already built files; no native dependencies tied to musl/glibc in the frontend. Verified on `aarch64` before every release (FEP #17). | P0 |
+| ENG-5 | Semantic versioning, `CHANGELOG.md` updated at every release. | P0 |
+| ENG-6 | Lightweight image based on HA base images; frontend assets built at build time, no downloads at runtime. | P0 |
 
-## Fuori ambito (per ora)
+## Out of scope (for now)
 
-- **Terminale**: c'è già l'add-on SSH/Terminal; aggiungerlo amplierebbe molto la superficie d'attacco.
-- **Git remoto** (push, pull, GitHub/Forgejo): eventualmente dopo il Git locale (GIT-1…6).
-- **Accesso fuori da `/config`** (`/share`, `/media`, `/addons`, `/ssl`): eventualmente come opzione futura, una cartella alla volta.
+- **Terminal**: the SSH/Terminal add-on already exists; adding one would greatly widen the attack surface.
+- **Remote Git** (push, pull, GitHub/Forgejo): possibly after local Git (GIT-1…6).
+- **Access outside `/config`** (`/share`, `/media`, `/addons`, `/ssl`): possibly as a future option, one folder at a time.
 
 ---
 
-## Struttura del repository
+## Repository structure
 
 ```
-repository.yaml          metadati della raccolta
+repository.yaml          collection metadata
 README.md, CONTRIBUTING.md, SECURITY.md
 LICENSE                  MIT
 .github/
-  workflows/             test, test nel browser e build per amd64/aarch64 (ENG-3, ENG-4); release
-  ISSUE_TEMPLATE/        modelli per segnalazioni e proposte
+  workflows/             tests, browser tests and build for amd64/aarch64 (ENG-3, ENG-4); release
+  ISSUE_TEMPLATE/        templates for bug reports and proposals
 docs/
-  REQUIREMENTS.md        questo documento
-  DEVELOPMENT.md         come provare il codice, API del server
-  RELEASING.md           come pubblicare una versione
-  images/                immagini della documentazione
+  REQUIREMENTS.md        this document
+  DEVELOPMENT.md         how to try the code, server API
+  RELEASING.md           how to publish a version
+  images/                documentation images
 editha/
-  config.yaml            manifest dell'add-on (ingress, /config, homeassistant_api)
-  build.yaml, Dockerfile immagine: compilazione di server e interfaccia + runtime Node.js
+  config.yaml            add-on manifest (ingress, /config, homeassistant_api)
+  build.yaml, Dockerfile image: server and web interface build + Node.js runtime
   icon.png, logo.png
   README.md, DOCS.md, DOCS.it.md, CHANGELOG.md, CHANGELOG.it.md
   server/
     src/
-      main.ts, app.ts    avvio e composizione
-      config.ts          variabili d'ambiente
-      errors.ts          errori con codice stabile
-      security/          filtro Ingress (SEC-1)
-      fs/                percorsi (SEC-2), scrittura atomica (SEC-3), file (FS-*), ricerca (SR-*), zip, anteprima
-      git/               Git locale in /config (GIT-*)
-      backups/           versioni dei file (BK-*)
-      ha/                chiamate a Core via Supervisor (HA-2, ACT-*)
-      state/             impostazioni (CFG-1), sessione (ED-11), snippet e bozze (ED-14) in /data
-      routes/            un file per gruppo di endpoint, interfaccia compilata
-    test/                test del server (node:test)
+      main.ts, app.ts    startup and composition
+      config.ts          environment variables
+      errors.ts          errors with a stable code
+      security/          Ingress filter (SEC-1)
+      fs/                paths (SEC-2), atomic write (SEC-3), files (FS-*), search (SR-*), zip, preview
+      git/               local Git in /config (GIT-*)
+      backups/           file versions (BK-*)
+      ha/                calls to Core through the Supervisor (HA-2, ACT-*)
+      state/             settings (CFG-1), session (ED-11), snippets and drafts (ED-14) in /data
+      routes/            one file per endpoint group, built web interface
+    test/                server tests (node:test)
   web/
-    public/index.html    pagina e colori dei temi (variabili CSS)
-    build.mjs            bundle con esbuild-wasm, senza binari nativi
+    public/index.html    page and theme colors (CSS variables)
+    build.mjs            bundle with esbuild-wasm, no native binaries
     playwright.config.ts
-    scripts/             immagini della documentazione
+    scripts/             documentation images
     src/
-      api/               client e tipi condivisi con il server
-      state/             tab (ED-3, ED-4), percorsi, dati di HA, anteprima: logica senza DOM
-      editor/            setup CodeMirror, tema, linguaggi, validatore YAML, completamenti, collegamenti, schema
-      components/        app, barra strumenti, albero, tab, editor, pannelli, barra di stato, dialoghi, menu, notifiche
-      i18n/              interfaccia in italiano e inglese (UI-3)
-      ui/                icone e stili comuni
-    test/                test unitari
-    e2e/                 test nel browser (Playwright), uno per ogni issue di FEP
+      api/               client and types shared with the server
+      state/             tabs (ED-3, ED-4), paths, HA data, preview: logic without DOM
+      editor/            CodeMirror setup, theme, languages, YAML validator, completions, links, outline
+      components/        app, toolbar, tree, tabs, editor, panels, status bar, dialogs, menus, notifications
+      i18n/              interface in Italian and English (UI-3)
+      ui/                shared icons and styles
+    test/                unit tests
+    e2e/                 browser tests (Playwright), one for each FEP issue
 ```
 
 ---
 
-## Avanzamento
+## Progress
 
-| Versione | Requisiti coperti |
+| Version | Requirements covered |
 | --- | --- |
-| 0.37.0 | GIT-1: `.gitignore` di base in inglese, una riga per tutte le copie `*secrets*.yaml`; il titolo delle esclusioni scritto dalle versioni precedenti (in italiano) resta valido. |
-| 0.36.0 | Revisione finale prima della 1.0: SEC-7 più ampio (ogni `*secrets*.yaml`, niente bozze), SEC-1 (richieste da altri siti rifiutate), ZIP senza copie annidate di `.storage`/`.cloud`, sostituzione fino a 2500 file, BK (cronologie unite su rinomina), riavvio segnalato correttamente, correzioni dell'interfaccia, nome EDITHA ovunque, CHANGELOG in inglese (`CHANGELOG.it.md` in italiano). |
-| 0.35.0 | GIT-2 e GIT-4: cartelle nuove apribili, file scelti o esclusi uno per uno (al massimo 200 per cartella); pulsanti della barra che servono solo con un file aperto (a capo, schema, Inserisci) spenti senza file; immagini della guida inglese visibili. |
-| 0.34.0 | SEC-7: secrets.yaml e copie mai negli ZIP delle cartelle, con avviso; requisiti riordinati (BK-8 per i backup del Supervisor); immagini della documentazione aggiornate. |
-| 0.33.0 | Ritocchi: anteprima template tolta dal menu di Home Assistant; pulsante Cronologia che si chiude al secondo clic; legenda Git in un riquadro, una voce per riga; pagina iniziale e Informazioni più essenziali; motto tra virgolette. |
-| 0.32.0 | GIT-2: sezione Esclusi con «Includi» (niente più .gitignore da modificare a mano), legenda di lettere, spunta e occhio; confronto solo se c'è un commit con cui confrontare. |
-| 0.31.0 | GIT-2: cartelle nuove raggruppate su una riga, «Escludi» (riga nel .gitignore), avviso al primo commit; pannello Git opaco sul telefono. |
-| 0.30.0 | GIT-3, GIT-5, GIT-6: differenze rispetto all'ultimo commit, storia dei commit con i file toccati, confronto e ripristino di un file com'era in un commit (dal salvataggio di EDITHA). Git locale completo. |
-| 0.29.0 | GIT-2 e GIT-4: modifiche dall'ultimo commit con le caselle, commit dei file scelti con un messaggio; secrets.yaml e copie mai. |
-| 0.28.0 | GIT-1: pannello Git nella barra laterale, inizializzazione del repository in /config con il .gitignore di base; git nell'immagine dell'add-on. |
-| 0.27.1 | HA-7: l'anteprima segue il cursore su un altro template, senza bisogno di Alt+T. |
-| 0.27.0 | HA-7 (2/2): pulsante nella barra, aggiornamento automatico mentre si scrive, Copia, avviso per le entità inesistenti, riga dell'errore di sintassi trovata da EDITHA. |
-| 0.26.0 | HA-7 (1/2): anteprima del template selezionato o sotto il cursore (Alt+T, menu Home Assistant), calcolata da Home Assistant, in un pannello sotto l'editor. |
-| 0.25.0 | BK-7 (3/3): cancellazione completa della cronologia (voce «tutte»), confermata scrivendo CANCELLA. |
-| 0.24.0 | BK-7 (2/3): eliminazione delle versioni più vecchie di 7/30/90 giorni, un anno o una data, con anteprima e conferma. |
-| 0.23.0 | BK-7 (1/3): spazio occupato dalla cronologia, da Informazioni e dalla cronologia; ED-14: bozze recuperate prese in carico in modo atomico (0.22.4). |
-| 0.22.3 | ED-14: bozze per finestra (più finestre o dispositivi non si scartano né sovrascrivono le bozze a vicenda), segnale di finestra aperta, proposta delle bozze di finestre chiuse; Esc sulla domanda rimanda davvero (0.22.2). |
-| 0.22.0 | Seconda revisione: BK-1 (nessuna eliminazione senza copia senza conferma, versioni senza doppioni, id monotoni), SEC-3/SEC-4 (conflitto anche durante la scrittura), SEC-7 (copie di secrets.yaml in ogni forma), ED-14 (bozze ritentate, attesa massima, ricrea il file sparito), CRLF conservato, HA-9 (spazi invisibili, tag sconosciuti, errori da principiante), scorciatoie per lettera della tastiera. |
-| 0.21.0 | Revisione del codice: SEC-7 (copie di secrets.yaml escluse da ricerca e sostituzione), HA-9 (template senza virgolette, chiavi complesse, alias senza ancora), scorciatoie per tasto fisico (anche su Mac), bozze non più salvabili scartate con un avviso. |
-| 0.20.2 | BK-2: la cronologia aperta segue il cambio di file. |
-| 0.20.1 | FS-1: niente freccia sulle cartelle vuote. |
-| 0.20.0 | ED-18: schema del file. |
-| 0.19.1 | FS-10: tab di anteprima propria (una, riusata), zoom indicato, immagine centrata a grandezza reale. |
-| 0.19.0 | FS-10: anteprima di immagini e PDF. |
-| 0.18.2 | Descrizione nel negozio: "Smart file editor for Home Assistant". |
-| 0.18.1 | Nuovo file/cartella solo sopra l'albero (tolti dalla barra in alto). |
-| 0.18.0 | Documentazione utente (DOCS.md, DOCS.it.md) con immagini; file per GitHub (CONTRIBUTING, SECURITY, modelli, release); HA-9: «chiave valore» senza due punti spiegato. |
-| 0.17.2 | Su telefono nella barra solo il nome EDITHA, senza logo. |
-| 0.17.1 | Nome EDITHA in maiuscolo nell'interfaccia, motto "Every Day I Tweak HA"; tolta la scritta "Esplora file" sopra l'albero. |
-| 0.17.0 | Modifica degli snippet personali. |
-| 0.16.0 | BK-6: confronto tra due file qualsiasi. Icona del pannello: mdi:pencil-circle-outline (0.16.1: mdi:pencil). |
-| 0.15.0 | SR-3: sostituisci in più file, con conferma e cronologia. |
-| 0.14.0 | HA-10: autocompletamento delle icone MDI con anteprima. |
-| 0.13.2 | Pulsante "chiudi la tastiera" accanto al cursore; secrets.yaml escluso dalla ricerca. |
-| 0.13.1 | Correzioni della revisione generale del codice. |
-| 0.13.0 | SR-1, SR-2 (ricerca in tutti i file, regex, maiuscole, parola intera), SR-4 (dove è usata un'entità). ACT-2 mirata tolta dalla lista (non serve). |
-| 0.12.0 | FS-5: "Sposta in…" dal menu contestuale. |
-| 0.11.0 | HA-4 (chiavi di !secret), HA-5 (Ctrl+clic su !include, !include_dir_…, !secret). |
-| 0.10.0 | HA-9: spiegazioni degli errori di indentazione, avvisi per gli errori tipici di HA, elenco dei problemi. |
-| 0.9.0 | ED-17: vista divisa in due colonne; finestra Informazioni. |
-| 0.8.1 | UI-2: niente effetto elastico di iOS sull'editor. |
-| 0.8.0 | ED-14: bozze delle modifiche non salvate, recuperabili alla riapertura. |
-| 0.7.1 | UI-2: pulsante per chiudere la tastiera su iPhone; FS-8 più sicuro (copie YAML in .bak). |
-| 0.7.0 | BK-2, BK-3, BK-4: cronologia con confronto e ripristino; BK-5: 10 versioni per file; FS-8: duplica; menu contestuale con pressione prolungata su telefono. |
-| 0.6.0 | FS-6: upload dal PC (pulsante, menu, trascinamento) e download (file, cartella come zip). |
-| 0.5.0 | UI-3: interfaccia in italiano e inglese con selettore (automatica dal browser). |
-| 0.4.2 | Correzione token del Supervisor con s6-overlay (HA-2, ACT-* nell'add-on reale); carattere 13/14 px; aggiornamenti senza refresh forzato. |
-| 0.4.1 | Avviso di connessione persa / add-on aggiornato con ricarica della pagina; ritentativo delle letture. |
-| 0.4.0 | HA-2, HA-3 (autocompletamento entità e azioni), ACT-1, ACT-2 (ricarica di tutto lo YAML), ACT-4, snippet predefiniti e personali; colonna dei numeri compatta. |
-| 0.3.1 | Descrizione: solo "Easy Developer IDE for The HA". |
-| 0.3.0 | Nuovo nome: Editha (D10). |
-| 0.2.2 | UI-2: colonna dei numeri compatta su telefono, righe spezzate allineate all'indentazione. |
-| 0.2.1 | SEC-8: cartelle di sistema nascoste per default, pulsante per mostrarle. |
-| 0.2.0 | Interfaccia: FS-1, FS-2, FS-3, FS-4, FS-7 (filtro per nome), ED-1…ED-8, ED-10 (solo a capo automatico), ED-11, ED-15, ED-16, HA-1, CFG-1, UI-1, UI-2, UI-4, UI-5 (tastiera nell'albero), UI-6, ENG-3. P0 ancora da fare: HA-2 (autocompletamento entità), ACT-1 (verifica della configurazione). |
-| 0.1.0 | SEC-1, SEC-2, SEC-3, SEC-4, SEC-5, SEC-6 (nessun token esposto), SEC-9, ENG-1, ENG-2, ENG-4, ENG-6, ENG-7; lato server: FS-2, FS-3, FS-4, BK-1, BK-2, BK-5 (limite fisso di 50 versioni), SEC-8 (senza sblocco). |
+| 0.37.0 | GIT-1: basic `.gitignore` in English, one line for all `*secrets*.yaml` copies; the exclusions heading written by earlier versions (in Italian) is still valid. |
+| 0.36.0 | Final review before 1.0: broader SEC-7 (every `*secrets*.yaml`, no drafts), SEC-1 (requests from other sites rejected), ZIP without nested copies of `.storage`/`.cloud`, replace up to 2500 files, BK (histories merged on rename), restart reported correctly, web interface fixes, EDITHA name everywhere, CHANGELOG in English (`CHANGELOG.it.md` in Italian). |
+| 0.35.0 | GIT-2 and GIT-4: new folders can be opened, files chosen or excluded one by one (at most 200 per folder); toolbar buttons that only make sense with an open file (line wrap, outline, Insert) disabled without a file; English guide images visible. |
+| 0.34.0 | SEC-7: secrets.yaml and copies never in folder ZIPs, with a warning; requirements reordered (BK-8 for Supervisor backups); documentation images updated. |
+| 0.33.0 | Touch-ups: template preview removed from the Home Assistant menu; History button that closes on the second click; Git legend in a box, one item per line; welcome page and About more essential; motto in quotes. |
+| 0.32.0 | GIT-2: Excluded section with «Include» (no more editing .gitignore by hand), legend for letters, checkmark and eye; comparison only if there is a commit to compare with. |
+| 0.31.0 | GIT-2: new folders grouped on one line, «Exclude» (a line in .gitignore), warning at the first commit; opaque Git panel on phones. |
+| 0.30.0 | GIT-3, GIT-5, GIT-6: differences against the latest commit, commit history with the files touched, comparison and restore of a file as it was in a commit (through EDITHA's save). Local Git complete. |
+| 0.29.0 | GIT-2 and GIT-4: changes since the latest commit with checkboxes, commit of the chosen files with a message; secrets.yaml and copies never. |
+| 0.28.0 | GIT-1: Git panel in the sidebar, initialization of the repository in /config with the basic .gitignore; git in the add-on image. |
+| 0.27.1 | HA-7: the preview follows the cursor onto another template, without needing Alt+T. |
+| 0.27.0 | HA-7 (2/2): toolbar button, automatic refresh while typing, Copy, warning for nonexistent entities, syntax error line found by EDITHA. |
+| 0.26.0 | HA-7 (1/2): preview of the selected template or the one under the cursor (Alt+T, Home Assistant menu), computed by Home Assistant, in a panel below the editor. |
+| 0.25.0 | BK-7 (3/3): full deletion of the history («all» option), confirmed by typing CANCELLA (DELETE in English). |
+| 0.24.0 | BK-7 (2/3): deletion of versions older than 7/30/90 days, one year or a date, with preview and confirmation. |
+| 0.23.0 | BK-7 (1/3): space used by the history, from About and from the history; ED-14: recovered drafts claimed atomically (0.22.4). |
+| 0.22.3 | ED-14: per-window drafts (multiple windows or devices do not discard or overwrite each other's drafts), open-window signal, offer of drafts from closed windows; Esc on the prompt really postpones (0.22.2). |
+| 0.22.0 | Second review: BK-1 (no deletion without a copy unless confirmed, versions without duplicates, monotonic ids), SEC-3/SEC-4 (conflict also during the write), SEC-7 (secrets.yaml copies in every form), ED-14 (drafts retried, maximum wait, recreates a vanished file), CRLF preserved, HA-9 (invisible spaces, unknown tags, beginner mistakes), shortcuts by keyboard letter. |
+| 0.21.0 | Code review: SEC-7 (secrets.yaml copies excluded from search and replace), HA-9 (unquoted templates, complex keys, aliases without an anchor), shortcuts by physical key (also on Mac), drafts that can no longer be saved discarded with a warning. |
+| 0.20.2 | BK-2: the open history follows the file change. |
+| 0.20.1 | FS-1: no arrow on empty folders. |
+| 0.20.0 | ED-18: file outline. |
+| 0.19.1 | FS-10: dedicated preview tab (one, reused), zoom shown, image centered at actual size. |
+| 0.19.0 | FS-10: preview of images and PDFs. |
+| 0.18.2 | Store description: "Smart file editor for Home Assistant". |
+| 0.18.1 | New file/folder only above the tree (removed from the top bar). |
+| 0.18.0 | User documentation (DOCS.md, DOCS.it.md) with images; GitHub files (CONTRIBUTING, SECURITY, templates, release); HA-9: «key value» without a colon explained. |
+| 0.17.2 | On phones only the EDITHA name in the bar, without the logo. |
+| 0.17.1 | EDITHA name in uppercase in the interface, motto "Every Day I Tweak HA"; removed the "File explorer" label above the tree. |
+| 0.17.0 | Editing of personal snippets. |
+| 0.16.0 | BK-6: comparison between any two files. Panel icon: mdi:pencil-circle-outline (0.16.1: mdi:pencil). |
+| 0.15.0 | SR-3: replace in multiple files, with confirmation and history. |
+| 0.14.0 | HA-10: MDI icon autocompletion with preview. |
+| 0.13.2 | "Close the keyboard" button next to the cursor; secrets.yaml excluded from search. |
+| 0.13.1 | Fixes from the general code review. |
+| 0.13.0 | SR-1, SR-2 (search in all files, regex, case, whole word), SR-4 (where an entity is used). Per-domain ACT-2 removed from the list (not needed). |
+| 0.12.0 | FS-5: "Move to…" from the context menu. |
+| 0.11.0 | HA-4 (!secret keys), HA-5 (Ctrl+click on !include, !include_dir_…, !secret). |
+| 0.10.0 | HA-9: explanations of indentation errors, warnings for typical HA mistakes, list of problems. |
+| 0.9.0 | ED-17: split view in two columns; About dialog. |
+| 0.8.1 | UI-2: no iOS rubber-band effect on the editor. |
+| 0.8.0 | ED-14: drafts of unsaved changes, recoverable on reopening. |
+| 0.7.1 | UI-2: button to close the keyboard on iPhone; safer FS-8 (YAML copies as .bak). |
+| 0.7.0 | BK-2, BK-3, BK-4: history with compare and restore; BK-5: 10 versions per file; FS-8: duplicate; context menu with long press on phones. |
+| 0.6.0 | FS-6: upload from the PC (button, menu, drag and drop) and download (file, folder as zip). |
+| 0.5.0 | UI-3: interface in Italian and English with a selector (automatic from the browser). |
+| 0.4.2 | Supervisor token fix with s6-overlay (HA-2, ACT-* in the real add-on); 13/14 px font; updates without a forced refresh. |
+| 0.4.1 | Lost connection / add-on updated warning with page reload; retry of reads. |
+| 0.4.0 | HA-2, HA-3 (entity and action autocompletion), ACT-1, ACT-2 (reload of all YAML), ACT-4, built-in and personal snippets; compact line number column. |
+| 0.3.1 | Description: just "Easy Developer IDE for The HA". |
+| 0.3.0 | New name: Editha (D10). |
+| 0.2.2 | UI-2: compact line number column on phones, wrapped lines aligned to the indentation. |
+| 0.2.1 | SEC-8: system folders hidden by default, button to show them. |
+| 0.2.0 | Web interface: FS-1, FS-2, FS-3, FS-4, FS-7 (name filter), ED-1…ED-8, ED-10 (line wrapping only), ED-11, ED-15, ED-16, HA-1, CFG-1, UI-1, UI-2, UI-4, UI-5 (keyboard in the tree), UI-6, ENG-3. P0 still to do: HA-2 (entity autocompletion), ACT-1 (configuration check). |
+| 0.1.0 | SEC-1, SEC-2, SEC-3, SEC-4, SEC-5, SEC-6 (no exposed token), SEC-9, ENG-1, ENG-2, ENG-4, ENG-6, ENG-7; server side: FS-2, FS-3, FS-4, BK-1, BK-2, BK-5 (fixed limit of 50 versions), SEC-8 (without unlock). |
 
 ---
 
-## Decisioni
+## Decisions
 
-| # | Decisione | Motivo |
+| # | Decision | Reason |
 | --- | --- | --- |
-| D1 | Backend in **TypeScript** (Node.js). | Un solo linguaggio per backend e frontend, tipi dell'API condivisi, libreria `yaml` con supporto ai tag di HA. |
-| D2 | Frontend con **Lit**. | Componenti piccoli e leggeri, stessa tecnologia del frontend di HA; CodeMirror 6 si integra senza adattatori. |
-| D3 | Versioni dei file in **`/data/backups`**. | Fuori da `/config`, incluse nel backup dell'add-on. |
-| D4 | Priorità alle **versioni dei singoli file** (BK-1…5); backup completi del Supervisor a P2 (BK-8). | |
-| D5 | Il repository diventa **pubblico al primo rilascio**. | Il Supervisor deve poterlo clonare senza credenziali. |
-| D7 | Architetture **`amd64`** e **`aarch64`**. | HA ha deprecato le architetture a 32 bit. |
-| D9 | `.storage` e simili **nascoste per default** (proposta di Trizompa dopo la prima prova), visibili a richiesta e **in sola lettura** (SEC-8). | |
-| D10 | Nome definitivo **EDITHA**, scritto in maiuscolo nell'interfaccia e nella documentazione, con il motto "Every Day I Tweak HA" (dalla 0.17.1, al posto di "Easy Developer IDE for The HA"); slug `editha`. | Scelta di Trizompa dopo la prima installazione. |
-| D6 | Licenza **MIT**. | Semplice e diffusa tra gli add-on di HA. |
-| D8 | Le issue di FEP #4–#19 sono coperte dai requisiti (vedi tabella sotto). | |
+| D1 | Backend in **TypeScript** (Node.js). | One language for backend and frontend, shared API types, `yaml` library with support for HA tags. |
+| D2 | Frontend with **Lit**. | Small, lightweight components, same technology as the HA frontend; CodeMirror 6 integrates without adapters. |
+| D3 | File versions in **`/data/backups`**. | Outside `/config`, included in the add-on backup. |
+| D4 | Priority to **single-file versions** (BK-1…5); full Supervisor backups at P2 (BK-8). | |
+| D5 | The repository becomes **public at the first release**. | The Supervisor must be able to clone it without credentials. |
+| D7 | **`amd64`** and **`aarch64`** architectures. | HA has deprecated 32-bit architectures. |
+| D9 | `.storage` and similar **hidden by default** (Trizompa's proposal after the first trial), visible on request and **read-only** (SEC-8). | |
+| D10 | Final name **EDITHA**, written in uppercase in the interface and documentation, with the motto "Every Day I Tweak HA" (since 0.17.1, replacing "Easy Developer IDE for The HA"); slug `editha`. | Trizompa's choice after the first installation. |
+| D6 | **MIT** license. | Simple and widespread among HA add-ons. |
+| D8 | FEP issues #4–#19 are covered by the requirements (see the table below). | |
 
-### Issue di File Editor Plus → requisiti
+### File Editor Plus issues → requirements
 
-Riferimento solo per comportamento atteso e problemi riscontrati; nessun codice di FEP.
+Reference only for expected behavior and problems found; no FEP code.
 
-| FEP | Problema | Requisito |
+| FEP | Problem | Requirement |
 | --- | --- | --- |
-| #4 | L'albero dei file non scorre, si vedono solo due elementi | FS-1 |
-| #5 | Sottolineature rosse su codice corretto dopo un clic (probabile controllo ortografico del browser) | ED-16, HA-1 |
-| #6 | Il tema scelto torna su "Auto" uscendo e rientrando | ED-8, CFG-1 |
-| #7 | Testo selezionato illeggibile (caratteri sovrapposti), peggio su Chrome | ED-8 |
-| #8 | Tab su una selezione cancella il testo; poi Ctrl+Z dà errore | ED-1 |
-| #9 | Mancano le guide di indentazione | ED-1 |
-| #10 | Nessun avviso chiudendo un file con modifiche non salvate | ED-6 |
-| #11 | "Nuovo file/cartella" crea nella radice ignorando la cartella selezionata; impossibile nelle cartelle vuote | FS-2 |
-| #12 | "Nuovo file/cartella" assenti dal menu contestuale | FS-2 |
-| #13 | Uscendo dall'add-on si perdono le tab aperte (il File Editor di HA ricorda l'ultimo file) | ED-11, ED-14 |
-| #14 | Undo non annulla l'indentazione fatta con Tab | ED-1 |
-| #15 | Tab attive/inattive con colori opposti alla toolbar e poco distinguibili; righe oltre la 40 non visibili; richiesta "Copia tutto" | ED-3, UI-6, ED-15, UI-7 |
-| #16 | "Reload YAML" dice "avviato" ma non ricarica nulla | ACT-2 |
-| #17 | Aggiornamento fallito su `aarch64`: build del frontend sul dispositivo senza il modulo nativo di Rollup per musl | ENG-7 |
-| #18 | Manca "Rinomina" per file e cartelle, sia nella barra sia nel menu contestuale | FS-3 |
-| #19 | Chiusa la tab attiva, l'editor mostra ancora il file chiuso; "Salva" rischia di scrivere il contenuto sbagliato | ED-4 |
+| #4 | The file tree does not scroll, only two items are visible | FS-1 |
+| #5 | Red underlines on correct code after a click (probably the browser spell check) | ED-16, HA-1 |
+| #6 | The chosen theme goes back to "Auto" when leaving and re-entering | ED-8, CFG-1 |
+| #7 | Selected text unreadable (overlapping characters), worse on Chrome | ED-8 |
+| #8 | Tab on a selection deletes the text; then Ctrl+Z gives an error | ED-1 |
+| #9 | Indentation guides are missing | ED-1 |
+| #10 | No warning when closing a file with unsaved changes | ED-6 |
+| #11 | "New file/folder" creates in the root ignoring the selected folder; impossible in empty folders | FS-2 |
+| #12 | "New file/folder" missing from the context menu | FS-2 |
+| #13 | Leaving the add-on loses the open tabs (HA's File Editor remembers the last file) | ED-11, ED-14 |
+| #14 | Undo does not undo indentation done with Tab | ED-1 |
+| #15 | Active/inactive tabs with colors opposite to the toolbar and hard to tell apart; lines past 40 not visible; "Copy all" requested | ED-3, UI-6, ED-15, UI-7 |
+| #16 | "Reload YAML" says "started" but reloads nothing | ACT-2 |
+| #17 | Update failed on `aarch64`: frontend build on the device without Rollup's native module for musl | ENG-7 |
+| #18 | "Rename" missing for files and folders, both in the toolbar and in the context menu | FS-3 |
+| #19 | After closing the active tab, the editor still shows the closed file; "Save" risks writing the wrong content | ED-4 |

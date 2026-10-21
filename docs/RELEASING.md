@@ -1,61 +1,61 @@
-# Come pubblicare una versione
+# How to publish a version
 
-Promemoria per il manutentore. Le voci con ☐ si fanno una volta sola, al primo rilascio pubblico
-(1.0.0); le altre a ogni versione.
+Reminder for the maintainer. Items marked ☐ are done only once, at the first public release
+(1.0.0); the others at every version.
 
-## A ogni versione
+## At every version
 
-1. `version` in `editha/config.yaml` aumentata (MAJOR.MINOR.PATCH: PATCH per correzioni, MINOR per
-   funzioni nuove, MAJOR per cambiamenti che rompono qualcosa).
-2. Voce con lo stesso numero (`## 1.0.0`) in `editha/CHANGELOG.md` (inglese: è quella che Home
-   Assistant mostra nella finestra di aggiornamento e che finisce nella release) e in
-   `editha/CHANGELOG.it.md` (italiano).
-3. Documentazione aggiornata se cambia qualcosa che l'utente vede (`editha/DOCS.md` e
-   `editha/DOCS.it.md`). Se cambia l'aspetto, rigenerare le immagini (vedi CONTRIBUTING.md).
-4. CI verde su GitHub. Se sono cambiati `Dockerfile`, `build.yaml` o le dipendenze, lanciare a
-   mano anche la build aarch64 (Actions → Editha → Run workflow): è emulata e lenta, quindi non
-   parte da sola.
-5. Unione nel branch `main` (pull request).
-6. Tag e release: su `main` creare il tag `v` + versione (es. `v1.0.0`) da **Releases → Draft a
-   new release → Choose a tag**, oppure `git tag v1.0.0 && git push origin v1.0.0`. Il workflow
-   *Release* controlla che il numero coincida con `config.yaml` e pubblica la release con il testo
-   del CHANGELOG.
+1. `version` in `editha/config.yaml` bumped (MAJOR.MINOR.PATCH: PATCH for fixes, MINOR for new
+   features, MAJOR for breaking changes).
+2. Entry with the same number (`## 1.0.0`) in `editha/CHANGELOG.md` (English: it is the one Home
+   Assistant shows in the update dialog and that goes into the release) and in
+   `editha/CHANGELOG.it.md` (Italian).
+3. Documentation updated if something the user sees changes (`editha/DOCS.md` and
+   `editha/DOCS.it.md`). If the look changes, regenerate the images (see CONTRIBUTING.md).
+4. CI green on GitHub. If `Dockerfile`, `build.yaml` or the dependencies changed, also run the
+   aarch64 build by hand (Actions → Editha → Run workflow): it is emulated and slow, so it does
+   not start on its own.
+5. Merge into the `main` branch (pull request).
+6. Tag and release: on `main` create the tag `v` + version (e.g. `v1.0.0`) from **Releases → Draft
+   a new release → Choose a tag**, or `git tag v1.0.0 && git push origin v1.0.0`. The *Release*
+   workflow checks that the number matches `config.yaml` and publishes the release with the
+   CHANGELOG text.
 
-Home Assistant vede l'aggiornamento appena la versione in `config.yaml` su `main` cambia: il tag
-serve solo alla pagina delle release su GitHub.
+Home Assistant sees the update as soon as the version in `config.yaml` on `main` changes: the
+tag is only for the releases page on GitHub.
 
-## Primo rilascio pubblico (1.0.0)
+## First public release (1.0.0)
 
-- ☐ **Prova sul campo** su PC e telefono; correzioni dei problemi trovati.
-- ☐ In `editha/config.yaml` togliere `stage: experimental` (senza la riga l'add-on è considerato
-  stabile) e portare `version` a `1.0.0`.
-- ☐ Su GitHub: **Settings → Emails → Keep my email addresses private**, così i commit futuri
-  fatti dal sito usano l'indirizzo `noreply`. (Nella storia non ci sono dati personali.)
-- ☐ **Rendere pubblico**: Settings → General → Danger Zone → *Change repository visibility*.
-- ☐ Immagini della documentazione: con il repository pubblico, nei link di `editha/DOCS.md`,
-  `editha/DOCS.it.md` e `editha/README.md` sostituire `../docs/images/` con
-  `https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/` (la scheda
-  Documentazione di Home Assistant non risolve i percorsi relativi).
-- ☐ **Sicurezza**: Settings → Code security → attivare *Private vulnerability reporting* (serve
-  per SECURITY.md) e *Dependabot alerts*.
-- ☐ **Presentazione del repository** (rotella accanto ad *About* nella pagina principale):
-  - descrizione: `EDITHA – Every Day I Tweak HA. Smart file editor add-on for Home Assistant.`
+- ☐ **Field test** on PC and phone; fix the problems found.
+- ☐ In `editha/config.yaml` remove `stage: experimental` (without the line the add-on is
+  considered stable) and set `version` to `1.0.0`.
+- ☐ On GitHub: **Settings → Emails → Keep my email addresses private**, so future commits made
+  from the website use the `noreply` address. (The history contains no personal data.)
+- ☐ **Make public**: Settings → General → Danger Zone → *Change repository visibility*.
+- ☐ Documentation images: once the repository is public, in the links of `editha/DOCS.md`,
+  `editha/DOCS.it.md` and `editha/README.md` replace `../docs/images/` with
+  `https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/` (the Home Assistant
+  Documentation tab does not resolve relative paths).
+- ☐ **Security**: Settings → Code security → enable *Private vulnerability reporting* (needed
+  for SECURITY.md) and *Dependabot alerts*.
+- ☐ **Repository presentation** (gear next to *About* on the main page):
+  - description: `EDITHA – Every Day I Tweak HA. Smart file editor add-on for Home Assistant.`
   - topics: `home-assistant`, `home-assistant-addon`, `hassio-addon`, `yaml`, `editor`,
     `codemirror`
-  - Settings → General → *Social preview*: caricare `docs/images/cover.png` (è l'immagine che
-    compare quando il link viene condiviso).
-- ☐ **Protezione di `main`** (dopo averlo reso pubblico): Settings → Rules → Rulesets → *New
-  branch ruleset*, destinazione *Default branch*, con *Restrict deletions*, *Block force pushes*
-  e *Require status checks to pass* (i controlli "Test del server", "Test dell'interfaccia",
-  "Build amd64"; "Build aarch64" parte solo a mano, quindi non va messo tra quelli obbligatori).
-- ☐ **Etichette** per le segnalazioni: `bug` ed `enhancement` esistono già di default.
-- ☐ Tag `v1.0.0` e release (vedi sopra).
-- ☐ **Annuncio** (facoltativo): forum di Home Assistant, categoria *Share your Projects*, e
-  r/homeassistant, con l'immagine `docs/images/cover.png` e il link al repository.
+  - Settings → General → *Social preview*: upload `docs/images/cover.png` (the image shown when
+    the link is shared).
+- ☐ **Protect `main`** (after making it public): Settings → Rules → Rulesets → *New branch
+  ruleset*, target *Default branch*, with *Restrict deletions*, *Block force pushes* and
+  *Require status checks to pass* (the checks "Server tests", "Web tests", "Build amd64";
+  "Build aarch64" only runs by hand, so it must not be among the required ones).
+- ☐ **Labels** for issues: `bug` and `enhancement` already exist by default.
+- ☐ Tag `v1.0.0` and release (see above).
+- ☐ **Announcement** (optional): Home Assistant forum, *Share your Projects* category, and
+  r/homeassistant, with the image `docs/images/cover.png` and the link to the repository.
 
-## Più avanti (facoltativo)
+## Later (optional)
 
-- **Immagini già pronte su GitHub (GHCR)**: oggi Home Assistant costruisce l'add-on sul
-  dispositivo a ogni installazione o aggiornamento (qualche minuto su un Raspberry). Pubblicando le
-  immagini già costruite, l'aggiornamento diventa un semplice download. Richiede un workflow in
-  più e la riga `image:` in `config.yaml`.
+- **Prebuilt images on GitHub (GHCR)**: today Home Assistant builds the add-on on the device at
+  every install or update (a few minutes on a Raspberry). By publishing prebuilt images, an
+  update becomes a simple download. Requires one more workflow and the `image:` line in
+  `config.yaml`.

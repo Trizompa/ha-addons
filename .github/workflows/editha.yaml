@@ -1,7 +1,7 @@
 name: Editha
 
 on:
-  # A mano (Actions → Editha → Run workflow): costruisce anche l'immagine aarch64.
+  # Manual run (Actions → Editha → Run workflow): also builds the aarch64 image.
   workflow_dispatch:
   push:
     paths:
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   test:
-    name: Test del server
+    name: Server tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -34,7 +34,7 @@ jobs:
       - run: npm test
 
   web:
-    name: Test dell'interfaccia
+    name: Web tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -45,22 +45,22 @@ jobs:
           cache-dependency-path: |
             editha/server/package-lock.json
             editha/web/package-lock.json
-      - name: Dipendenze
+      - name: Dependencies
         run: |
           npm ci --prefix editha/server
           npm ci --prefix editha/web
-      - name: Controllo dei tipi e test unitari
+      - name: Type check and unit tests
         working-directory: editha/web
         run: |
           npm run typecheck
           npm test
-      - name: Browser per i test
+      - name: Test browser
         working-directory: editha/web
         run: npx playwright install --with-deps chromium
-      - name: Test nel browser (e2e)
+      - name: Browser tests (e2e)
         working-directory: editha/web
         run: npm run test:e2e
-      - name: Rapporto dei test
+      - name: Test report
         if: failure()
         uses: actions/upload-artifact@v4
         with:
@@ -71,14 +71,14 @@ jobs:
           retention-days: 7
 
   build:
-    # ENG-4 / ENG-7: l'immagine deve costruirsi su entrambe le architetture,
-    # con la stessa base image che usa il Supervisor.
+    # ENG-4 / ENG-7: the image must build on both architectures,
+    # with the same base image the Supervisor uses.
     name: Build ${{ matrix.arch }}
     runs-on: ubuntu-latest
     needs: [test, web]
-    # La build aarch64 è emulata (QEMU): lenta, a volte resta appesa e consuma i minuti di
-    # GitHub Actions. Parte solo a mano (workflow_dispatch); a ogni push si costruisce amd64.
-    # Ogni tentativo ha un tempo massimo e se ne fanno fino a tre.
+    # The aarch64 build is emulated (QEMU): slow, sometimes hangs, and uses up GitHub Actions
+    # minutes. It only runs manually (workflow_dispatch); every push builds amd64.
+    # Each attempt has a time limit, and up to three attempts are made.
     timeout-minutes: 55
     strategy:
       fail-fast: false
@@ -89,7 +89,7 @@ jobs:
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - name: Build
-        # Sul dispositivo il Supervisor compila senza emulazione: il problema è solo qui.
+        # On the device the Supervisor builds without emulation: the problem is only here.
         run: |
           for attempt in 1 2 3; do
             if timeout 15m docker buildx build editha \
@@ -98,19 +98,19 @@ jobs:
               --load --tag editha:${{ matrix.arch }}; then
               exit 0
             fi
-            echo "::warning::Build ${{ matrix.arch }}, tentativo $attempt non riuscito o bloccato: si riprova"
+            echo "::warning::Build ${{ matrix.arch }}, attempt $attempt failed or hung: retrying"
           done
           exit 1
-      - name: Avvio e controllo dell'accesso
-        # Riproduce la rete del Supervisor: il proxy Ingress ha l'indirizzo 172.30.32.2
-        # e il server usa la configurazione predefinita (EDITHA_ALLOWED_IPS non impostata).
+      - name: Start and access check
+        # Reproduces the Supervisor network: the Ingress proxy has address 172.30.32.2
+        # and the server uses the default configuration (EDITHA_ALLOWED_IPS not set).
         run: |
           image=editha:${{ matrix.arch }}
           platform=${{ matrix.platform }}
           mkdir -p "$RUNNER_TEMP/config" "$RUNNER_TEMP/data"
           echo "homeassistant:" > "$RUNNER_TEMP/config/configuration.yaml"
           docker network create --subnet 172.30.32.0/23 hassio
-          # Come il Supervisor: il token arriva come variabile d'ambiente del container.
+          # Like the Supervisor: the token arrives as a container environment variable.
           docker run -d --name editha --network hassio --ip 172.30.33.10 --platform "$platform" \
             -e SUPERVISOR_TOKEN=token-di-prova \
             -v "$RUNNER_TEMP/config:/config" -v "$RUNNER_TEMP/data:/data" "$image"
@@ -120,22 +120,22 @@ jobs:
           }
           for i in $(seq 1 30); do
             if probe 172.30.32.2 /api/health; then break; fi
-            if [ "$i" = 30 ]; then echo "il server non risponde"; exit 1; fi
+            if [ "$i" = 30 ]; then echo "the server does not respond"; exit 1; fi
             sleep 2
           done
           echo
           probe 172.30.32.2 /api/tree
           echo
           probe 172.30.32.2 / | grep -q "<editha-app>"
-          echo "interfaccia servita"
-          # Editha deve vedere il token anche quando l'avvio passa da s6-overlay.
+          echo "web interface served"
+          # Editha must see the token even when startup goes through s6-overlay.
           probe 172.30.32.2 /api/ha/status | grep -q '"available":true'
-          echo "token del Supervisor visibile"
+          echo "Supervisor token visible"
           if probe 172.30.33.50 /api/health; then
-            echo "un indirizzo diverso dal proxy Ingress non deve essere accettato"
+            echo "an address other than the Ingress proxy must not be accepted"
             exit 1
           fi
-          echo "indirizzo esterno rifiutato correttamente"
-      - name: Log del server
+          echo "external address correctly rejected"
+      - name: Server log
         if: always()
         run: docker logs editha || true
