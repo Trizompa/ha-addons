@@ -67,6 +67,7 @@ import { KeyboardController } from '../app/keyboard.js';
 import { SearchController } from '../app/search.js';
 import { SplitController } from '../app/split.js';
 import { OutlineController } from '../app/outline.js';
+import { ServerController } from '../app/server.js';
 
 /** Tasti della pagina iniziale: sul Mac ⌘ ⌥ ⇧ al posto di Ctrl, Alt e Shift. */
 const KEY = MAC ? { mod: '⌘', alt: '⌥', shift: '⇧' } : { mod: 'Ctrl', alt: 'Alt', shift: 'Shift' };
@@ -154,9 +155,7 @@ export class EdithaApp extends LitElement {
   /** ED-18: schema del file in uso (null se non è YAML) e voce in cui si trova il cursore. */
   declare outline: OutlineItem[] | null;
   declare outlineActive: number;
-  private build: string | null = null;
   private offLang: (() => void) | null = null;
-  private healthTimer: ReturnType<typeof setInterval> | undefined;
 
   /** Controller delle singole funzioni (src/app/): ricevono l'elemento e lavorano sui suoi membri. */
   readonly drafts = new DraftsController(this);
@@ -174,6 +173,7 @@ export class EdithaApp extends LitElement {
   readonly splitView = new SplitController(this);
   /** Schema del file ("outline" è già lo stato mostrato dal pannello). */
   readonly outlineView = new OutlineController(this);
+  readonly server = new ServerController(this);
 
   readonly tabs = new TabsModel<EditorState>();
   /** Testo salvato su disco per ogni tab: serve a sapere se ci sono modifiche. */
@@ -444,7 +444,7 @@ export class EdithaApp extends LitElement {
     document.addEventListener('visibilitychange', this.drafts.onVisibility);
     window.addEventListener('pagehide', this.drafts.onPageHide);
     window.addEventListener('pageshow', this.drafts.onPageShow);
-    connection.addEventListener('change', this.onConnection);
+    connection.addEventListener('change', this.server.onConnection);
     this.offLang = onLangChange(() => this.onLanguageChanged());
     this.narrowQuery.addEventListener('change', this.onNarrowChange);
     this.toggleAttribute('narrow', this.narrow);
@@ -457,16 +457,16 @@ export class EdithaApp extends LitElement {
     document.removeEventListener('visibilitychange', this.drafts.onVisibility);
     window.removeEventListener('pagehide', this.drafts.onPageHide);
     window.removeEventListener('pageshow', this.drafts.onPageShow);
-    connection.removeEventListener('change', this.onConnection);
+    connection.removeEventListener('change', this.server.onConnection);
     this.offLang?.();
-    clearInterval(this.healthTimer);
+    this.server.stop();
     this.drafts.stop();
     this.narrowQuery.removeEventListener('change', this.onNarrowChange);
     super.disconnectedCallback();
   }
 
   override async firstUpdated(): Promise<void> {
-    this.build = await api.health().then((h) => h.build, () => null);
+    this.server.build = await api.health().then((h) => h.build, () => null);
     try {
       this.settings = await api.settings();
     } catch {
@@ -521,53 +521,6 @@ export class EdithaApp extends LitElement {
     this.refreshToolbar();
   }
 
-  // ——— connessione con il server ———
-
-  private readonly onConnection = () => {
-    if (!connection.online) {
-      this.offline = true;
-      clearInterval(this.healthTimer);
-      // Si riprova da soli: quando il server torna, il banner sparisce.
-      this.healthTimer = setInterval(() => void this.checkHealth(), 4000);
-    }
-  };
-
-  private async checkHealth(): Promise<void> {
-    let build: string;
-    try {
-      build = (await api.health()).build;
-    } catch {
-      return;
-    }
-    clearInterval(this.healthTimer);
-    // Le bozze che non sono partite mentre Editha non rispondeva si scrivono adesso.
-    void this.drafts.writeAllDrafts();
-    if (this.build && build !== this.build) {
-      this.addonUpdated = true;
-      return;
-    }
-    this.offline = false;
-    this.toasts.show(t('conn.restored'), 'success');
-  }
-
-  /** Ricarica dal banner: prima le bozze; senza server le modifiche andrebbero perse, e lo si dice. */
-  private async reloadPage(): Promise<void> {
-    if (this.tabs.tabs.some((tab) => tab.dirty)) {
-      if (this.offline && !this.addonUpdated) {
-        const ok = await this.dialog.confirm({
-          title: t('conn.reload'),
-          message: t('conn.reloadOffline'),
-          confirmLabel: t('conn.reload'),
-          danger: true,
-        });
-        if (!ok) return;
-      } else {
-        await this.drafts.writeAllDrafts();
-      }
-    }
-    location.reload();
-  }
-
   private renderBanner() {
     if (!this.offline && !this.addonUpdated) return null;
     const text = this.addonUpdated
@@ -575,7 +528,7 @@ export class EdithaApp extends LitElement {
       : t('conn.offline');
     return html`<div class="banner ${this.addonUpdated ? 'info' : ''}" role="alert">
       <span>${text}</span>
-      <button class="btn primary" @click=${() => void this.reloadPage()}>${t('conn.reload')}</button>
+      <button class="btn primary" @click=${() => void this.server.reloadPage()}>${t('conn.reload')}</button>
     </div>`;
   }
 
