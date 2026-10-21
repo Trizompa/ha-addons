@@ -198,7 +198,7 @@ export class DraftsController {
       }
       // Esc: le bozze restano per la prossima apertura; modificando uno di quei file si chiede.
       if (choice === null) for (const draft of drafts) this.deferredDrafts.set(draft.path, { draft, asked: false });
-      await this.app.restoreSession();
+      await this.app.session.restoreSession();
       if (choice === 'discard') {
         await Promise.all(drafts.map((d) => this.discardDraft(d)));
       } else if (choice === 'recover') {

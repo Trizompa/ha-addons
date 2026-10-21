@@ -153,7 +153,7 @@ export class FileOpsController {
     await this.app.tree.reveal(to, entry.type as 'file' | 'directory');
     this.app.refreshTabs();
     this.app.refreshStatus();
-    this.app.scheduleSession();
+    this.app.session.scheduleSession();
   }
 
   private async deleteEntry(entry: { path: string; type: string }): Promise<void> {

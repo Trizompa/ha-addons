@@ -6,7 +6,7 @@ import { forEachDiagnostic } from '@codemirror/lint';
 import { api, ApiError, errorText, whileLeaving } from '../api/client.js';
 import { getLang, onLangChange, resolveLang, setLang, t, type LanguageSetting, type MessageKey } from '../i18n/index.js';
 import { connection } from '../api/connection.js';
-import type { Entry, Session, Settings, ThemeMode } from '../api/types.js';
+import type { Entry, Settings, ThemeMode } from '../api/types.js';
 import { createEditorState, docText, reconfigureEffects } from '../editor/setup.js';
 import { languageOf } from '../editor/languages.js';
 import { LINT_MAX_CHARS } from '../editor/yaml-lint.js';
@@ -64,12 +64,13 @@ import {
 import type { SearchMatch } from '../api/types.js';
 import type { EdithaAboutDialog } from './about-dialog.js';
 import type { EdithaSidePane } from './side-pane.js';
-import { DraftsController, PERMANENT_OPEN_ERRORS } from '../app/drafts.js';
+import { DraftsController } from '../app/drafts.js';
 import { FileOpsController } from '../app/file-ops.js';
 import { GitController } from '../app/git.js';
 import { HaController } from '../app/ha.js';
 import { SnippetsController } from '../app/snippets.js';
 import { HistoryController } from '../app/history.js';
+import { SessionController } from '../app/session.js';
 
 /** Tasti della pagina iniziale: sul Mac ⌘ ⌥ ⇧ al posto di Ctrl, Alt e Shift. */
 const KEY = MAC ? { mod: '⌘', alt: '⌥', shift: '⇧' } : { mod: 'Ctrl', alt: 'Alt', shift: 'Shift' };
@@ -172,12 +173,11 @@ export class EdithaApp extends LitElement {
   readonly snippets = new SnippetsController(this);
   /** Cronologia dei file ("history" è già lo stato del pannello aperto). */
   readonly versions = new HistoryController(this);
+  readonly session = new SessionController(this);
 
   readonly tabs = new TabsModel<EditorState>();
   /** Testo salvato su disco per ogni tab: serve a sapere se ci sono modifiche. */
   readonly saved = new WeakMap<EditorTab, Text>();
-  private sessionTimer: ReturnType<typeof setTimeout> | undefined;
-  private sessionReady = false;
   private readonly narrowQuery = window.matchMedia(NARROW);
   readonly touchQuery = window.matchMedia('(pointer: coarse)');
   private editorFocused = false;
@@ -628,70 +628,6 @@ export class EdithaApp extends LitElement {
     void this.updateSettings({ sidebarVisible: !this.settings.sidebarVisible });
   }
 
-  // ——— sessione (ED-11, FEP #13) ———
-
-  async restoreSession(): Promise<void> {
-    let session: Session;
-    try {
-      session = await api.session();
-    } catch {
-      // Sessione non letta: non la si sovrascrive con una vuota (sessionReady resta false).
-      return;
-    }
-    const missing: string[] = [];
-    for (const saved of session.tabs) {
-      let failure: unknown = null;
-      const tab = await this.loadTab(saved.path, { anchor: saved.anchor, head: saved.head }, true, (err) => (failure = err));
-      if (tab) this.pane.setScrollTop(tab, saved.scrollTop);
-      else {
-        missing.push(saved.path);
-        // Un errore passeggero (Editha non risponde) non toglie il file dalla sessione.
-        if (!(failure instanceof ApiError && PERMANENT_OPEN_ERRORS.has(failure.code))) this.unrestored.push(saved);
-      }
-    }
-    const active = (session.active && this.tabs.find(session.active)) || this.tabs.tabs[0];
-    if (active) this.activate(active.path);
-    const side = session.side ? this.tabs.find(session.side) : undefined;
-    if (side && !this.narrow) await this.showInSide(side);
-    if (missing.length) {
-      this.toasts.show(
-        missing.length === 1
-          ? t('session.missingOne', { name: missing[0]! })
-          : t('session.missingMany', { n: missing.length }),
-        'warning',
-      );
-    }
-    this.sessionReady = true;
-    this.scheduleSession();
-  }
-
-  scheduleSession(): void {
-    if (!this.sessionReady) return;
-    clearTimeout(this.sessionTimer);
-    this.sessionTimer = setTimeout(() => void this.saveSession(), 600);
-  }
-
-  /** Tab della sessione che all'avvio non si sono aperte per un errore passeggero. */
-  private unrestored: Session['tabs'] = [];
-
-  private async saveSession(): Promise<void> {
-    const open = this.tabs.tabs.map((tab) => {
-      const sel = this.pane.stateOf(tab).selection.main;
-      return { path: tab.path, anchor: sel.anchor, head: sel.head, scrollTop: this.pane.scrollTopOf(tab) };
-    });
-    const kept = this.unrestored.filter((u) => !this.tabs.find(u.path));
-    const session: Session = {
-      tabs: [...open, ...kept].slice(0, 50),
-      active: this.tabs.active?.path ?? null,
-      side: this.split ? (this.side?.shown?.path ?? null) : null,
-    };
-    try {
-      await api.saveSession(session);
-    } catch {
-      // La sessione è una comodità: un errore qui non va segnalato a ogni modifica.
-    }
-  }
-
   // ——— tab ———
 
   /** Legge un file e crea la sua tab (senza attivarla se `background`). */
@@ -761,7 +697,7 @@ export class EdithaApp extends LitElement {
     this.pane.show(tab);
     this.refreshTabs();
     this.refreshStatus();
-    this.scheduleSession();
+    this.session.scheduleSession();
   }
 
   /** Chiude una tab chiedendo cosa fare delle modifiche non salvate (ED-6, FEP #10). */
@@ -803,7 +739,7 @@ export class EdithaApp extends LitElement {
     if (!next && this.preview) this.showPreview();
     this.refreshTabs();
     this.refreshStatus();
-    this.scheduleSession();
+    this.session.scheduleSession();
     return true;
   }
 
@@ -831,7 +767,7 @@ export class EdithaApp extends LitElement {
     if (tab !== this.tabs.active) return;
     this.refreshStatus(update.state);
     this.refreshToolbar(update.state);
-    if (update.selectionSet || update.docChanged) this.scheduleSession();
+    if (update.selectionSet || update.docChanged) this.session.scheduleSession();
   }
 
   // ——— ricerca in tutti i file (SR-1, SR-2, SR-4) ———
@@ -1043,7 +979,7 @@ export class EdithaApp extends LitElement {
     this.ha.scheduleTemplate(tab);
   }
 
-  private async showInSide(tab: EditorTab): Promise<void> {
+  async showInSide(tab: EditorTab): Promise<void> {
     if (this.narrow) return;
     this.split = true;
     // L'anteprima coprirebbe la colonna appena aperta.
@@ -1054,7 +990,7 @@ export class EdithaApp extends LitElement {
     this.side?.focusEditor();
     this.refreshTabs();
     this.refreshStatus();
-    this.scheduleSession();
+    this.session.scheduleSession();
   }
 
   async openInSide(path: string): Promise<void> {
@@ -1074,7 +1010,7 @@ export class EdithaApp extends LitElement {
     this.sideFocused = false;
     this.refreshTabs();
     this.refreshStatus();
-    this.scheduleSession();
+    this.session.scheduleSession();
     if (!this.touchQuery.matches) this.pane.focusEditor();
   }
 
@@ -1355,7 +1291,7 @@ export class EdithaApp extends LitElement {
     whileLeaving(() => {
       this.drafts.flushDrafts();
       // Durante l'avvio la sessione non è ancora ripristinata: salvarla ora la cancellerebbe.
-      if (this.sessionReady) void this.saveSession();
+      if (this.session.sessionReady) void this.session.saveSession();
     });
   };
 
