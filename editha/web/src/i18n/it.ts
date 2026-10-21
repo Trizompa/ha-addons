@@ -188,7 +188,7 @@ export const it = {
   'tree.git': 'Git: repository locale di /config',
   'git.unavailable': 'Il programma git non è disponibile in questa versione dell\'add-on.',
   'git.broken': 'In /config c\'è una cartella .git, ma git non la riconosce come repository. EDITHA non la tocca: controllala o rimuovila da un terminale.',
-  'git.noneIntro': 'In /config non c\'è ancora un repository Git. Git conserva la storia dei tuoi file con dei «commit»: istantanee che decidi tu quando fare, ognuna con un messaggio, da poter confrontare e ripristinare.',
+  'git.noneIntro': 'In /config non c\'è ancora un repository Git. Git conserva la storia dei tuoi file con dei «commit»: istantanee che decidi tu quando fare, ognuna con un messaggio, da poter confrontare e ripristinare. La cronologia automatica di EDITHA resta attiva comunque: Git è in più.',
   'git.ignoredIntro': 'Verrà creato anche un file .gitignore che tiene fuori dal repository:',
   'git.ignoredSecrets': 'password e chiavi: secrets.yaml e le sue copie',
   'git.ignoredInternal': 'i dati interni di Home Assistant (.storage, .cloud, deps, tts…)',

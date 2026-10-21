@@ -178,7 +178,7 @@ export const en: Record<keyof Dictionary, string> = {
   'tree.git': 'Git: local repository of /config',
   'git.unavailable': 'The git program is not available in this version of the add-on.',
   'git.broken': 'There is a .git folder in /config, but git does not recognise it as a repository. EDITHA leaves it alone: check it or remove it from a terminal.',
-  'git.noneIntro': 'There is no Git repository in /config yet. Git keeps the history of your files as “commits”: snapshots you decide when to take, each with a message, that you can compare and restore.',
+  'git.noneIntro': 'There is no Git repository in /config yet. Git keeps the history of your files as “commits”: snapshots you decide when to take, each with a message, that you can compare and restore. EDITHA’s automatic file history keeps working anyway: Git comes on top.',
   'git.ignoredIntro': 'A .gitignore file will also be created, keeping out of the repository:',
   'git.ignoredSecrets': 'passwords and keys: secrets.yaml and its copies',
   'git.ignoredInternal': 'Home Assistant internal data (.storage, .cloud, deps, tts…)',

@@ -293,6 +293,14 @@ The history lives in the add-on's own storage, which is included when you back u
 
 ## Local Git
 
+> **History, Git or backup?**
+> - **EDITHA's history**: automatic, file by file (the last 10 versions). Use it to go back on one
+>   file.
+> - **Git**: snapshots of the configuration that you take when you want, with a message. Use them
+>   to remember what you changed and when, across several files.
+> - **Home Assistant backup**: a copy of the whole system. Use it if everything breaks. Neither of
+>   the two above replaces it.
+
 The **Git** button (the branch, at the top of the file explorer) opens the Git panel in place of
 the tree. Everything stays on your Home Assistant: EDITHA only uses the repository in `/config` and
 sends nothing outside (no GitHub or other servers).

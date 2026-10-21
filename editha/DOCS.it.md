@@ -303,6 +303,14 @@ La cronologia sta nello spazio dell'add-on, che viene incluso quando fai il back
 
 ## Git locale
 
+> **Cronologia, Git o backup?**
+> - **Cronologia di EDITHA**: automatica, file per file (le ultime 10 versioni). Serve a tornare
+>   indietro su un file.
+> - **Git**: le "fotografie" della configurazione le fai tu, quando vuoi, con un messaggio. Serve a
+>   ricordare cosa hai cambiato e quando, su più file insieme.
+> - **Backup di Home Assistant**: copia di tutto il sistema. Serve se si rompe tutto. Nessuno dei
+>   due sopra lo sostituisce.
+
 Il pulsante **Git** (il ramo, in alto nell'esplora file) apre il pannello Git al posto dell'albero.
 Tutto resta sul tuo Home Assistant: EDITHA usa solo il repository in `/config` e non invia niente
 fuori (niente GitHub né altri server).
