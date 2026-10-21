@@ -69,7 +69,9 @@ export class GitController {
       try {
         current = (await api.read(path)).content;
       } catch (err) {
-        if (!(err instanceof ApiError && err.code === 'not_found')) return void this.app.toasts.show(this.app.openErrorText(path, err), 'error');
+        if (!(err instanceof ApiError && err.code === 'not_found')) {
+          return void this.app.toasts.show(this.app.openErrorText(path, err), 'error');
+        }
         current = null;
       }
     }

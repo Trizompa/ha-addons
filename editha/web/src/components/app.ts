@@ -26,10 +26,9 @@ import type { StatusInfo } from './status-bar.js';
 import type { TabView } from './tab-bar.js';
 import type { EdithaToasts } from './toasts.js';
 import type { ToolbarState } from './toolbar.js';
-import type { EdithaInsertPanel, InsertTab } from './insert-panel.js';
+import type { InsertTab } from './insert-panel.js';
 import type { Snippet } from '../api/types.js';
 import { haData } from '../state/ha-data.js';
-import { fillIds, normalizeSnippetBody } from '../editor/snippets.js';
 import './context-menu.js';
 import './dialog.js';
 import './editor-pane.js';
@@ -54,7 +53,6 @@ import './preview-panel.js';
 import './outline-panel.js';
 import { activeOutlineIndex, buildOutline, type OutlineItem } from '../editor/outline.js';
 import './snippet-editor.js';
-import type { EdithaSnippetEditor } from './snippet-editor.js';
 import type { CompareSide } from './compare-panel.js';
 import {
   ENTITY_ID,
@@ -72,6 +70,7 @@ import { DraftsController, PERMANENT_OPEN_ERRORS } from '../app/drafts.js';
 import { FileOpsController } from '../app/file-ops.js';
 import { GitController } from '../app/git.js';
 import { HaController } from '../app/ha.js';
+import { SnippetsController } from '../app/snippets.js';
 
 /** Tasti della pagina iniziale: sul Mac ⌘ ⌥ ⇧ al posto di Ctrl, Alt e Shift. */
 const KEY = MAC ? { mod: '⌘', alt: '⌥', shift: '⇧' } : { mod: 'Ctrl', alt: 'Alt', shift: 'Shift' };
@@ -171,6 +170,7 @@ export class EdithaApp extends LitElement {
   readonly fileOps = new FileOpsController(this);
   readonly git = new GitController(this);
   readonly ha = new HaController(this);
+  readonly snippets = new SnippetsController(this);
 
   readonly tabs = new TabsModel<EditorState>();
   /** Testo salvato su disco per ogni tab: serve a sapere se ci sono modifiche. */
@@ -478,7 +478,7 @@ export class EdithaApp extends LitElement {
     this.drafts.startAlive();
     await this.drafts.recoverDrafts();
     void haData.start();
-    void this.loadSnippets();
+    void this.snippets.loadSnippets();
   }
 
   // ——— lingua ———
@@ -1310,91 +1310,6 @@ export class EdithaApp extends LitElement {
     this.flash(t('history.restored', { date }));
   }
 
-  // ——— inserimento di entità e snippet ———
-
-  private toggleInsert(): void {
-    this.insertOpen = !this.insertOpen;
-    this.refreshToolbar();
-    if (this.insertOpen) {
-      void this.updateComplete.then(() =>
-        (this.renderRoot.querySelector('editha-insert-panel') as EdithaInsertPanel | null)?.focusSearch(),
-      );
-    }
-  }
-
-  private insertText(text: string): void {
-    if (!this.editor.insertText(text)) this.toasts.show(t('insert.needEditable'), 'warning');
-  }
-
-  private insertSnippet(body: string, fields: boolean): void {
-    if (!this.editor.insertBlock(fillIds(body), fields)) {
-      this.toasts.show(t('insert.needEditable'), 'warning');
-      return;
-    }
-    if (fields) this.toasts.show(t('insert.fieldsHint'), 'info');
-  }
-
-  private async loadSnippets(): Promise<void> {
-    try {
-      this.userSnippets = (await api.snippets()).snippets;
-    } catch {
-      this.userSnippets = [];
-    }
-  }
-
-  private async saveSnippets(list: Snippet[]): Promise<boolean> {
-    try {
-      this.userSnippets = (await api.saveSnippets({ snippets: list })).snippets;
-      return true;
-    } catch (err) {
-      this.toasts.show(t('snippet.notSaved', { error: this.errorText(err) }), 'error');
-      return false;
-    }
-  }
-
-  private async saveSelectionAsSnippet(): Promise<void> {
-    const selection = this.editor.selectionForSnippet();
-    const body = normalizeSnippetBody(selection.text, selection.column);
-    if (!body.trim()) {
-      this.toasts.show(t('snippet.selectFirst'), 'warning');
-      return;
-    }
-    if (body.length > 20000) {
-      this.toasts.show(t('snippet.tooLong'), 'warning');
-      return;
-    }
-    const name = await this.dialog.prompt({
-      title: t('snippet.newTitle'),
-      label: t('snippet.nameLabel'),
-      confirmLabel: t('common.save'),
-      validate: (v) => (v.trim() ? (v.length > 120 ? t('name.tooLong') : null) : t('name.empty')),
-    });
-    if (name === null) return;
-    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    const trimmed = name.trim();
-    if (await this.saveSnippets([...this.userSnippets, { id, name: trimmed, body }])) this.flash(t('snippet.saved', { name: trimmed }));
-  }
-
-  private async editSnippet(id: string): Promise<void> {
-    const snippet = this.userSnippets.find((s) => s.id === id);
-    if (!snippet) return;
-    const editor = this.renderRoot.querySelector('editha-snippet-editor') as EdithaSnippetEditor;
-    const changed = await editor.edit(snippet);
-    if (!changed) return;
-    const list = this.userSnippets.map((s) => (s.id === id ? { ...s, ...changed } : s));
-    if (await this.saveSnippets(list)) this.flash(t('snippet.saved', { name: changed.name }));
-  }
-
-  private async deleteSnippet(id: string, name: string): Promise<void> {
-    const ok = await this.dialog.confirm({
-      title: t('snippet.deleteTitle'),
-      message: t('snippet.deleteMessage', { name }),
-      confirmLabel: t('common.delete'),
-      danger: true,
-    });
-    if (ok && (await this.saveSnippets(this.userSnippets.filter((s) => s.id !== id)))) this.flash(t('snippet.deleted'));
-  }
-
   private closeCompare(): void {
     this.compare = null;
     this.ha.scheduleTemplate(null);
@@ -1431,7 +1346,7 @@ export class EdithaApp extends LitElement {
       case 'theme':
         return void this.cycleTheme();
       case 'insert':
-        return this.toggleInsert();
+        return this.snippets.toggleInsert();
       case 'template':
         return void this.ha.previewTemplate();
       case 'ha-menu':
@@ -1793,14 +1708,14 @@ export class EdithaApp extends LitElement {
                 .tab=${this.insertTab}
                 .userSnippets=${this.userSnippets}
                 .canInsert=${!!this.focusedTab() && !this.focusedTab()!.readOnly}
-                @insert-text=${(e: CustomEvent<{ text: string }>) => this.insertText(e.detail.text)}
+                @insert-text=${(e: CustomEvent<{ text: string }>) => this.snippets.insertText(e.detail.text)}
                 @insert-snippet=${(e: CustomEvent<{ body: string; fields: boolean }>) =>
-                  this.insertSnippet(e.detail.body, e.detail.fields)}
-                @snippet-save=${() => void this.saveSelectionAsSnippet()}
-                @snippet-edit=${(e: CustomEvent<{ id: string }>) => void this.editSnippet(e.detail.id)}
+                  this.snippets.insertSnippet(e.detail.body, e.detail.fields)}
+                @snippet-save=${() => void this.snippets.saveSelectionAsSnippet()}
+                @snippet-edit=${(e: CustomEvent<{ id: string }>) => void this.snippets.editSnippet(e.detail.id)}
                 @snippet-delete=${(e: CustomEvent<{ id: string; name: string }>) =>
-                  void this.deleteSnippet(e.detail.id, e.detail.name)}
-                @panel-close=${() => this.toggleInsert()}
+                  void this.snippets.deleteSnippet(e.detail.id, e.detail.name)}
+                @panel-close=${() => this.snippets.toggleInsert()}
                 @entity-usages=${(e: CustomEvent<{ id: string }>) =>
                   void this.openSearch({ query: e.detail.id, wholeWord: true, caseSensitive: true })}
               ></editha-insert-panel>`
