@@ -332,7 +332,7 @@ export class FileOpsController {
     // Le tab aperte sui file sostituiti mostrano subito il nuovo contenuto, se non hanno modifiche.
     for (const name of done) {
       const tab = this.app.tabs.find(join(dir, name));
-      if (tab && !tab.dirty) await this.app.reloadFromDisk(tab, true);
+      if (tab && !tab.dirty) await this.app.saver.reloadFromDisk(tab, true);
     }
     this.app.flash(done.length === 1 ? t('upload.doneOne', { name: done[0]! }) : t('upload.doneMany', { n: done.length }));
   }

@@ -72,7 +72,7 @@ export class HistoryController {
       return;
     }
     // La tab aperta mostra il contenuto ripristinato; Annulla nell'editor lo riporta indietro.
-    if (tab) await this.app.reloadFromDisk(tab, true);
+    if (tab) await this.app.saver.reloadFromDisk(tab, true);
     this.app.history = null;
     if (tab) this.app.activate(tab.path);
     this.app.flash(t('history.restored', { date }));

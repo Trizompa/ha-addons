@@ -133,7 +133,7 @@ export class GitController {
       return void this.app.toasts.show(t('history.failed', { name, error }), 'error');
     }
     // La tab aperta mostra il contenuto ripristinato; Annulla nell'editor lo riporta indietro.
-    if (tab) await this.app.reloadFromDisk(tab, true);
+    if (tab) await this.app.saver.reloadFromDisk(tab, true);
     this.scheduleGitRefresh();
     this.app.flash(t('git.restored', { name, rev: short }));
   }
@@ -153,6 +153,6 @@ export class GitController {
     await this.app.tree.refresh('');
     // Un .gitignore aperto (senza modifiche) mostra subito le righe aggiunte da Escludi.
     const ignore = this.app.tabs.find('.gitignore');
-    if (ignore && !ignore.dirty) await this.app.reloadFromDisk(ignore, true);
+    if (ignore && !ignore.dirty) await this.app.saver.reloadFromDisk(ignore, true);
   }
 }

@@ -13,7 +13,7 @@ import { LINT_MAX_CHARS } from '../editor/yaml-lint.js';
 import { basename, dirname, resolvePath } from '../state/paths.js';
 import { previewKind } from '../state/preview.js';
 import { MAC, shortcutKey } from '../state/keys.js';
-import { forgetSecrets, secretKeys } from '../state/secrets.js';
+import { secretKeys } from '../state/secrets.js';
 import type { LinkKind } from '../editor/links.js';
 import { TabsModel } from '../state/tabs.js';
 import { icon, icons } from '../ui/icons.js';
@@ -71,6 +71,7 @@ import { HaController } from '../app/ha.js';
 import { SnippetsController } from '../app/snippets.js';
 import { HistoryController } from '../app/history.js';
 import { SessionController } from '../app/session.js';
+import { SaveController } from '../app/save.js';
 
 /** Tasti della pagina iniziale: sul Mac ⌘ ⌥ ⇧ al posto di Ctrl, Alt e Shift. */
 const KEY = MAC ? { mod: '⌘', alt: '⌥', shift: '⇧' } : { mod: 'Ctrl', alt: 'Alt', shift: 'Shift' };
@@ -174,6 +175,7 @@ export class EdithaApp extends LitElement {
   /** Cronologia dei file ("history" è già lo stato del pannello aperto). */
   readonly versions = new HistoryController(this);
   readonly session = new SessionController(this);
+  readonly saver = new SaveController(this);
 
   readonly tabs = new TabsModel<EditorState>();
   /** Testo salvato su disco per ogni tab: serve a sapere se ci sono modifiche. */
@@ -719,7 +721,7 @@ export class EdithaApp extends LitElement {
       });
       if (choice === null) return false;
       // Salvato, ma intanto si è scritto ancora: la tab resta aperta con le nuove modifiche.
-      if (choice === 'save' && (!(await this.save(tab)) || tab.dirty)) return false;
+      if (choice === 'save' && (!(await this.saver.save(tab)) || tab.dirty)) return false;
     }
     // Lo stato della tab chiusa viene staccato dalla vista prima di scegliere la successiva:
     // l'editor mostra sempre il contenuto della nuova tab attiva (ED-4, FEP #19).
@@ -839,7 +841,7 @@ export class EdithaApp extends LitElement {
     // Le tab aperte (senza modifiche) mostrano subito il testo nuovo.
     for (const f of res.files) {
       const tab = this.tabs.find(f.path);
-      if (tab && !tab.dirty) await this.reloadFromDisk(tab, true);
+      if (tab && !tab.dirty) await this.saver.reloadFromDisk(tab, true);
     }
     const count = res.files.reduce((n, f) => n + f.count, 0);
     this.flash(replaceDoneMessage(count, res.files.length));
@@ -936,6 +938,16 @@ export class EdithaApp extends LitElement {
     await this.updateComplete;
     if (path === '') return;
     if (!(await this.tree.reveal(path, 'directory', true))) this.toasts.show(t('link.dirMissing', { path }), 'warning');
+  }
+
+  // ——— salvataggio (ED-5, SEC-4): in SaveController ———
+
+  save(tab?: EditorTab | null): Promise<boolean> {
+    return this.saver.save(tab);
+  }
+
+  saveAll(): Promise<void> {
+    return this.saver.saveAll();
   }
 
   // ——— vista divisa (ED-17) ———
@@ -1054,146 +1066,14 @@ export class EdithaApp extends LitElement {
     </div>`;
   }
 
-  // ——— salvataggio (ED-5, SEC-4) ———
-
-  /** Salvataggi in corso: uno alla volta per tab, ognuno parte dall'etag del precedente. */
-  private readonly saving = new Map<EditorTab, Promise<boolean>>();
-
-  async save(tab: EditorTab | null = this.focusedTab()): Promise<boolean> {
-    if (!tab || tab.readOnly) return false;
-    // Niente da salvare: Ctrl+S su una tab pulita non deve proporre di sovrascrivere il file.
-    if (!tab.dirty && !this.saving.has(tab)) return true;
-    // Un secondo Ctrl+S mentre il primo è in viaggio aspetta: altrimenti partirebbe con
-    // l'etag vecchio e il server lo scambierebbe per un conflitto.
-    const previous = this.saving.get(tab) ?? Promise.resolve(true);
-    const run = previous.then(
-      () => this.saveNow(tab),
-      () => this.saveNow(tab),
-    );
-    this.saving.set(tab, run);
-    try {
-      return await run;
-    } finally {
-      if (this.saving.get(tab) === run) this.saving.delete(tab);
-    }
-  }
-
-  private async saveNow(tab: EditorTab): Promise<boolean> {
-    if (this.tabs.find(tab.path) !== tab) return false;
-    const state = this.pane.stateOf(tab);
-    const doc = state.doc;
-    try {
-      const res = await api.save(tab.path, docText(state), tab.etag);
-      this.markSaved(tab, doc, res.etag);
-      if (tab.name === 'secrets.yaml') forgetSecrets();
-      this.flash(t('save.done', { name: tab.name }));
-      return true;
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'conflict') return this.resolveConflict(tab, err);
-      if (err instanceof ApiError && err.code === 'not_found') return this.recreateOnSave(tab, state);
-      this.toasts.show(t('save.failed', { name: tab.name, error: this.errorText(err) }), 'error');
-      return false;
-    }
-  }
-
-  /** Il file è stato rinominato o eliminato da un'altra parte mentre era aperto qui. */
-  private async recreateOnSave(tab: EditorTab, state: EditorState): Promise<boolean> {
-    const choice = await this.dialog.choose({
-      title: t('save.missingTitle'),
-      message: t('save.missing', { name: tab.path }),
-      choices: [
-        { id: 'cancel', label: t('common.cancel') },
-        { id: 'recreate', label: t('drafts.recreate'), variant: 'primary' },
-      ],
-      defaultId: 'recreate',
-    });
-    if (choice !== 'recreate') return false;
-    try {
-      await api.create(tab.path, 'file', docText(state));
-      const file = await api.read(tab.path);
-      this.markSaved(tab, state.doc, file.etag);
-    } catch (err) {
-      this.toasts.show(t('save.failed', { name: tab.name, error: this.errorText(err) }), 'error');
-      return false;
-    }
-    this.git.scheduleGitRefresh();
-    await this.tree.refresh(dirname(tab.path));
-    this.flash(t('save.done', { name: tab.name }));
-    return true;
-  }
-
-  private markSaved(tab: EditorTab, doc: Text, etag: string): void {
-    this.git.scheduleGitRefresh();
-    tab.etag = etag;
-    this.saved.set(tab, doc);
-    tab.dirty = !this.pane.stateOf(tab).doc.eq(doc);
-    this.refreshTabs();
-    // Salvato quello che c'era nella bozza: se nel frattempo si è scritto ancora, la bozza si aggiorna.
-    if (tab.dirty) this.drafts.scheduleDraft(tab);
-    else {
-      this.drafts.dropDraft(tab.path, tab);
-      // Salvato: la prossima modifica richiede cosa fare della bozza vecchia ancora in sospeso.
-      const deferred = this.drafts.deferredDrafts.get(tab.path);
-      if (deferred) deferred.asked = false;
-    }
-  }
-
-  /** Il file è cambiato su disco dopo l'apertura: decide l'utente. */
-  private async resolveConflict(tab: EditorTab, err: ApiError): Promise<boolean> {
-    const choice = await this.dialog.choose({
-      title: t('conflict.title'),
-      message: t('conflict.message', { name: tab.name }),
-      choices: [
-        { id: 'cancel', label: t('common.cancel') },
-        { id: 'reload', label: t('conflict.reload') },
-        { id: 'overwrite', label: t('conflict.overwrite'), variant: 'danger' },
-      ],
-      defaultId: 'cancel',
-    });
-    if (choice === 'overwrite') {
-      tab.etag = String(err.details.etag ?? tab.etag);
-      // Già dentro il salvataggio in corso: si riprova direttamente, senza mettersi in coda.
-      return this.saveNow(tab);
-    }
-    if (choice === 'reload') {
-      await this.reloadFromDisk(tab);
-    }
-    return false;
-  }
-
-  async reloadFromDisk(tab: EditorTab, quiet = false): Promise<void> {
-    const before = this.pane.stateOf(tab).doc;
-    try {
-      const file = await api.read(tab.path);
-      // Ricarica automatica (dopo una sostituzione, un caricamento, un ripristino): se intanto si
-      // è scritto nella tab, il testo resta; al salvataggio l'etag vecchio farà chiedere cosa fare.
-      if (quiet && !this.pane.stateOf(tab).doc.eq(before)) return;
-      this.replaceDoc(tab, file.content);
-      this.markSaved(tab, this.pane.stateOf(tab).doc, file.etag);
-      if (!quiet) this.toasts.show(t('conflict.reloaded', { name: tab.name }), 'info');
-    } catch (err) {
-      this.toasts.show(this.openErrorText(tab.path, err), 'error');
-    }
-  }
-
-  async saveAll(): Promise<void> {
-    let n = 0;
-    for (const tab of this.tabs.tabs.filter((t) => t.dirty && !t.readOnly)) {
-      if (!(await this.save(tab))) return;
-      n++;
-    }
-    if (n > 1) this.flash(t('save.doneMany', { n }));
-  }
-
-
   private onToolbarAction(e: CustomEvent<{ action: string; rect?: DOMRect }>): void {
     switch (e.detail.action) {
       case 'toggle-sidebar':
         return this.toggleSidebar();
       case 'save':
-        return void this.save();
+        return void this.saver.save();
       case 'save-all':
-        return void this.saveAll();
+        return void this.saver.saveAll();
       case 'undo':
         return this.editor.command('undo');
       case 'redo':
@@ -1243,8 +1123,8 @@ export class EdithaApp extends LitElement {
     } else if (mod && key === 's') {
       e.preventDefault();
       if (modal()) return;
-      if (e.altKey) void this.saveAll();
-      else void this.save();
+      if (e.altKey) void this.saver.saveAll();
+      else void this.saver.save();
     } else if (e.altKey && !mod && key === 't') {
       // In un campo di testo Alt+T resta un carattere (su Mac Option+T scrive †).
       const target = e.composedPath()[0];

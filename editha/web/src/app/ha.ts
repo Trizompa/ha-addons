@@ -214,7 +214,7 @@ export class HaController {
     });
     if (choice === null) return false;
     if (choice === 'save') {
-      await this.app.saveAll();
+      await this.app.saver.saveAll();
       return !this.app.tabs.tabs.some((t) => t.dirty && !t.readOnly);
     }
     return true;
