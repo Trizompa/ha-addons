@@ -26,7 +26,7 @@ export class KeyboardController {
       case 'search-all':
         return this.app.searchOpen ? this.app.search.closeSearch() : void this.app.search.openSearch();
       case 'split':
-        return void (this.app.split ? this.app.closeSplit() : this.app.tabs.active && this.app.showInSide(this.app.tabs.active));
+        return void (this.app.split ? this.app.splitView.closeSplit() : this.app.tabs.active && this.app.splitView.showInSide(this.app.tabs.active));
       case 'about':
         return (this.app.renderRoot.querySelector('editha-about-dialog') as EdithaAboutDialog).show();
       case 'history':

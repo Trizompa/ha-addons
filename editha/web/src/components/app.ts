@@ -65,6 +65,7 @@ import { SessionController } from '../app/session.js';
 import { SaveController } from '../app/save.js';
 import { KeyboardController } from '../app/keyboard.js';
 import { SearchController } from '../app/search.js';
+import { SplitController } from '../app/split.js';
 
 /** Tasti della pagina iniziale: sul Mac ⌘ ⌥ ⇧ al posto di Ctrl, Alt e Shift. */
 const KEY = MAC ? { mod: '⌘', alt: '⌥', shift: '⇧' } : { mod: 'Ctrl', alt: 'Alt', shift: 'Shift' };
@@ -171,6 +172,8 @@ export class EdithaApp extends LitElement {
   readonly saver = new SaveController(this);
   readonly keys = new KeyboardController(this);
   readonly search = new SearchController(this);
+  /** Vista divisa ("split" è già lo stato: colonna destra aperta o no). */
+  readonly splitView = new SplitController(this);
 
   readonly tabs = new TabsModel<EditorState>();
   /** Testo salvato su disco per ogni tab: serve a sapere se ci sono modifiche. */
@@ -471,7 +474,7 @@ export class EdithaApp extends LitElement {
     }
     this.applyTheme(this.settings.theme);
     setLang(resolveLang(this.settings.language));
-    this.side!.makeState = (tab) => this.mirrorState(tab);
+    this.side!.makeState = (tab) => this.splitView.mirrorState(tab);
     this.refreshToolbar();
     this.drafts.startAlive();
     await this.drafts.recoverDrafts();
@@ -579,7 +582,7 @@ export class EdithaApp extends LitElement {
   private readonly onNarrowChange = (e: MediaQueryListEvent) => {
     this.narrow = e.matches;
     this.drawerOpen = false;
-    if (this.narrow) this.closeSplit();
+    if (this.narrow) this.splitView.closeSplit();
     this.toggleAttribute('narrow', this.narrow);
     // Lo schema non si aggiorna su schermo stretto: tornando larghi si ricalcola.
     this.outlineDoc = null;
@@ -832,80 +835,6 @@ export class EdithaApp extends LitElement {
 
   // ——— vista divisa (ED-17) ———
 
-  /** Stato della colonna destra per una tab: stesso testo, cursore e annulla propri. */
-  private mirrorState(tab: EditorTab): EditorState {
-    const canonical = this.pane.stateOf(tab);
-    const sel = canonical.selection.main;
-    return createEditorState({
-      doc: docText(canonical),
-      path: tab.path,
-      readOnly: tab.readOnly,
-      prefs: { wordWrap: this.settings.wordWrap, fontSize: this.settings.fontSize },
-      selection: { anchor: sel.anchor, head: sel.head },
-      onUpdate: (update) => this.onSideUpdate(update),
-    });
-  }
-
-  private onSideUpdate(update: ViewUpdate): void {
-    if (update.focusChanged && update.view.hasFocus) this.sideFocused = true;
-    // Ogni aggiornamento conta: anche i risultati del controllo YAML arrivano così, dopo una pausa.
-    if (this.sideFocused) {
-      this.refreshStatus();
-      this.refreshToolbar();
-    }
-  }
-
-  /** Modifica fatta a destra: arriva alla tab (che è ciò che si salva) e alla colonna sinistra. */
-  private onSideChange(e: CustomEvent<{ tab: EditorTab; changes: ChangeSet }>): void {
-    const { tab, changes } = e.detail;
-    if (this.tabs.find(tab.path) !== tab) return;
-    if (this.pane.applyRemote(tab, changes)) return;
-    // La tab non è visibile a sinistra: niente ascoltatori, si aggiorna qui.
-    const saved = this.saved.get(tab);
-    const dirty = !saved || !tab.state.doc.eq(saved);
-    if (dirty !== tab.dirty) {
-      tab.dirty = dirty;
-      this.refreshTabs();
-    }
-    this.drafts.scheduleDraft(tab, 1000, true);
-    this.ha.scheduleTemplate(tab);
-  }
-
-  async showInSide(tab: EditorTab): Promise<void> {
-    if (this.narrow) return;
-    this.split = true;
-    // L'anteprima coprirebbe la colonna appena aperta.
-    this.previewShown = false;
-    await this.updateComplete;
-    this.side?.show(tab);
-    this.sideFocused = true;
-    this.side?.focusEditor();
-    this.refreshTabs();
-    this.refreshStatus();
-    this.session.scheduleSession();
-  }
-
-  async openInSide(path: string): Promise<void> {
-    const tab = await this.loadTab(path, undefined, true, (err) =>
-      this.toasts.show(this.openErrorText(path, err), 'error'),
-    );
-    if (tab) await this.showInSide(tab);
-  }
-
-  closeSplit(): void {
-    if (!this.split) return;
-    const side = this.side;
-    const shown = side?.shown;
-    if (side && shown) side.detach(shown);
-    side?.showEmpty();
-    this.split = false;
-    this.sideFocused = false;
-    this.refreshTabs();
-    this.refreshStatus();
-    this.session.scheduleSession();
-    if (!this.touchQuery.matches) this.pane.focusEditor();
-  }
-
   /** Effetti di configurazione per la tab e, se la mostra, per la colonna destra. */
   applyEffects(tab: EditorTab, effects: StateEffect<unknown>[]): void {
     this.pane.apply(tab, effects);
@@ -928,7 +857,7 @@ export class EdithaApp extends LitElement {
           .value=${shown?.path ?? ''}
           @change=${(e: Event) => {
             const tab = this.tabs.find((e.target as HTMLSelectElement).value);
-            if (tab) void this.showInSide(tab);
+            if (tab) void this.splitView.showInSide(tab);
           }}
         >
           ${shown ? null : html`<option value="" selected>${t('split.choose')}</option>`}
@@ -936,11 +865,11 @@ export class EdithaApp extends LitElement {
             (v) => html`<option value=${v.path} ?selected=${v.path === shown?.path}>${v.dirty ? '● ' : ''}${v.path}</option>`,
           )}
         </select>
-        <button class="icon-btn small" title=${t('split.close')} @click=${() => this.closeSplit()}>
+        <button class="icon-btn small" title=${t('split.close')} @click=${() => this.splitView.closeSplit()}>
           ${icon(icons.close, 16)}
         </button>
       </div>
-      <editha-side-pane @side-change=${this.onSideChange}>
+      <editha-side-pane @side-change=${(e: CustomEvent<{ tab: EditorTab; changes: ChangeSet }>) => this.splitView.onSideChange(e)}>
         <div class="side-empty" slot="empty">${t('split.empty')}</div>
       </editha-side-pane>
     </div>`;

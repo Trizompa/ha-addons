@@ -444,7 +444,7 @@ export class FileOpsController {
       case 'open-text':
         return entry ? this.app.openFile(entry.path, true) : undefined;
       case 'open-side':
-        return entry ? this.app.openInSide(entry.path) : undefined;
+        return entry ? this.app.splitView.openInSide(entry.path) : undefined;
       case 'rename':
         return entry ? this.rename(entry) : undefined;
       case 'copy-path':

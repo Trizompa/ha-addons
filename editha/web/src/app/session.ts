@@ -36,7 +36,7 @@ export class SessionController {
     const active = (session.active && this.app.tabs.find(session.active)) || this.app.tabs.tabs[0];
     if (active) this.app.activate(active.path);
     const side = session.side ? this.app.tabs.find(session.side) : undefined;
-    if (side && !this.app.narrow) await this.app.showInSide(side);
+    if (side && !this.app.narrow) await this.app.splitView.showInSide(side);
     if (missing.length) {
       this.app.toasts.show(
         missing.length === 1
