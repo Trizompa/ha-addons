@@ -172,8 +172,9 @@ Non sono segreti `secretary.yaml`, `secret_sensors.yaml` né `mysecret.yaml`.
 ## Immagine
 
 `editha/Dockerfile` usa la base image di HA indicata in `build.yaml`. La CI
-(`.github/workflows/editha.yaml`) esegue i test, costruisce l'immagine per `amd64` e
-`aarch64` e controlla che il server risponda.
+(`.github/workflows/editha.yaml`) esegue i test, costruisce l'immagine per `amd64` e controlla
+che il server risponda. La build `aarch64` è emulata (QEMU), lenta e consuma molti minuti di
+GitHub Actions: parte solo a mano (Actions → Editha → *Run workflow*).
 
 Build locale:
 

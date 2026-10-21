@@ -12,7 +12,9 @@ Promemoria per il manutentore. Le voci con ☐ si fanno una volta sola, al primo
    `editha/CHANGELOG.it.md` (italiano).
 3. Documentazione aggiornata se cambia qualcosa che l'utente vede (`editha/DOCS.md` e
    `editha/DOCS.it.md`). Se cambia l'aspetto, rigenerare le immagini (vedi CONTRIBUTING.md).
-4. CI verde su GitHub.
+4. CI verde su GitHub. Se sono cambiati `Dockerfile`, `build.yaml` o le dipendenze, lanciare a
+   mano anche la build aarch64 (Actions → Editha → Run workflow): è emulata e lenta, quindi non
+   parte da sola.
 5. Unione nel branch `main` (pull request).
 6. Tag e release: su `main` creare il tag `v` + versione (es. `v1.0.0`) da **Releases → Draft a
    new release → Choose a tag**, oppure `git tag v1.0.0 && git push origin v1.0.0`. Il workflow
@@ -45,7 +47,7 @@ serve solo alla pagina delle release su GitHub.
 - ☐ **Protezione di `main`** (dopo averlo reso pubblico): Settings → Rules → Rulesets → *New
   branch ruleset*, destinazione *Default branch*, con *Restrict deletions*, *Block force pushes*
   e *Require status checks to pass* (i controlli "Test del server", "Test dell'interfaccia",
-  "Build amd64", "Build aarch64").
+  "Build amd64"; "Build aarch64" parte solo a mano, quindi non va messo tra quelli obbligatori).
 - ☐ **Etichette** per le segnalazioni: `bug` ed `enhancement` esistono già di default.
 - ☐ Tag `v1.0.0` e release (vedi sopra).
 - ☐ **Annuncio** (facoltativo): forum di Home Assistant, categoria *Share your Projects*, e

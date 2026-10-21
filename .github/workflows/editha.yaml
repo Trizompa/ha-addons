@@ -1,6 +1,8 @@
 name: Editha
 
 on:
+  # A mano (Actions → Editha → Run workflow): costruisce anche l'immagine aarch64.
+  workflow_dispatch:
   push:
     paths:
       - "editha/**"
@@ -74,17 +76,14 @@ jobs:
     name: Build ${{ matrix.arch }}
     runs-on: ubuntu-latest
     needs: [test, web]
-    # La build aarch64 è emulata (QEMU): npm a volte resta appeso. Ogni tentativo ha un tempo
-    # massimo e se ne fanno fino a tre; oltre, meglio fallire che restare appesi per ore.
+    # La build aarch64 è emulata (QEMU): lenta, a volte resta appesa e consuma i minuti di
+    # GitHub Actions. Parte solo a mano (workflow_dispatch); a ogni push si costruisce amd64.
+    # Ogni tentativo ha un tempo massimo e se ne fanno fino a tre.
     timeout-minutes: 55
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - arch: amd64
-            platform: linux/amd64
-          - arch: aarch64
-            platform: linux/arm64
+        include: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '[{"arch":"amd64","platform":"linux/amd64"},{"arch":"aarch64","platform":"linux/arm64"}]' || '[{"arch":"amd64","platform":"linux/amd64"}]') }}
     steps:
       - uses: actions/checkout@v5
       - uses: docker/setup-qemu-action@v3

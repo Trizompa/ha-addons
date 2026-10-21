@@ -48,7 +48,9 @@ requirements and the design decisions (both in Italian).
 - New interface text goes in both `editha/web/src/i18n/en.ts` and `it.ts`.
 - Bump `version` in `editha/config.yaml` and add an entry to `editha/CHANGELOG.md` (English)
   and `editha/CHANGELOG.it.md` (Italian) for every change users can see.
-- CI must be green: it runs the tests and builds the image for `amd64` and `aarch64`.
+- CI must be green: it runs the tests and builds the `amd64` image. The `aarch64` build is
+  emulated and slow, so it runs only by hand (Actions → Editha → Run workflow), for example before
+  a release or after changing the Dockerfile or dependencies.
 
 ## Screenshots
 
