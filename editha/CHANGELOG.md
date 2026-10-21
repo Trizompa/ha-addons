@@ -2,6 +2,24 @@
 
 Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
+## 0.36.0
+
+Final review before 1.0.
+
+- **Secrets, stricter**: any file with "secrets" in its name and a `.yaml`/`.yml` extension (for example `old_secrets.yaml`, `20240101_secrets.yaml`) is now treated like `secrets.yaml`: never searched, replaced, put in a folder ZIP or used for the template preview. Unsaved changes to these files are no longer kept as drafts, so their values never sit in EDITHA's data folder.
+- **Folder ZIPs** also leave out copies of `.storage` and `.cloud` found deeper (for example in other add-ons' backups).
+- **Other sites**: requests that a browser marks as coming from another website are refused, so a malicious page cannot make EDITHA restart Home Assistant through your browser.
+- **Replace all** works with more than 1000 files in the results (up to 2500).
+- **File history**: renaming a file onto the name of a file deleted earlier joins the two histories, newest first, instead of hiding the renamed file's versions.
+- **Restart**: on some installations a restart that went through was reported as an error; now it is reported as sent.
+- Split view: after choosing a tab in the tab bar, Save, Undo and the toolbar act on that file (before, they could still act on the right column).
+- Option+W (Alt+W) no longer closes the tab while you type in a text field (on a Mac it types ∑).
+- File explorer: opening two folders quickly no longer closes one of them; on a Mac the delete key deletes the selected item.
+- Git panel: clearer error messages in English; the Excluded list no longer shows an outdated state after quick clicks.
+- Welcome page: on a Mac the shortcuts show ⌘ ⌥ ⇧.
+- The name is written EDITHA everywhere (sidebar, page title, messages); the English interface uses “curly” quotes.
+- Documentation: guides checked against the program (toolbar, shortcuts, limits, safety) and developer notes updated.
+
 ## 0.35.0
 
 - **Git, expandable folders**: the arrow next to a new folder shows its files, each with its own checkbox and crossed-out eye. This way you can put only some files of a folder into the commit, or exclude them for good. The folder's checkbox becomes "partial" and the count says how many files go in (for example `3 of 8 files`). At most 200 files per folder are shown: the others go in only with the whole folder.

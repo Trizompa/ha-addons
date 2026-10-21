@@ -47,6 +47,14 @@ describe('API', () => {
       assert.equal(res.json().error.code, 'forbidden_origin');
     });
 
+    it('rifiuta le richieste partite da un altro sito (anche dal proxy Ingress)', async () => {
+      const cross = await app.inject({ method: 'POST', url: '/api/ha/restart', remoteAddress: INGRESS, headers: { 'sec-fetch-site': 'cross-site' } });
+      assert.equal(cross.statusCode, 403);
+      assert.equal(cross.json().error.code, 'forbidden_origin');
+      const same = await app.inject({ method: 'GET', url: '/api/tree', remoteAddress: INGRESS, headers: { 'sec-fetch-site': 'same-origin' } });
+      assert.equal(same.statusCode, 200);
+    });
+
     it('normalizza gli indirizzi IPv4 mappati', () => {
       assert.equal(normalizeIp('::ffff:10.0.0.1'), '10.0.0.1');
       assert.equal(normalizeIp(undefined), '');
@@ -139,6 +147,17 @@ describe('API', () => {
     assert.equal(big.statusCode, 413);
     await call({ method: 'DELETE', url: '/api/draft?path=configuration.yaml' });
     assert.deepEqual((await call({ method: 'GET', url: '/api/drafts' })).json(), { drafts: [] });
+  });
+
+  it('SEC-7: niente bozze di secrets.yaml e delle sue copie, nemmeno da recuperare', async () => {
+    for (const p of ['secrets.yaml', 'old_secrets.yaml']) {
+      const res = await call({ method: 'PUT', url: '/api/draft', payload: { path: p, content: 'pw: x\n', etag: 'e1' } });
+      assert.equal(res.statusCode, 403, p);
+    }
+    const claim = await call({ method: 'POST', url: '/api/draft/claim', payload: { path: 'secrets.yaml', client: 'c1' } });
+    assert.deepEqual(claim.json(), { claimed: false });
+    const list = (await call({ method: 'GET', url: '/api/drafts' })).json().drafts as { path: string }[];
+    assert.equal(list.some((d) => /secrets/.test(d.path)), false);
   });
 
   it('bozze per finestra: due finestre non si sovrascrivono, e si sa quali sono ancora aperte', async () => {

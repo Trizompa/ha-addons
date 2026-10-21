@@ -88,8 +88,8 @@ describe('Git locale (GIT-1)', () => {
       'secret_old.yaml', 'secret.yaml.bak', 'secrets_esphome.yaml', 'secrets copy.yaml', 'secrets (1).yaml', 'secrets-old.yaml',
       'secret (1).yaml', 'secret2.yaml', 'secret.bak.yaml', 'esphome/secrets.yaml', '.secret.yaml', '#Secret.bak.yaml',
       '~secret_old.yml', '.secret (1).yaml'];
-    const normal = ['secret_sensors.yaml', 'secret-door.yaml', 'secret_garage_automation.yml', 'secretary.yaml', 'my_secrets.yaml',
-      'secrets.json', 'configuration.yaml'];
+    const normal = ['secret_sensors.yaml', 'secret-door.yaml', 'secret_garage_automation.yml', 'secretary.yaml', 'secrets.json',
+      'configuration.yaml'];
     for (const n of secrets) assert.equal(isSecretsFile(path.basename(n)), true, n);
     for (const n of normal) assert.equal(isSecretsFile(n), false, n);
     execFileSync('git', ['init', '--quiet', sb.configDir]);

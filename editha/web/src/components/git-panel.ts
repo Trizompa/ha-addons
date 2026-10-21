@@ -1,12 +1,25 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { live } from 'lit/directives/live.js';
-import { api, errorText, type GitChange, type GitCommit, type GitInfo } from '../api/client.js';
-import { t } from '../i18n/index.js';
+import { ApiError, api, errorText, type GitChange, type GitCommit, type GitInfo } from '../api/client.js';
+import { getLang, t } from '../i18n/index.js';
 import { icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
 import { formatVersionDate } from './history-panel.js';
 
 type CommitFiles = Awaited<ReturnType<typeof api.git.commitFiles>>['files'];
+
+/**
+ * Errori di git: il server li spiega in italiano con il caso preciso. In inglese i codici generici
+ * (conflict, invalid_request) direbbero altro ("file cambiato da un altro programma"): qui hanno
+ * un testo che parla di Git.
+ */
+function gitErrorText(err: unknown): string {
+  if (err instanceof ApiError && getLang() !== 'it') {
+    if (err.code === 'conflict') return t('git.errorConflict');
+    if (err.code === 'invalid_request') return t('git.errorInvalid');
+  }
+  return errorText(err);
+}
 
 /**
  * GIT-1…6: Git locale sulla cartella /config, nella barra laterale al posto dell'albero.
@@ -393,7 +406,9 @@ export class EdithaGitPanel extends LitElement {
         this.changes = status.files;
         this.truncated = status.truncated;
         this.merging = status.merging;
-        this.ignoredList = (await api.git.ignored()).entries;
+        const ignored = (await api.git.ignored()).entries;
+        if (token !== this.loadToken) return;
+        this.ignoredList = ignored;
         // La storia si rilegge solo se è cambiato l'ultimo commit (aperti e pagine restano).
         if (this.showLog && info.head?.hash !== this.logHead) void this.loadLog(true);
       } else {
@@ -401,7 +416,7 @@ export class EdithaGitPanel extends LitElement {
         this.unchecked = new Set();
       }
     } catch (err) {
-      if (token === this.loadToken) this.error = errorText(err);
+      if (token === this.loadToken) this.error = gitErrorText(err);
     }
   }
 
@@ -429,7 +444,7 @@ export class EdithaGitPanel extends LitElement {
         this.expanded = new Map([...this.expanded].filter(([hash]) => still.has(hash)));
       }
     } catch (err) {
-      if (token === this.logToken) this.emit('git-error', { message: errorText(err) });
+      if (token === this.logToken) this.emit('git-error', { message: gitErrorText(err) });
     }
   }
 
@@ -446,7 +461,7 @@ export class EdithaGitPanel extends LitElement {
     try {
       value = (await api.git.commitFiles(hash)).files;
     } catch (err) {
-      value = { error: errorText(err) };
+      value = { error: gitErrorText(err) };
     }
     if (!this.expanded.has(hash)) return;
     this.expanded = new Map(this.expanded).set(hash, value);
@@ -598,7 +613,7 @@ export class EdithaGitPanel extends LitElement {
       await api.git.ignore(path);
       this.emit('git-changed', { message: t('git.ignored', { path }) });
     } catch (err) {
-      this.emit('git-error', { message: errorText(err) });
+      this.emit('git-error', { message: gitErrorText(err) });
     } finally {
       this.busy = false;
     }
@@ -614,7 +629,7 @@ export class EdithaGitPanel extends LitElement {
       if (res.stillIgnored) this.emit('git-error', { message: t('git.stillIgnored', { path: shown }) });
       else this.emit('git-changed', { message: t('git.unignored', { path: shown }) });
     } catch (err) {
-      this.emit('git-error', { message: errorText(err) });
+      this.emit('git-error', { message: gitErrorText(err) });
     } finally {
       this.busy = false;
     }
@@ -680,7 +695,7 @@ export class EdithaGitPanel extends LitElement {
         tree: false,
       });
     } catch (err) {
-      this.emit('git-error', { message: errorText(err) });
+      this.emit('git-error', { message: gitErrorText(err) });
     } finally {
       this.busy = false;
     }
@@ -703,7 +718,7 @@ export class EdithaGitPanel extends LitElement {
       this.emit('git-changed', { message: res.gitignoreCreated ? t('git.initDone') : t('git.initDoneKept') });
       await this.load();
     } catch (err) {
-      this.emit('git-error', { message: errorText(err) });
+      this.emit('git-error', { message: gitErrorText(err) });
       await this.load();
     } finally {
       this.busy = false;
@@ -717,7 +732,7 @@ export class EdithaGitPanel extends LitElement {
       await this.load();
       this.emit('git-changed', { message: res.created ? t('git.gitignoreDone') : t('git.gitignoreKept') });
     } catch (err) {
-      this.emit('git-error', { message: errorText(err) });
+      this.emit('git-error', { message: gitErrorText(err) });
     } finally {
       this.busy = false;
     }

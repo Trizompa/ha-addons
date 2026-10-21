@@ -81,6 +81,7 @@ export async function buildApp(config: Config, options: AppOptions = {}): Promis
     createSnippetStore(config.dataDir),
     new DraftStore(path.join(config.dataDir, 'drafts')),
     config.maxFileSize,
+    (p) => files.isSecrets(p),
   );
   registerGitRoutes(app, new GitService(config.configDir, path.join(config.dataDir, 'git-home'), config.maxFileSize));
   registerHaRoutes(app, new HaClient(config.haUrl, config.haToken), (p) => files.isSecrets(p));

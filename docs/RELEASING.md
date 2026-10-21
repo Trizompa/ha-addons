@@ -28,8 +28,12 @@ serve solo alla pagina delle release su GitHub.
 - ☐ In `editha/config.yaml` togliere `stage: experimental` (senza la riga l'add-on è considerato
   stabile) e portare `version` a `1.0.0`.
 - ☐ Su GitHub: **Settings → Emails → Keep my email addresses private**, così i commit futuri
-  fatti dal sito usano l'indirizzo `noreply`. (La storia dei commit è già stata ripulita.)
+  fatti dal sito usano l'indirizzo `noreply`. (Nella storia non ci sono dati personali.)
 - ☐ **Rendere pubblico**: Settings → General → Danger Zone → *Change repository visibility*.
+- ☐ Immagini della documentazione: con il repository pubblico, nei link di `editha/DOCS.md`,
+  `editha/DOCS.it.md` e `editha/README.md` sostituire `../docs/images/` con
+  `https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/` (la scheda
+  Documentazione di Home Assistant non risolve i percorsi relativi).
 - ☐ **Sicurezza**: Settings → Code security → attivare *Private vulnerability reporting* (serve
   per SECURITY.md) e *Dependabot alerts*.
 - ☐ **Presentazione del repository** (rotella accanto ad *About* nella pagina principale):

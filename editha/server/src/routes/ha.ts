@@ -89,8 +89,11 @@ export function registerHaRoutes(
     try {
       await ha.callService('homeassistant', 'restart');
     } catch (err) {
-      // Core può chiudere la connessione mentre si riavvia: la richiesta è comunque partita.
-      if (!(err instanceof EdithaError && err.code === 'ha_unavailable')) throw err;
+      // Core può chiudere la connessione mentre si riavvia (e il proxy del Supervisor risponde
+      // 502/503/504): la richiesta è comunque partita.
+      const status = err instanceof EdithaError ? (err.details as { status?: number } | undefined)?.status : undefined;
+      const dropped = err instanceof EdithaError && (err.code === 'ha_unavailable' || (err.code === 'ha_error' && [502, 503, 504].includes(status ?? 0)));
+      if (!dropped) throw err;
     }
     return { ok: true, warnings: check.warnings };
   });

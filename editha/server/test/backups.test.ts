@@ -153,6 +153,24 @@ describe('BackupStore', () => {
     assert.equal((await store.read('a.yaml', versions[2]!.id)).toString(), '2');
   });
 
+  it('rinomina su un nome che ha già una cronologia: le versioni si uniscono, le più recenti restano', async () => {
+    await store.saveFile('b.yaml', Buffer.from('B1'), 'save');
+    clock = new Date('2026-10-15T08:00:01.000Z');
+    await store.saveFile('a.yaml', Buffer.from('A1'), 'save');
+    clock = new Date('2026-10-15T08:00:02.000Z');
+    await store.saveFile('b.yaml', Buffer.from('B2'), 'delete');
+    clock = new Date('2026-10-15T08:00:03.000Z');
+    await store.saveFile('a.yaml', Buffer.from('A2'), 'save');
+    await store.move('a.yaml', 'b.yaml');
+    const versions = await store.list('b.yaml');
+    // Tiene le ultime 3 (keep = 3), dalla più recente.
+    assert.deepEqual(
+      await Promise.all(versions.map(async (v) => (await store.read('b.yaml', v.id)).toString())),
+      ['A2', 'B2', 'A1'],
+    );
+    assert.equal((await store.list('a.yaml')).length, 0);
+  });
+
   it('tiene separate le cronologie di percorsi diversi', async () => {
     await store.saveFile('a.yaml', Buffer.from('a'), 'save');
     await store.saveFile('a.yaml/b', Buffer.from('b'), 'save');

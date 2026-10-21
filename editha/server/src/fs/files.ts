@@ -456,6 +456,9 @@ export class FileService {
         // Scaricando tutta /config le cartelle di sistema (SEC-8) restano fuori: dati interni
         // di HA, token, dipendenze. Si possono scaricare chiedendo la cartella da sola.
         if (abs === this.guard.root && d.isDirectory() && READ_ONLY_DIRS.includes(d.name)) continue;
+        // Copie di .storage e .cloud più in basso (dentro backup di altri add-on): token e dati
+        // interni di HA, fuori come in ricerca e in Git.
+        if (d.isDirectory() && (d.name === '.storage' || d.name === '.cloud')) continue;
         // SEC-7: secrets.yaml e le sue copie non escono mai in uno ZIP (si scaricano solo da soli).
         if (d.isFile() && isSecretsFile(d.name)) continue;
         const childAbs = path.join(abs, d.name);

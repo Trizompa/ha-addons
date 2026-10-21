@@ -35,7 +35,8 @@ export const sessionSchema = {
           path: { type: 'string', minLength: 1, maxLength: 4096 },
           anchor: { type: 'integer', minimum: 0 },
           head: { type: 'integer', minimum: 0 },
-          scrollTop: { type: 'number', minimum: 0 },
+          // Safari, rimbalzando oltre l'inizio, può dare un valore negativo per un attimo.
+          scrollTop: { type: 'number' },
         },
         additionalProperties: false,
       },

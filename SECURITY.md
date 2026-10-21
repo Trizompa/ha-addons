@@ -23,3 +23,8 @@ Only the latest release receives fixes. Update from the add-on page in Home Assi
 - The Supervisor token and the values in `secrets.yaml` never reach the browser through the
   API, except when the user opens `secrets.yaml` itself.
 - System folders (`.storage`, `.cloud`, `deps`, `tts`, `.git`) are read-only.
+- `secrets.yaml` and its copies are never searched or replaced, never put in a folder ZIP and
+  never committed from the Git panel.
+- Git works only on the local repository in `/config`: there is no push, pull or fetch, and
+  network protocols, hooks, filters, signing and external programs are disabled for every Git
+  command EDITHA runs.

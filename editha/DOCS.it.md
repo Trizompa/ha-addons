@@ -47,11 +47,11 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
 ![Finestra principale](../docs/images/main-dark.png)
 
 - **Barra degli strumenti** (in alto): esplora file, salva e salva tutto, annulla e ripeti, cerca
-  e sostituisci, cronologia del file, a capo automatico, vista divisa, schema, pannello Inserisci e
-  menu di Home Assistant. A destra: lingua (Automatica (browser), Italiano, English), tema
-  (automatico, chiaro, scuro) e Informazioni.
-- **Esplora file** (a sinistra): il contenuto di `/config`. Sopra: cerca in tutti i file, nuovo
-  file, nuova cartella, cartelle di sistema, carica, aggiorna e comprimi tutto.
+  e sostituisci, cronologia del file, a capo automatico, vista divisa, schema, pannello Inserisci,
+  anteprima template e menu di Home Assistant. A destra: lingua (Automatica (browser), Italiano,
+  English), tema (automatico, chiaro, scuro) e Informazioni.
+- **Esplora file** (a sinistra): il contenuto di `/config`. Sopra: cerca in tutti i file, Git,
+  nuovo file, nuova cartella, cartelle di sistema, carica, aggiorna e comprimi tutto.
 - **Tab ed editor** (al centro): una tab per ogni file aperto. Il pallino su una tab indica
   modifiche non salvate.
 - **Barra di stato** (in basso): percorso del file, esito del controllo YAML, posizione del
@@ -75,7 +75,7 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 | Duplica… | Solo file. EDITHA propone `nome_copia.est`, che puoi cambiare. Una copia YAML prende anche `.bak` in fondo (`automations_copia.yaml.bak`), così Home Assistant non la carica due volte; un nome che finisce in `.yaml` chiede conferma. |
 | Sposta in… | Scegli la cartella di destinazione da un elenco. Niente trascinamento, apposta: troppo facile sbagliare cartella. La cronologia segue il file. |
 | Elimina (Canc) | Chiede conferma. Una copia resta nella cronologia di EDITHA (vedi [Cronologia](#cronologia-e-confronto)); per gli elementi oltre 50 MB non si può tenere una copia: EDITHA lo dice e chiede di nuovo prima di eliminarli. |
-| Scarica sul PC / Scarica come zip | Un file, oppure un'intera cartella come archivio zip, fino a 50 MB. Lo zip non contiene mai `secrets.yaml` né le sue copie (EDITHA lo dice); quel file si scarica da solo. |
+| Scarica sul PC / Scarica come zip | Un file, oppure un'intera cartella come archivio zip, fino a 50 MB. Lo zip non contiene mai `secrets.yaml` né le sue copie (EDITHA lo dice; quel file si scarica da solo), né i collegamenti; scaricando tutta `/config` restano fuori anche le cartelle di sistema (`.storage`, `.cloud`, `deps`, `tts`, `.git`), e così le copie di `.storage` e `.cloud` più in basso (per esempio nei backup di altri add-on). |
 | Copia percorso | Il percorso completo `/config/...`. |
 | Cronologia… | Le versioni salvate del file (vedi [Cronologia](#cronologia-e-confronto)). |
 | Seleziona per il confronto / Confronta con *nome* | Confronta due file affiancati. |
@@ -127,11 +127,11 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 - Chiudere una tab o la pagina con modifiche non salvate chiede conferma.
 - Se la pagina si chiude comunque (telefono bloccato, browser chiuso), EDITHA conserva le modifiche
   non salvate come **bozza** e la volta dopo propone di recuperarle (Esc rimanda la scelta: le
-  bozze restano, e alla prima modifica di uno di quei file EDITHA lo chiede di nuovo). Se il file non esiste più
-  (rinominato o eliminato da un'altra parte), EDITHA propone di ricrearlo con quelle modifiche; la
-  bozza di un file che non si può più salvare (per esempio è diventato di sola lettura) viene
-  scartata con un avviso. La stessa scelta di ricreare il file compare se salvi un file che nel
-  frattempo è stato rinominato o eliminato da un'altra parte.
+  bozze restano, e alla prima modifica di uno di quei file EDITHA lo chiede di nuovo). Se il file
+  non esiste più (rinominato o eliminato da un'altra parte), EDITHA propone di ricrearlo con quelle
+  modifiche; la bozza di un file che non si può più salvare (per esempio è diventato di sola
+  lettura) viene scartata con un avviso. La stessa scelta di ricreare il file compare se salvi un
+  file che nel frattempo è stato rinominato o eliminato da un'altra parte.
 - Con EDITHA aperta in più finestre o dispositivi, ognuno tiene le sue bozze: una finestra non
   propone, scarta o sovrascrive mai le bozze di un'altra ancora aperta. Se una finestra si chiude
   senza salvare (o il telefono chiude l'app), un'altra finestra aperta propone le sue modifiche
@@ -158,7 +158,8 @@ cartella `esphome` sono accettati anche i tag di ESPHome (`!lambda`, `!extend`, 
 ![Un errore YAML spiegato](../docs/images/problems.png)
 
 Avvisa anche di errori tipici di Home Assistant che sono YAML valido, come `on`/`off`/`yes`/`no`
-senza virgolette (lo YAML li trasforma in vero/falso) o `name:Casa` senza lo spazio dopo i due punti.
+senza virgolette (lo YAML li trasforma in vero/falso) o `name:Casa` senza lo spazio dopo i due
+punti.
 
 I file molto grandi (oltre 1 MB) non vengono controllati e non hanno lo schema, così l'editor resta
 reattivo.
@@ -218,9 +219,9 @@ se **Salva tutto e continua** o **Continua senza salvare**.
 ### Anteprima dei template
 
 Metti il cursore su un template (o selezionalo) e premi **Alt+T**, oppure usa il pulsante
-**Anteprima template** nella barra (le parentesi graffe). Senza selezione EDITHA prende il valore sotto il cursore,
-letto come lo legge Home Assistant: anche su più righe (`value_template: >`, `|`, virgolette che
-vanno a capo). Nei file `.jinja` prende il file intero.
+**Anteprima template** nella barra (le parentesi graffe). Senza selezione EDITHA prende il valore
+sotto il cursore, letto come lo legge Home Assistant, anche quando occupa più righe (`>`, `|`,
+testo tra virgolette che va a capo). Nei file `.jinja` prende il file intero.
 
 Il risultato lo calcola Home Assistant con lo stato attuale delle entità, come in Strumenti per
 sviluppatori, e compare in un pannello sotto l'editor: in verde il risultato, in rosso un errore di
@@ -233,13 +234,14 @@ sintassi, in arancione un errore di valutazione (per esempio una divisione per z
   file YAML molto grandi l'aggiornamento automatico è spento. Il pulsante di aggiornamento
   ricalcola dal punto in cui si trova il cursore.
 - **Copia** copia il risultato.
-- Se il template cita entità che non esistono (per esempio `states('sensor.sbagliato')`), sotto il
-  risultato compare un avviso: Home Assistant in quel caso non dà errore, risponde `unknown`.
+- Se il template cita entità che non esistono o sono disattivate (per esempio
+  `states('sensor.sbagliato')`), sotto il risultato compare un avviso: Home Assistant in quel caso
+  non dà errore, risponde `unknown`.
 - Home Assistant non dice in che riga sta un errore di sintassi: quando può, la trova EDITHA (un
   `{% if %}` senza `{% endif %}`, un `{{` non chiuso…) e offre **Vai alla riga N**.
-- Esc chiude il pannello. Variabili
-come `trigger`, `this` o quelle di un'automazione esistono solo mentre l'automazione gira: qui
-risultano vuote. Da `secrets.yaml` e dalle sue copie l'anteprima non parte mai.
+- Esc chiude il pannello. Variabili come `trigger`, `this` o quelle di un'automazione esistono solo
+  mentre l'automazione gira: qui risultano vuote. In `secrets.yaml` e nelle sue copie l'anteprima
+  non è disponibile.
 
 ![Anteprima di un template](../docs/images/template-preview.png)
 
@@ -253,13 +255,13 @@ usato.
 ![Cerca in tutti i file](../docs/images/search.png)
 
 La ricerca salta le cartelle di sistema, i collegamenti, i file oltre 5 MB e i file binari
-(database, archivi, immagini e simili). Con troppi risultati (2000) o una ricerca troppo lunga
-mostra i primi trovati.
+(database, archivi, immagini e simili). Mostra al massimo 200 risultati per file; con troppi
+risultati (2000 in tutto) o una ricerca che dura più di circa 8 secondi mostra i primi trovati.
 
 Il pulsante con le frecce apre **Sostituisci nei file**. **Sostituisci tutto** cambia tutte le
 occorrenze dopo una conferma; se la ricerca si è fermata prima (troppi risultati), cambia solo i
-file elencati; **Sostituisci in *nome*** accanto a un file sostituisce solo lì. Ogni
-file modificato conserva la versione precedente nella cronologia. I file con modifiche non salvate,
+file elencati; **Sostituisci in *nome*** accanto a un file sostituisce solo lì. Ogni file
+modificato conserva la versione precedente nella cronologia. I file con modifiche non salvate,
 `secrets.yaml` con le sue copie e le cartelle di sistema non vengono mai toccati.
 
 `secrets.yaml` e le sue copie (come `secrets.yaml.bak` o `secrets_old.yaml`) sono esclusi dalla
@@ -284,15 +286,14 @@ resta copia (EDITHA avvisa prima di eliminarli).
 
 **Spazio occupato dalla cronologia**: con il pulsante a forma di disco nell'intestazione della
 cronologia (aperta dal pulsante **Cronologia del file** nella barra, che con un secondo clic la
-chiude), EDITHA mostra
-quanto spazio occupa la cronologia sul disco, in tutto e file per file, dai più pesanti, segnalando
-i file che non esistono più. Sotto puoi eliminare le versioni più vecchie di 7, 30, 90 giorni, un
-anno o una data a scelta: prima **Anteprima** dice quante versioni di quanti file se ne andrebbero
-e quanto spazio liberano, poi **Elimina N versioni…** chiede conferma. L'ultima voce, **tutte**,
-cancella l'intera cronologia (compresi gli avanzi di salvataggi interrotti): per confermare bisogna
-scrivere **CANCELLA**. Le versioni eliminate non si possono più ripristinare; i tuoi file in
-`/config` e le modifiche non salvate non vengono mai toccati. Il registro dell'add-on elenca cosa
-è stato eliminato.
+chiude), EDITHA mostra quanto spazio occupa la cronologia sul disco, in tutto e file per file, dai
+più pesanti, segnalando i file che non esistono più. Sotto puoi eliminare le versioni più vecchie
+di 7, 30, 90 giorni, un anno o una data a scelta: prima **Anteprima** dice quante versioni di
+quanti file se ne andrebbero e quanto spazio liberano, poi **Elimina N versioni…** chiede
+conferma. L'ultima voce, **tutte**, cancella l'intera cronologia (compresi gli avanzi di
+salvataggi interrotti): per confermare bisogna scrivere **CANCELLA**. Le versioni eliminate non si
+possono più ripristinare; i tuoi file in `/config` e le modifiche non salvate non vengono mai
+toccati. Il registro dell'add-on elenca cosa è stato eliminato.
 
 Per confrontare due file qualsiasi: tasto destro sul primo → **Seleziona per il confronto**, poi
 tasto destro sul secondo → **Confronta con *nome*** (il nome del primo file). Esc chiude il
@@ -312,10 +313,12 @@ fuori (niente GitHub né altri server).
   `tts`…), database, registri e file temporanei. Puoi modificarlo come ogni altro file.
 - Un repository o un `.gitignore` che esistono già si usano così come sono.
 - Il pannello mostra il ramo, l'ultimo commit e le **modifiche** dall'ultimo commit: ogni file con
-  una lettera (**M** modificato, **N** nuovo, **E** eliminato, **C** in conflitto) e una casella. Un clic sul nome apre
-  il file. L'elenco si aggiorna quando salvi un file con il pannello aperto, o con il pulsante di
-  aggiornamento.
-- Una cartella che git non ha mai visto è **una riga sola**, con il numero di file che contiene
+  una lettera (**M** modificato, **N** nuovo, **E** eliminato, **C** in conflitto) e una casella.
+  Un clic sul nome apre il file. L'elenco si aggiorna quando salvi un file con il pannello aperto,
+  o con il pulsante di aggiornamento.
+- L'elenco mostra al massimo 2000 righe. Se sono di più compare un avviso e il commit non si può
+  fare: escludi con l'occhio barrato le cartelle che non vuoi conservare, poi fai il commit.
+- Una cartella che Git non segue ancora è **una riga sola**, con il numero di file che contiene
   (per esempio `custom_components/ · 1450 file`). L'**occhio barrato** accanto a un file o a
   una cartella nuovi li **esclude** dal repository: aggiunge una riga al `.gitignore`, così non
   compaiono più. Al primo commit, che di solito contiene tutta la configurazione, conviene
@@ -330,29 +333,30 @@ fuori (niente GitHub né altri server).
   esclude per sempre.
 - La sezione **Esclusi** elenca file e cartelle esclusi dal repository; **Includi** li fa
   ricomparire tra le modifiche (toglie la riga dal `.gitignore`, senza toccare i file).
-- Per fare un **commit** (una «fotografia» dei file, con un messaggio): lascia spuntati i file da
+- Per fare un **commit** (una "fotografia" dei file, con un messaggio): lascia spuntati i file da
   includere (all'inizio ci sono tutti), scrivi cosa hai cambiato e premi **Commit** (o
   Ctrl+Invio nel messaggio).
 - Alcuni file non entrano mai in un commit da EDITHA, anche se il `.gitignore` è stato cambiato o
   manca: compaiono con un lucchetto e non si possono spuntare. Sono `secrets.yaml` e le sue copie, i
   dati interni e le credenziali di Home Assistant (`.storage`, `.cloud`, token, database), i file
-  che passano da un filtro di git (`.gitattributes`, per esempio Git LFS o git-crypt: EDITHA non
-  esegue programmi esterni, quindi li salverebbe senza filtro; vanno committati da un terminale) e gli altri repository dentro `/config`.
-- Il pulsante del confronto (le due colonne) accanto a un file mostra le differenze rispetto all'ultimo commit,
-  nella stessa vista del confronto tra file (anche con le modifiche non ancora salvate).
+  che passano da un filtro di Git (`.gitattributes`, per esempio Git LFS o git-crypt: EDITHA non
+  esegue programmi esterni, quindi li salverebbe senza filtro; vanno committati da un terminale) e
+  gli altri repository dentro `/config`.
+- Il pulsante del confronto (le due colonne) accanto a un file mostra le differenze rispetto
+  all'ultimo commit, nella stessa vista del confronto tra file (anche con le modifiche non ancora
+  salvate).
 - **Storia dei commit** elenca i commit, dal più recente. Un clic su un commit mostra i file che ha
   toccato; per ciascuno puoi **confrontare** quella versione con il file attuale o
   **ripristinarlo** com'era in quel commit (con conferma). Il ripristino passa dal normale
   salvataggio di EDITHA: il contenuto attuale resta nella cronologia di EDITHA, e un file che ora
   non c'è viene ricreato. Segreti e dati interni non si mostrano né si ripristinano.
-- I file nuovi che compaiono da soli mentre il pannello è aperto (dopo un salvataggio o
-  un'operazione sui file) arrivano senza spunta: decidi tu se
-  includerli.
-- Durante un'unione (merge), un rebase o un cherry-pick avviati da un terminale i commit da EDITHA sono sospesi: completala o
-  annullala dal terminale.
+- I file nuovi che compaiono mentre il pannello è aperto (dopo un salvataggio o un'operazione sui
+  file) arrivano senza spunta: decidi tu se includerli.
+- Durante un'unione (merge), un rebase o un cherry-pick avviati da un terminale, il commit da
+  EDITHA non si può fare: completa o annulla l'operazione nel terminale.
 
-La cronologia di EDITHA (le copie automatiche a ogni salvataggio) resta separata e continua a
-funzionare come prima.
+La cronologia di EDITHA (le copie automatiche a ogni salvataggio) resta separata e funziona
+indipendentemente da Git.
 
 ![Pannello Git](../docs/images/git-panel.png)
 
@@ -361,8 +365,10 @@ funzionare come prima.
 EDITHA funziona nell'app di Home Assistant. Su uno schermo stretto l'esplora file diventa un
 pannello che si apre dal pulsante nella barra, e la barra mostra solo i pulsanti principali:
 **Cronologia…** sta nel menu del file (pressione prolungata sul file) e **Informazioni** nel menu
-del pulsante della lingua. Vista divisa, **Apri a destra** e schema del file non sono disponibili
-sul telefono. Su telefono e tablet un piccolo pulsante accanto al cursore chiude la tastiera.
+del pulsante della lingua. **A capo automatico** e **Salva tutto** non sono nella barra (con una
+tastiera, Ctrl+Alt+S salva comunque tutto). Vista divisa, **Apri a destra** e schema del file non
+sono disponibili sul telefono. Su telefono e tablet un piccolo pulsante accanto al cursore chiude
+la tastiera.
 
 | Editor | Esplora file |
 | --- | --- |
@@ -387,20 +393,26 @@ Cmd+Maiusc+Z e i suggerimenti restano Ctrl+Spazio.
 | Ctrl+Maiusc+M | Elenco dei problemi |
 | F8 | Problema successivo |
 | F2 | Rinomina (nell'esplora file) |
-| Canc | Elimina (nell'esplora file) |
+| Canc | Elimina (nell'esplora file; sul Mac anche il tasto delete) |
 | Alt+T | Anteprima del template sotto il cursore (Opzione+T su Mac) |
-| Esc | Chiudi la cronologia, il confronto o l'anteprima |
+| Ctrl+Invio | Commit (nel campo del messaggio di Git) |
+| Esc | Chiudi la cronologia, il confronto, l'anteprima dell'immagine o del template |
 
 ## Sicurezza e privacy
 
-- **Nessuna porta esposta**: EDITHA risponde solo al proxy Ingress di Home Assistant.
+- **Nessuna porta esposta**: EDITHA accetta richieste solo dal proxy Ingress di Home Assistant.
 - **Solo `/config`**: nessun file fuori dalla cartella della configurazione può essere letto o
   scritto.
 - **Salvataggi sicuri**: il file viene scritto in una copia temporanea e poi sostituito, così un
   disco pieno o un crash non lo lasciano mai scritto a metà.
 - **Secret**: i valori di `secrets.yaml` si vedono solo aprendo quel file. Non arrivano mai al
-  browser per i suggerimenti e non finiscono nei log; `secrets.yaml` e le sue copie non vengono
-  mai cercati né modificati da una sostituzione.
+  browser per i suggerimenti e non finiscono nei log. `secrets.yaml` e le sue copie non vengono
+  mai cercati né modificati da una sostituzione, non entrano mai nello zip di una cartella né in
+  un commit dal pannello Git, e l'anteprima dei template in quei file non è disponibile. Le
+  modifiche non salvate a questi file non vengono conservate come bozze: salva prima di chiudere
+  la pagina.
+- **Altri siti**: una pagina di un altro sito non può far fare niente a EDITHA (per esempio
+  riavviare Home Assistant) attraverso il tuo browser.
 - **Cartelle di sistema** in sola lettura.
 - **Nessun bisogno di internet**: tutto quello che serve a EDITHA è dentro l'add-on.
 

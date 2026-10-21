@@ -13,6 +13,8 @@ export function registerStateRoutes(
   snippets: JsonStore<SnippetList>,
   drafts: DraftStore,
   maxDraftSize: number,
+  /** SEC-7: secrets.yaml e copie (anche attraverso un link): mai bozze, i valori restano sul disco. */
+  isSecrets: (path: string) => Promise<boolean> = async () => false,
 ): void {
   app.get('/api/settings', async () => settings.get());
 
@@ -34,7 +36,13 @@ export function registerStateRoutes(
   );
 
   // ED-14: bozze delle modifiche non salvate.
-  app.get('/api/drafts', async () => ({ drafts: await drafts.list() }));
+  // Bozze di secrets.yaml rimaste da versioni precedenti: mai mandate al browser.
+  app.get('/api/drafts', async () => {
+    const list = await drafts.list();
+    const shown = [];
+    for (const d of list) if (!(await isSecrets(d.path))) shown.push(d);
+    return { drafts: shown };
+  });
 
   app.put<{ Body: { path: string; content: string; etag: string; client?: string } }>(
     '/api/draft',
@@ -44,6 +52,7 @@ export function registerStateRoutes(
       if (size > maxDraftSize) {
         throw new EdithaError('too_large', `Bozza troppo grande (${size} byte)`, { size, limit: maxDraftSize });
       }
+      if (await isSecrets(req.body.path)) throw new EdithaError('forbidden_path', 'Nessuna bozza per secrets.yaml e le sue copie');
       const draft = await drafts.put(req.body.path, req.body.content, req.body.etag, req.body.client);
       return { path: draft.path, savedAt: draft.savedAt };
     },
@@ -71,6 +80,7 @@ export function registerStateRoutes(
     '/api/draft/claim',
     { schema: { body: claimSchema } },
     async (req) => {
+      if (await isSecrets(req.body.path)) return { claimed: false };
       const draft = await drafts.claim(req.body.path, req.body.from, req.body.client);
       return draft ? { claimed: true, draft } : { claimed: false };
     },

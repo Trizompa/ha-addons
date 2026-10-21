@@ -1,4 +1,4 @@
-# Editha – requisiti
+# EDITHA – requisiti
 
 Every Day I Tweak HA. Add-on per Home Assistant che offre un
 editor/IDE per i file di `/config`.
@@ -32,13 +32,13 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 
 | ID | Requisito | Pr. |
 | --- | --- | --- |
-| SEC-1 | Nessuna porta esposta: il server ascolta solo sulla porta Ingress e accetta richieste solo dal proxy Ingress del Supervisor (`172.30.32.2`). | P0 |
+| SEC-1 | Nessuna porta esposta: il server ascolta solo sulla porta Ingress e accetta richieste solo dal proxy Ingress del Supervisor (`172.30.32.2`); rifiutate quelle che il browser segna come partite da un altro sito (`Sec-Fetch-Site: cross-site`). | P0 |
 | SEC-2 | Ogni percorso ricevuto è risolto (incluso `realpath` per i symlink) e rifiutato se esce da `/config`. Niente `..`, percorsi assoluti esterni, byte nulli. | P0 |
 | SEC-3 | Scrittura atomica: file temporaneo nella stessa cartella + `rename`, preservando permessi. Un salvataggio interrotto non lascia mai un file troncato. | P0 |
 | SEC-4 | Rilevamento conflitti: il client invia l'etag (SHA-256 del contenuto letto); se il file è cambiato su disco nel frattempo il backend risponde 409 e l'UI chiede cosa fare (annulla / ricarica dal disco / sovrascrivi; sovrascrivendo, la versione su disco finisce nella cronologia). | P0 |
 | SEC-5 | Limiti: dimensione massima apribile nell'editor (configurabile), rilevamento file binari (aperti in sola lettura o solo scaricabili). | P0 |
 | SEC-6 | Il token del Supervisor non arriva mai al browser; le chiamate a Core passano dal backend. | P0 |
-| SEC-7 | `secrets.yaml`: modificabile, ma i valori non finiscono nei log né nelle risposte dell'autocompletamento (solo le chiavi). `secrets.yaml` e le sue copie (nomi che corrispondono a `/^secrets.*\.ya?ml(\.bak)?$/i`, anche raggiunti da un collegamento) sono esclusi da ricerca e sostituzione. | P0 |
+| SEC-7 | `secrets.yaml`: modificabile, ma i valori non finiscono nei log né nelle risposte dell'autocompletamento (solo le chiavi). `secrets.yaml` e le sue copie (vedi `isSecretsFile` in `server/src/fs/search.ts`: nomi che contengono `secrets` seguito, in un punto qualsiasi, da `.yaml`/`.yml`, come `secrets_copia.yaml.bak`, `secrets.yaml~` o `old_secrets.yaml`; il singolare `secret` solo con un suffisso da copia, come `secret.yaml` o `secret_old.yaml`; anche raggiunti da un collegamento) sono esclusi da ricerca e sostituzione, mai negli ZIP delle cartelle (0.34.0), mai nei commit Git, niente anteprima template. | P0 |
 | SEC-8 | Cartelle delicate (`.storage`, `.cloud`, `deps`, `tts`, `.git`) nascoste nell'albero per default, visibili con un pulsante (scelta memorizzata) e sempre in sola lettura; sblocco esplicito della scrittura da valutare. | P1 |
 | SEC-9 | Log del backend senza contenuto dei file. | P0 |
 
@@ -86,7 +86,7 @@ Gli ID (`SEC-1`, `ED-3`, …) servono per citarli nelle issue e nei commit.
 | --- | --- | --- |
 | HA-1 | Validazione YAML in tempo reale (sintassi) che riconosce i tag di HA: `!include`, `!include_dir_*`, `!secret`, `!input`, `!env_var`. Errori sottolineati nel punto esatto (riga e colonna) con messaggio; nessuna segnalazione su codice corretto; la sottolineatura si aggiorna/scompare mentre si corregge (FEP #5). | P0 |
 | HA-2 | Autocompletamento degli `entity_id` dagli stati di Core, con nome e stato nel suggerimento. | P0 |
-| HA-3 | Autocompletamento di servizi/azioni (`domain.service`) e dei loro campi. | P1 |
+| HA-3 | Autocompletamento di servizi/azioni (`domain.service`). | P1 |
 | HA-4 | Autocompletamento delle chiavi di `!secret` da `secrets.yaml`. | P1 |
 | HA-5 | Ctrl/Cmd+clic su `!include path` apre il file incluso. | P1 |
 | HA-6 | Hover su un `entity_id`: stato e attributi correnti. | P2 |
@@ -198,7 +198,7 @@ editha/
   config.yaml            manifest dell'add-on (ingress, /config, homeassistant_api)
   build.yaml, Dockerfile immagine: compilazione di server e interfaccia + runtime Node.js
   icon.png, logo.png
-  README.md, DOCS.md, DOCS.it.md, CHANGELOG.md
+  README.md, DOCS.md, DOCS.it.md, CHANGELOG.md, CHANGELOG.it.md
   server/
     src/
       main.ts, app.ts    avvio e composizione
@@ -206,6 +206,7 @@ editha/
       errors.ts          errori con codice stabile
       security/          filtro Ingress (SEC-1)
       fs/                percorsi (SEC-2), scrittura atomica (SEC-3), file (FS-*), ricerca (SR-*), zip, anteprima
+      git/               Git locale in /config (GIT-*)
       backups/           versioni dei file (BK-*)
       ha/                chiamate a Core via Supervisor (HA-2, ACT-*)
       state/             impostazioni (CFG-1), sessione (ED-11), snippet e bozze (ED-14) in /data
@@ -233,45 +234,7 @@ editha/
 
 | Versione | Requisiti coperti |
 | --- | --- |
-| 0.1.0 | SEC-1, SEC-2, SEC-3, SEC-4, SEC-5, SEC-6 (nessun token esposto), SEC-9, ENG-1, ENG-2, ENG-4, ENG-6, ENG-7; lato server: FS-2, FS-3, FS-4, BK-1, BK-2, BK-5 (limite fisso di 50 versioni), SEC-8 (senza sblocco). |
-| 0.2.0 | Interfaccia: FS-1, FS-2, FS-3, FS-4, FS-7 (filtro per nome), ED-1…ED-8, ED-10 (solo a capo automatico), ED-11, ED-15, ED-16, HA-1, CFG-1, UI-1, UI-2, UI-4, UI-5 (tastiera nell'albero), UI-6, ENG-3. P0 ancora da fare: HA-2 (autocompletamento entità), ACT-1 (verifica della configurazione). |
-| 0.2.1 | SEC-8: cartelle di sistema nascoste per default, pulsante per mostrarle. |
-| 0.2.2 | UI-2: colonna dei numeri compatta su telefono, righe spezzate allineate all'indentazione. |
-| 0.3.0 | Nuovo nome: Editha (D10). |
-| 0.3.1 | Descrizione: solo "Easy Developer IDE for The HA". |
-| 0.4.0 | HA-2, HA-3 (autocompletamento entità e azioni), ACT-1, ACT-2 (ricarica di tutto lo YAML), ACT-4, snippet predefiniti e personali; colonna dei numeri compatta. |
-| 0.4.1 | Avviso di connessione persa / add-on aggiornato con ricarica della pagina; ritentativo delle letture. |
-| 0.4.2 | Correzione token del Supervisor con s6-overlay (HA-2, ACT-* nell'add-on reale); carattere 13/14 px; aggiornamenti senza refresh forzato. |
-| 0.5.0 | UI-3: interfaccia in italiano e inglese con selettore (automatica dal browser). |
-| 0.6.0 | FS-6: upload dal PC (pulsante, menu, trascinamento) e download (file, cartella come zip). |
-| 0.7.0 | BK-2, BK-3, BK-4: cronologia con confronto e ripristino; BK-5: 10 versioni per file; FS-8: duplica; menu contestuale con pressione prolungata su telefono. |
-| 0.7.1 | UI-2: pulsante per chiudere la tastiera su iPhone; FS-8 più sicuro (copie YAML in .bak). |
-| 0.8.0 | ED-14: bozze delle modifiche non salvate, recuperabili alla riapertura. |
-| 0.8.1 | UI-2: niente effetto elastico di iOS sull'editor. |
-| 0.9.0 | ED-17: vista divisa in due colonne; finestra Informazioni. |
-| 0.10.0 | HA-9: spiegazioni degli errori di indentazione, avvisi per gli errori tipici di HA, elenco dei problemi. |
-| 0.11.0 | HA-4 (chiavi di !secret), HA-5 (Ctrl+clic su !include, !include_dir_…, !secret). |
-| 0.12.0 | FS-5: "Sposta in…" dal menu contestuale. |
-| 0.13.0 | SR-1, SR-2 (ricerca in tutti i file, regex, maiuscole, parola intera), SR-4 (dove è usata un'entità). ACT-2 mirata tolta dalla lista (non serve). |
-| 0.13.1 | Correzioni della revisione generale del codice. |
-| 0.13.2 | Pulsante "chiudi la tastiera" accanto al cursore; secrets.yaml escluso dalla ricerca. |
-| 0.14.0 | HA-10: autocompletamento delle icone MDI con anteprima. |
-| 0.15.0 | SR-3: sostituisci in più file, con conferma e cronologia. |
-| 0.16.0 | BK-6: confronto tra due file qualsiasi. Icona del pannello: mdi:pencil-circle-outline (0.16.1: mdi:pencil). |
-| 0.17.0 | Modifica degli snippet personali. |
-| 0.17.1 | Nome EDITHA in maiuscolo nell'interfaccia, motto "Every Day I Tweak HA"; tolta la scritta "Esplora file" sopra l'albero. |
-| 0.17.2 | Su telefono nella barra solo il nome EDITHA, senza logo. |
-| 0.18.0 | Documentazione utente (DOCS.md, DOCS.it.md) con immagini; file per GitHub (CONTRIBUTING, SECURITY, modelli, release); HA-9: «chiave valore» senza due punti spiegato. |
-| 0.18.1 | Nuovo file/cartella solo sopra l'albero (tolti dalla barra in alto). |
-| 0.18.2 | Descrizione nel negozio: "Smart file editor for Home Assistant". |
-| 0.19.0 | FS-10: anteprima di immagini e PDF. |
-| 0.19.1 | FS-10: tab di anteprima propria (una, riusata), zoom indicato, immagine centrata a grandezza reale. |
-| 0.20.0 | ED-18: schema del file. |
-| 0.20.1 | FS-1: niente freccia sulle cartelle vuote. |
-| 0.20.2 | BK-2: la cronologia aperta segue il cambio di file. |
-| 0.21.0 | Revisione del codice: SEC-7 (copie di secrets.yaml escluse da ricerca e sostituzione), HA-9 (template senza virgolette, chiavi complesse, alias senza ancora), scorciatoie per tasto fisico (anche su Mac), bozze non più salvabili scartate con un avviso. |
-| 0.22.0 | Seconda revisione: BK-1 (nessuna eliminazione senza copia senza conferma, versioni senza doppioni, id monotoni), SEC-3/SEC-4 (conflitto anche durante la scrittura), SEC-7 (copie di secrets.yaml in ogni forma), ED-14 (bozze ritentate, attesa massima, ricrea il file sparito), CRLF conservato, HA-9 (spazi invisibili, tag sconosciuti, errori da principiante), scorciatoie per lettera della tastiera. |
-| 0.22.3 | ED-14: bozze per finestra (più finestre o dispositivi non si scartano né sovrascrivono le bozze a vicenda), segnale di finestra aperta, proposta delle bozze di finestre chiuse; Esc sulla domanda rimanda davvero (0.22.2). |
+| 0.36.0 | Revisione finale prima della 1.0: SEC-7 più ampio (ogni `*secrets*.yaml`, niente bozze), SEC-1 (richieste da altri siti rifiutate), ZIP senza copie annidate di `.storage`/`.cloud`, sostituzione fino a 2500 file, BK (cronologie unite su rinomina), riavvio segnalato correttamente, correzioni dell'interfaccia, nome EDITHA ovunque, CHANGELOG in inglese (`CHANGELOG.it.md` in italiano). |
 | 0.35.0 | GIT-2 e GIT-4: cartelle nuove apribili, file scelti o esclusi uno per uno (al massimo 200 per cartella); pulsanti della barra che servono solo con un file aperto (a capo, schema, Inserisci) spenti senza file; immagini della guida inglese visibili. |
 | 0.34.0 | SEC-7: secrets.yaml e copie mai negli ZIP delle cartelle, con avviso; requisiti riordinati (BK-8 per i backup del Supervisor); immagini della documentazione aggiornate. |
 | 0.33.0 | Ritocchi: anteprima template tolta dal menu di Home Assistant; pulsante Cronologia che si chiude al secondo clic; legenda Git in un riquadro, una voce per riga; pagina iniziale e Informazioni più essenziali; motto tra virgolette. |
@@ -286,6 +249,45 @@ editha/
 | 0.25.0 | BK-7 (3/3): cancellazione completa della cronologia (voce «tutte»), confermata scrivendo CANCELLA. |
 | 0.24.0 | BK-7 (2/3): eliminazione delle versioni più vecchie di 7/30/90 giorni, un anno o una data, con anteprima e conferma. |
 | 0.23.0 | BK-7 (1/3): spazio occupato dalla cronologia, da Informazioni e dalla cronologia; ED-14: bozze recuperate prese in carico in modo atomico (0.22.4). |
+| 0.22.3 | ED-14: bozze per finestra (più finestre o dispositivi non si scartano né sovrascrivono le bozze a vicenda), segnale di finestra aperta, proposta delle bozze di finestre chiuse; Esc sulla domanda rimanda davvero (0.22.2). |
+| 0.22.0 | Seconda revisione: BK-1 (nessuna eliminazione senza copia senza conferma, versioni senza doppioni, id monotoni), SEC-3/SEC-4 (conflitto anche durante la scrittura), SEC-7 (copie di secrets.yaml in ogni forma), ED-14 (bozze ritentate, attesa massima, ricrea il file sparito), CRLF conservato, HA-9 (spazi invisibili, tag sconosciuti, errori da principiante), scorciatoie per lettera della tastiera. |
+| 0.21.0 | Revisione del codice: SEC-7 (copie di secrets.yaml escluse da ricerca e sostituzione), HA-9 (template senza virgolette, chiavi complesse, alias senza ancora), scorciatoie per tasto fisico (anche su Mac), bozze non più salvabili scartate con un avviso. |
+| 0.20.2 | BK-2: la cronologia aperta segue il cambio di file. |
+| 0.20.1 | FS-1: niente freccia sulle cartelle vuote. |
+| 0.20.0 | ED-18: schema del file. |
+| 0.19.1 | FS-10: tab di anteprima propria (una, riusata), zoom indicato, immagine centrata a grandezza reale. |
+| 0.19.0 | FS-10: anteprima di immagini e PDF. |
+| 0.18.2 | Descrizione nel negozio: "Smart file editor for Home Assistant". |
+| 0.18.1 | Nuovo file/cartella solo sopra l'albero (tolti dalla barra in alto). |
+| 0.18.0 | Documentazione utente (DOCS.md, DOCS.it.md) con immagini; file per GitHub (CONTRIBUTING, SECURITY, modelli, release); HA-9: «chiave valore» senza due punti spiegato. |
+| 0.17.2 | Su telefono nella barra solo il nome EDITHA, senza logo. |
+| 0.17.1 | Nome EDITHA in maiuscolo nell'interfaccia, motto "Every Day I Tweak HA"; tolta la scritta "Esplora file" sopra l'albero. |
+| 0.17.0 | Modifica degli snippet personali. |
+| 0.16.0 | BK-6: confronto tra due file qualsiasi. Icona del pannello: mdi:pencil-circle-outline (0.16.1: mdi:pencil). |
+| 0.15.0 | SR-3: sostituisci in più file, con conferma e cronologia. |
+| 0.14.0 | HA-10: autocompletamento delle icone MDI con anteprima. |
+| 0.13.2 | Pulsante "chiudi la tastiera" accanto al cursore; secrets.yaml escluso dalla ricerca. |
+| 0.13.1 | Correzioni della revisione generale del codice. |
+| 0.13.0 | SR-1, SR-2 (ricerca in tutti i file, regex, maiuscole, parola intera), SR-4 (dove è usata un'entità). ACT-2 mirata tolta dalla lista (non serve). |
+| 0.12.0 | FS-5: "Sposta in…" dal menu contestuale. |
+| 0.11.0 | HA-4 (chiavi di !secret), HA-5 (Ctrl+clic su !include, !include_dir_…, !secret). |
+| 0.10.0 | HA-9: spiegazioni degli errori di indentazione, avvisi per gli errori tipici di HA, elenco dei problemi. |
+| 0.9.0 | ED-17: vista divisa in due colonne; finestra Informazioni. |
+| 0.8.1 | UI-2: niente effetto elastico di iOS sull'editor. |
+| 0.8.0 | ED-14: bozze delle modifiche non salvate, recuperabili alla riapertura. |
+| 0.7.1 | UI-2: pulsante per chiudere la tastiera su iPhone; FS-8 più sicuro (copie YAML in .bak). |
+| 0.7.0 | BK-2, BK-3, BK-4: cronologia con confronto e ripristino; BK-5: 10 versioni per file; FS-8: duplica; menu contestuale con pressione prolungata su telefono. |
+| 0.6.0 | FS-6: upload dal PC (pulsante, menu, trascinamento) e download (file, cartella come zip). |
+| 0.5.0 | UI-3: interfaccia in italiano e inglese con selettore (automatica dal browser). |
+| 0.4.2 | Correzione token del Supervisor con s6-overlay (HA-2, ACT-* nell'add-on reale); carattere 13/14 px; aggiornamenti senza refresh forzato. |
+| 0.4.1 | Avviso di connessione persa / add-on aggiornato con ricarica della pagina; ritentativo delle letture. |
+| 0.4.0 | HA-2, HA-3 (autocompletamento entità e azioni), ACT-1, ACT-2 (ricarica di tutto lo YAML), ACT-4, snippet predefiniti e personali; colonna dei numeri compatta. |
+| 0.3.1 | Descrizione: solo "Easy Developer IDE for The HA". |
+| 0.3.0 | Nuovo nome: Editha (D10). |
+| 0.2.2 | UI-2: colonna dei numeri compatta su telefono, righe spezzate allineate all'indentazione. |
+| 0.2.1 | SEC-8: cartelle di sistema nascoste per default, pulsante per mostrarle. |
+| 0.2.0 | Interfaccia: FS-1, FS-2, FS-3, FS-4, FS-7 (filtro per nome), ED-1…ED-8, ED-10 (solo a capo automatico), ED-11, ED-15, ED-16, HA-1, CFG-1, UI-1, UI-2, UI-4, UI-5 (tastiera nell'albero), UI-6, ENG-3. P0 ancora da fare: HA-2 (autocompletamento entità), ACT-1 (verifica della configurazione). |
+| 0.1.0 | SEC-1, SEC-2, SEC-3, SEC-4, SEC-5, SEC-6 (nessun token esposto), SEC-9, ENG-1, ENG-2, ENG-4, ENG-6, ENG-7; lato server: FS-2, FS-3, FS-4, BK-1, BK-2, BK-5 (limite fisso di 50 versioni), SEC-8 (senza sblocco). |
 
 ---
 
@@ -296,7 +298,7 @@ editha/
 | D1 | Backend in **TypeScript** (Node.js). | Un solo linguaggio per backend e frontend, tipi dell'API condivisi, libreria `yaml` con supporto ai tag di HA. |
 | D2 | Frontend con **Lit**. | Componenti piccoli e leggeri, stessa tecnologia del frontend di HA; CodeMirror 6 si integra senza adattatori. |
 | D3 | Versioni dei file in **`/data/backups`**. | Fuori da `/config`, incluse nel backup dell'add-on. |
-| D4 | Priorità alle **versioni dei singoli file** (BK-1…5); backup completi del Supervisor a P2 (BK-7). | |
+| D4 | Priorità alle **versioni dei singoli file** (BK-1…5); backup completi del Supervisor a P2 (BK-8). | |
 | D5 | Il repository diventa **pubblico al primo rilascio**. | Il Supervisor deve poterlo clonare senza credenziali. |
 | D7 | Architetture **`amd64`** e **`aarch64`**. | HA ha deprecato le architetture a 32 bit. |
 | D9 | `.storage` e simili **nascoste per default** (proposta di Trizompa dopo la prima prova), visibili a richiesta e **in sola lettura** (SEC-8). | |

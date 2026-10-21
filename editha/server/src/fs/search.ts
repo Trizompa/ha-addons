@@ -49,14 +49,14 @@ const SKIP_EXT = /\.(db|db-shm|db-wal|sqlite|sqlite3|zip|gz|tar|tgz|png|jpe?g|gi
 
 /**
  * SEC-7: secrets.yaml e le sue copie non entrano mai nella ricerca né nella sostituzione.
- * "secrets" (anche dopo ".", "#" o "~" di editor e copie nascoste) non seguito da un'altra
- * lettera, poi ".yaml"/".yml" in qualunque punto: secrets_copia.yaml.bak, secrets.yaml_copy.bak,
- * secrets.yaml~, secrets.yaml.old, secrets_esphome.yaml. Il singolare "secret" vale solo come
- * copia (secret.yaml, secret_old.yaml), così secret_sensors.yaml resta un file normale.
+ * "secrets" in qualunque punto del nome, poi ".yaml"/".yml" in qualunque punto: secrets_copia.yaml.bak,
+ * secrets.yaml_copy.bak, secrets.yaml~, old_secrets.yaml, 20240101_secrets.yaml, secretsold.yaml,
+ * secrets_esphome.yaml (la stessa regola dei dati sensibili di Git). Il singolare "secret" vale
+ * solo come copia (secret.yaml, secret_old.yaml), così secret_sensors.yaml resta un file normale.
  */
 export function isSecretsFile(name: string): boolean {
   return (
-    /^[.#~]?secrets(?![a-z])[^/]*\.ya?ml/i.test(name) ||
+    /secrets[^/]*\.ya?ml/i.test(name) ||
     /^[.#~]?secret(?:[._~ -]?(?:\d+|bak|backup|old|orig|copy|copia|new|\(\d+\)))*\.ya?ml/i.test(name)
   );
 }

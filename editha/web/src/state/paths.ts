@@ -74,7 +74,7 @@ export function validateName(name: string): string | null {
 export function isSecretsFile(path: string): boolean {
   const name = basename(path);
   return (
-    /^[.#~]?secrets(?![a-z])[^/]*\.ya?ml/i.test(name) ||
+    /secrets[^/]*\.ya?ml/i.test(name) ||
     /^[.#~]?secret(?:[._~ -]?(?:\d+|bak|backup|old|orig|copy|copia|new|\(\d+\)))*\.ya?ml/i.test(name)
   );
 }

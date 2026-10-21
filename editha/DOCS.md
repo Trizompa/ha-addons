@@ -45,11 +45,12 @@ through Home Assistant (Ingress), with your Home Assistant login.
 
 ![Main window](../docs/images/main-dark.png)
 
-- **Toolbar** (top): file explorer, save and save all, undo and redo, find and replace,
-  file history, word wrap, split view, outline, insert panel and the Home Assistant menu. On the right:
-  language (Automatic (browser), Italiano, English), theme (automatic, light, dark) and About.
-- **File explorer** (left): the content of `/config`. Above it: search in all files, new file,
-  new folder, system folders, upload, refresh and collapse all.
+- **Toolbar** (top): file explorer, save and save all, undo and redo, find and replace, file
+  history, word wrap, split view, outline, insert panel, template preview and the Home Assistant
+  menu. On the right: language (Automatic (browser), Italiano, English), theme (automatic, light,
+  dark) and About.
+- **File explorer** (left): the content of `/config`. Above it: search in all files, Git, new
+  file, new folder, system folders, upload, refresh and collapse all.
 - **Tabs and editor** (centre): one tab per open file. A dot on a tab means unsaved changes.
 - **Status bar** (bottom): file path, YAML check result, cursor position, encoding and language.
 
@@ -69,9 +70,9 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 | Open as text | SVG files only: they open in the preview, this opens their code in the editor. |
 | Rename (F2) | Open tabs follow the new name, and the file's history goes with it. |
 | Duplicate… | Files only. EDITHA proposes `name_copy.ext`, which you can change. A YAML copy also gets `.bak` at the end (`automations_copy.yaml.bak`), so Home Assistant does not load it twice; a name ending in `.yaml` asks for confirmation. |
-| Move to… | Pick the destination folder from a list. There is no drag-and-drop on purpose: too easy to drop in the wrong place. The history goes with the file. |
+| Move to… | Pick the destination folder from a list. Drag-and-drop is deliberately not supported: it is too easy to drop something in the wrong place. The history goes with the file. |
 | Delete (Del) | Asks first. A copy is kept in EDITHA's history (see [History](#history-and-comparison)); for items larger than 50 MB no copy can be kept, and EDITHA says so and asks again before deleting. |
-| Download to your PC / Download as zip | A file, or a whole folder as a zip archive, up to 50 MB. The zip never contains `secrets.yaml` or its copies (EDITHA tells you); download that file on its own. |
+| Download to your PC / Download as zip | A file, or a whole folder as a ZIP archive, up to 50 MB. The ZIP never contains `secrets.yaml` or its copies (EDITHA tells you; download that file on its own), nor links; when you download all of `/config`, the system folders (`.storage`, `.cloud`, `deps`, `tts`, `.git`) are left out too, and so are copies of `.storage` and `.cloud` found deeper (for example in other add-ons' backups). |
 | Copy path | The full `/config/...` path. |
 | History… | The saved versions of the file (see [History](#history-and-comparison)). |
 | Select for compare / Compare with *name* | Compare two files side by side. |
@@ -97,7 +98,7 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 - **Undo and redo** also undo indentation made with Tab.
 - **Find and replace** in the open file: Ctrl+F.
 - **Word wrap** and **split view** are in the toolbar. Split view shows two files side by side, or
-  two places of the same file: changes made in one column appear in the other. **Open on the
+  two parts of the same file: changes made in one column appear in the other. **Open on the
   right** in a file's menu puts it straight into the right column.
 
   ![Split view](../docs/images/split-view.png)
@@ -121,10 +122,11 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 - Closing a tab or the page with unsaved changes asks first.
 - If the page closes anyway (phone locked, browser closed), EDITHA keeps the unsaved changes as a
   **draft**. Next time it offers to recover them (Esc postpones the choice: the drafts stay, and
-  the first time you change one of those files EDITHA asks again). If the file no longer exists (renamed or deleted
-  elsewhere), EDITHA offers to recreate it with those changes; a draft of a file that can no longer
-  be saved (for example it became read-only) is discarded with a notice. The same choice to
-  recreate the file appears if you save a file that was renamed or deleted elsewhere meanwhile.
+  the first time you change one of those files EDITHA asks again). If the file no longer exists
+  (renamed or deleted elsewhere), EDITHA offers to recreate it with those changes; a draft of a
+  file that can no longer be saved (for example it became read-only) is discarded with a notice.
+  The same choice to recreate the file appears if you save a file that was renamed or deleted
+  elsewhere meanwhile.
 - With EDITHA open in several windows or devices, each one keeps its own drafts: a window never
   offers, discards or overwrites the drafts of another window that is still open. If a window
   closes without saving (or a phone closes the app), another open window offers its changes
@@ -212,27 +214,28 @@ whether to **Save all and continue** or **Continue without saving**.
 ### Template preview
 
 Put the cursor on a template (or select it) and press **Alt+T**, or use the **Template preview**
-button in the toolbar (the curly braces). Without a selection EDITHA takes the value under the cursor, read the way
-Home Assistant reads it: also across several lines (`value_template: >`, `|`, quoted text that
-wraps). In `.jinja` files it takes the whole file.
+button in the toolbar (the curly braces). Without a selection EDITHA takes the value under the
+cursor, parsed the way Home Assistant does, including values that span several lines (`>`, `|`,
+quoted text that wraps). In `.jinja` files it takes the whole file.
 
 Home Assistant renders it with the current state of the entities, as in Developer tools, and the
 result appears in a panel below the editor: green for the result, red for a syntax error, orange
 for an evaluation error (for example a division by zero).
 
-- While the panel is open the preview updates by itself: while you edit the template, shortly
+- While the panel is open the preview updates automatically: while you edit the template, shortly
   after you stop typing, and when you move the cursor (or click) onto another template, also in
   another file. On a line without a template the previous result stays. Selected text is only sent
   with Alt+T or the button (so selecting to copy starts nothing), and in very large YAML files the
   automatic update is off. The refresh button renders again from where the cursor is.
 - **Copy** copies the result.
-- If the template mentions entities that do not exist (for example `states('sensor.wrong')`), a
-  warning appears below the result: Home Assistant gives no error in that case, it returns `unknown`.
+- If the template mentions entities that do not exist or are disabled (for example
+  `states('sensor.wrong')`), a warning appears below the result: Home Assistant gives no error in
+  that case, it returns `unknown`.
 - Home Assistant does not say on which line a syntax error is: when it can, EDITHA finds it (an
   `{% if %}` without `{% endif %}`, an unclosed `{{`…) and offers **Go to line N**.
-- Esc closes the panel. Variables such as `trigger`, `this` or those of an
-automation only exist while the automation runs: here they are empty. The preview never starts
-from `secrets.yaml` or its copies.
+- Esc closes the panel. Variables such as `trigger`, `this` or those of an automation only exist
+  while the automation runs: here they are empty. The preview is not available in `secrets.yaml`
+  or its copies.
 
 ![Template preview](../docs/images/template-preview.png)
 
@@ -245,12 +248,13 @@ file at that line. Search for an `entity_id` with *whole word* to find everywher
 ![Search in all files](../docs/images/search.png)
 
 The search skips system folders, links, files over 5 MB and binary files (databases, archives,
-images and the like). With too many results (2000) or a search that takes too long, it shows the
-first ones.
+images and the like). It lists at most 200 matches per file; with too many results (2000 in all)
+or a search that takes longer than about 8 seconds, it shows the first ones.
 
 The arrows button opens **Replace in files**. **Replace all** changes every match after a
-confirmation; if the search stopped early (too many results), only the listed files are changed; **Replace in *name*** next to a file replaces only there. Every changed file keeps
-its previous version in the history. Files with unsaved changes, `secrets.yaml` and its copies,
+confirmation; if the search stopped early (too many results), only the listed files are changed;
+**Replace in *name*** next to a file replaces only there. Every changed file keeps its previous
+version in the history. Files with unsaved changes, `secrets.yaml` and its copies,
 and system folders are never touched.
 
 `secrets.yaml` and its copies (such as `secrets.yaml.bak` or `secrets_old.yaml`) are not searched,
@@ -273,14 +277,14 @@ Folders cannot be restored this way, and items larger than 50 MB have no copy (E
 before deleting them).
 
 **Space taken by the history**: with the disk button in the history header (opened by the **File
-history** toolbar button, which closes it on a second click), EDITHA shows how much disk space the history takes in total and
-file by file, biggest first, marking the files that no longer exist. Below that you can delete the
-versions older than 7, 30, 90 days, one year or a date you choose: **Preview** first tells you how
-many versions of how many files would go and how much space they free, then **Delete N versions…**
-asks for confirmation. The last choice, **all**, deletes the whole history (including leftovers of
-interrupted saves): to confirm you have to type **DELETE** (**CANCELLA** in Italian). Deleted
-versions can no longer be restored; your files in `/config` and unsaved changes are never touched.
-The add-on log lists what was deleted.
+history** toolbar button, which closes it on a second click), EDITHA shows how much disk space the
+history takes in total and file by file, biggest first, marking the files that no longer exist.
+Below that you can delete the versions older than 7, 30, 90 days, one year or a date you choose:
+**Preview** first tells you how many versions of how many files would go and how much space they
+free, then **Delete N versions…** asks for confirmation. The last choice, **all**, deletes the
+whole history (including leftovers of interrupted saves): to confirm you have to type **DELETE**
+(**CANCELLA** in Italian). Deleted versions can no longer be restored; your files in `/config` and
+unsaved changes are never touched. The add-on log lists what was deleted.
 
 To compare any two files: right-click the first → **Select for compare**, then right-click the
 second → **Compare with *name*** (the name of the first file). Esc closes the comparison.
@@ -299,45 +303,50 @@ sends nothing outside (no GitHub or other servers).
   `tts`…), databases, logs and temporary files. You can edit it like any other file.
 - An existing repository or `.gitignore` is used as it is.
 - The panel shows the branch, the last commit and the **changes** since the last commit: each file
-  with a letter (**M** modified, **N** new, **D** deleted, **C** in conflict) and a checkbox. Clicking the name opens
-  the file. The list updates when you save a file with the panel open, or with the refresh button.
-- A folder git has never seen is **a single row**, with the number of files it contains (for
+  with a letter (**M** modified, **N** new, **D** deleted, **C** in conflict) and a checkbox.
+  Clicking the name opens the file. The list updates when you save a file with the panel open, or
+  with the refresh button.
+- The list shows at most 2000 rows. With more, a warning appears and committing is disabled:
+  exclude with the crossed-out eye the folders you do not want to keep, then commit.
+- A folder Git does not track yet is **a single row**, with the number of files it contains (for
   example `custom_components/ · 1450 files`). The **crossed-out eye** next to a new file or
   folder **excludes** it from the repository: it adds a line to `.gitignore`, so it no longer
   shows up. Before the first commit, which usually contains the whole configuration, exclude the
   folders you do not need (downloaded by HACS, other add-ons' copies…).
 - The **arrow** next to a new folder opens it: its files show one by one, each with its own tick
   and crossed-out eye, so you can commit or exclude only some of them. The folder tick then shows
-  "in part" and the count becomes, for example, `3 of 8 files`; clicking the folder tick takes the
-  whole folder again. Up to 200 files are listed: the others go in only with the whole folder.
+  as partly selected and the count becomes, for example, `3 of 8 files`; clicking the folder tick
+  takes the whole folder again. Up to 200 files are listed: the others go in only with the whole
+  folder.
 - **Tick or crossed-out eye?** The tick only decides what goes into the commit you are about to
   make: an unticked file stays among the changes and you find it next time. The crossed-out eye
   excludes for good.
 - The **Excluded** section lists files and folders excluded from the repository; **Include**
   brings them back among the changes (it removes the line from `.gitignore`, the files are not
   touched).
-- To make a **commit** (a «snapshot» of the files, with a message): keep the files to include
+- To make a **commit** (a "snapshot" of the files, with a message): keep the files to include
   ticked (all of them at first), write what you changed and press **Commit** (or Ctrl+Enter in the
   message).
 - Some files never go into a commit from EDITHA, even if `.gitignore` was changed or is missing:
   they appear with a padlock and cannot be ticked. They are `secrets.yaml` and its copies, Home
   Assistant internal data and credentials (`.storage`, `.cloud`, tokens, databases), files that go
-  through a git filter (`.gitattributes`, for example Git LFS or git-crypt: EDITHA runs no external
-  programs, so it would store them unfiltered; commit them from a terminal) and other repositories inside `/config`.
-- The compare button (two columns) next to a file shows the changes since the last commit, in the same view
-  as the file comparison (unsaved changes included).
+  through a Git filter (`.gitattributes`, for example Git LFS or git-crypt: EDITHA runs no
+  external programs, so it would store them unfiltered; commit them from a terminal) and other
+  repositories inside `/config`.
+- The compare button (two columns) next to a file shows the changes since the last commit, in the
+  same view as the file comparison (unsaved changes included).
 - **Commit history** lists the commits, newest first. Clicking a commit shows the files it touched;
   for each one you can **compare** that version with the current file or **restore** it as it was
   in that commit (with confirmation). Restoring goes through EDITHA's normal save: the current
   content stays in EDITHA's history, and a file that no longer exists is recreated. Secrets and
   internal data are neither shown nor restored.
-- New files that appear by themselves while the panel is open (after a save or a file operation)
-  arrive unticked: you decide whether to include
-  them.
-- During a merge, rebase or cherry-pick started from a terminal, commits from EDITHA are paused: complete or abort it from
-  the terminal.
+- New files that appear while the panel is open (after a save or a file operation) arrive
+  unticked: you decide whether to include them.
+- During a merge, rebase or cherry-pick started from a terminal, committing from EDITHA is
+  disabled: complete or abort it in the terminal.
 
-EDITHA's history (the automatic copies on every save) stays separate and keeps working as before.
+EDITHA's history (the automatic copies on every save) stays separate and works independently of
+Git.
 
 ![Git panel](../docs/images/git-panel.png)
 
@@ -345,9 +354,10 @@ EDITHA's history (the automatic copies on every save) stays separate and keeps w
 
 EDITHA works in the Home Assistant app. On a narrow screen the file explorer becomes a panel that
 slides in from the toolbar button, and the toolbar keeps only the main buttons: **History…** is in
-the file's menu (long press on the file) and **About** is in the menu of the language button. Split
-view, **Open on the right** and the file outline are not available on phones. On phones and
-tablets a small button next to the cursor hides the keyboard.
+the file's menu (long press on the file) and **About** is in the menu of the language button.
+**Word wrap** and **Save all** are not in the toolbar (with a keyboard, Ctrl+Alt+S still saves
+all). Split view, **Open on the right** and the file outline are not available on phones. On
+phones and tablets a small button next to the cursor hides the keyboard.
 
 | Editor | File explorer |
 | --- | --- |
@@ -372,19 +382,24 @@ and suggestions stay Ctrl+Space.
 | Ctrl+Shift+M | List of problems |
 | F8 | Next problem |
 | F2 | Rename (in the file explorer) |
-| Del | Delete (in the file explorer) |
+| Del | Delete (in the file explorer; on a Mac also the delete key) |
 | Alt+T | Preview the template under the cursor (Option+T on Mac) |
-| Esc | Close the history, the comparison or the image preview |
+| Ctrl+Enter | Commit (in the Git message field) |
+| Esc | Close the history, the comparison, the image preview or the template preview |
 
 ## Safety and privacy
 
-- **No exposed ports**: EDITHA answers only to Home Assistant's Ingress proxy.
+- **No exposed ports**: EDITHA accepts requests only from Home Assistant's Ingress proxy.
 - **Only `/config`**: no file outside your configuration folder can be read or written.
 - **Safe saves**: a file is written to a temporary copy and then swapped in, so a full disk or a
   crash never leaves it half written.
 - **Secrets**: the values in `secrets.yaml` are shown only when you open that file. They are never
-  sent to the browser for suggestions and never logged; `secrets.yaml` and its copies are never
-  searched or replaced.
+  sent to the browser for suggestions and never logged. `secrets.yaml` and its copies are never
+  searched or replaced, never put in a folder ZIP and never committed from the Git panel, and the
+  template preview is not available in them. Unsaved changes to them are not kept as drafts: save
+  before closing the page.
+- **Other sites**: a page from another website cannot make EDITHA do anything (for example restart
+  Home Assistant) through your browser.
 - **System folders** are read-only.
 - **No internet needed**: everything EDITHA uses is inside the add-on.
 

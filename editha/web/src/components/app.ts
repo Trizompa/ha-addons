@@ -12,7 +12,7 @@ import { languageOf } from '../editor/languages.js';
 import { LINT_MAX_CHARS } from '../editor/yaml-lint.js';
 import { basename, dirname, extension, isSecretsFile, join, resolvePath, validateName } from '../state/paths.js';
 import { previewKind } from '../state/preview.js';
-import { shortcutKey } from '../state/keys.js';
+import { MAC, shortcutKey } from '../state/keys.js';
 import { forgetSecrets, secretKeys } from '../state/secrets.js';
 import type { LinkKind } from '../editor/links.js';
 import { TabsModel } from '../state/tabs.js';
@@ -71,6 +71,9 @@ import type { EdithaFolderPicker } from './folder-picker.js';
 import type { EdithaAboutDialog } from './about-dialog.js';
 import type { EdithaSidePane } from './side-pane.js';
 import { formatVersionDate, type EdithaHistoryPanel } from './history-panel.js';
+
+/** Tasti della pagina iniziale: sul Mac ⌘ ⌥ ⇧ al posto di Ctrl, Alt e Shift. */
+const KEY = MAC ? { mod: '⌘', alt: '⌥', shift: '⇧' } : { mod: 'Ctrl', alt: 'Alt', shift: 'Shift' };
 
 const DEFAULT_SETTINGS: Settings = {
   theme: 'auto',
@@ -1383,6 +1386,8 @@ export class EdithaApp extends LitElement {
     if (this.tabs.find(tab.path) !== tab) return;
     if (!tab.dirty) return this.dropDraft(tab.path, tab);
     const path = tab.path;
+    // SEC-7: i valori di secrets.yaml non vanno nelle bozze (resterebbero in /data e passerebbero alle altre finestre).
+    if (isSecretsFile(path)) return;
     if (this.deferredDrafts.has(path)) return;
     if (this.pendingDrafts.has(path)) return this.scheduleDraft(tab);
     const gen = this.draftGen.get(tab) ?? 0;
@@ -2777,6 +2782,9 @@ export class EdithaApp extends LitElement {
       if (modal()) return;
       void this.previewTemplate();
     } else if (e.altKey && !mod && key === 'w') {
+      // In un campo di testo Alt+W resta un carattere (su Mac Option+W scrive ∑).
+      const target = e.composedPath()[0];
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
       e.preventDefault();
       if (modal()) return;
       const tab = this.focusedTab();
@@ -2804,7 +2812,11 @@ export class EdithaApp extends LitElement {
   };
 
   private readonly onBeforeUnload = (e: BeforeUnloadEvent) => {
-    if (this.tabs.tabs.some((t) => t.dirty)) e.preventDefault();
+    if (this.tabs.tabs.some((t) => t.dirty)) {
+      e.preventDefault();
+      // Chrome meno recenti e le WebView (app Companion di Home Assistant) guardano returnValue.
+      e.returnValue = '';
+    }
     whileLeaving(() => {
       this.flushDrafts();
       // Durante l'avvio la sessione non è ancora ripristinata: salvarla ora la cancellerebbe.
@@ -3034,7 +3046,11 @@ export class EdithaApp extends LitElement {
             .tabs=${this.tabViews}
             .active=${this.previewShown ? this.preview : this.activePath}
             .preview=${this.preview}
-            @tab-activate=${(e: CustomEvent<{ path: string }>) => this.activate(e.detail.path)}
+            @tab-activate=${(e: CustomEvent<{ path: string }>) => {
+              // La tab scelta va nella colonna sinistra: pulsanti e scorciatoie agiscono su di lei.
+              this.sideFocused = false;
+              this.activate(e.detail.path);
+            }}
             @tab-close=${(e: CustomEvent<{ path: string }>) => void this.closeTab(e.detail.path)}
             @preview-activate=${() => this.showPreview()}
             @preview-close=${() => this.closePreview()}
@@ -3043,14 +3059,14 @@ export class EdithaApp extends LitElement {
           <editha-editor-pane>
             <div class="welcome" slot="empty">
               <div class="keys">
-                <span><kbd>Ctrl</kbd> + <kbd>S</kbd></span><span>${t('welcome.save')}</span>
-                <span><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd></span><span>${t('welcome.saveAll')}</span>
-                <span><kbd>Ctrl</kbd> + <kbd>F</kbd></span><span>${t('welcome.search')}</span>
-                <span><kbd>Alt</kbd> + <kbd>W</kbd></span><span>${t('welcome.closeTab')}</span>
-                <span><kbd>Tab</kbd> / <kbd>Shift</kbd> + <kbd>Tab</kbd></span><span>${t('welcome.indent')}</span>
+                <span><kbd>${KEY.mod}</kbd> + <kbd>S</kbd></span><span>${t('welcome.save')}</span>
+                <span><kbd>${KEY.mod}</kbd> + <kbd>${KEY.alt}</kbd> + <kbd>S</kbd></span><span>${t('welcome.saveAll')}</span>
+                <span><kbd>${KEY.mod}</kbd> + <kbd>F</kbd></span><span>${t('welcome.search')}</span>
+                <span><kbd>${KEY.alt}</kbd> + <kbd>W</kbd></span><span>${t('welcome.closeTab')}</span>
+                <span><kbd>Tab</kbd> / <kbd>${KEY.shift}</kbd> + <kbd>Tab</kbd></span><span>${t('welcome.indent')}</span>
                 <span><kbd>Ctrl</kbd> + <kbd>Space</kbd></span><span>${t('welcome.complete')}</span>
                 <span><kbd>F2</kbd></span><span>${t('welcome.rename')}</span>
-                <span><kbd>Alt</kbd> + <kbd>T</kbd></span><span>${t('welcome.template')}</span>
+                <span><kbd>${KEY.alt}</kbd> + <kbd>T</kbd></span><span>${t('welcome.template')}</span>
               </div>
             </div>
           </editha-editor-pane>

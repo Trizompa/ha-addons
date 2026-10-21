@@ -5,7 +5,7 @@ import { dirname, isWithin } from '../state/paths.js';
 import { fileIcon, icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
 import { t } from '../i18n/index.js';
-import { shortcutLabel } from '../state/keys.js';
+import { MAC, shortcutLabel } from '../state/keys.js';
 
 export interface TreeSelection {
   path: string;
@@ -215,19 +215,21 @@ export class EdithaFileTree extends LitElement {
   /** Mostra e seleziona una voce; `open` apre anche la cartella. false se la voce non esiste. */
   async reveal(path: string, type: TreeSelection['type'] = 'file', open = false): Promise<boolean> {
     const parts = path.split('/');
-    const expanded = new Set(this.expanded);
+    // Cartelle da aprire: si aggiungono alla fine all'insieme di quel momento, così non si perde
+    // una cartella aperta o chiusa mentre si aspettava il server.
+    const toOpen: string[] = [];
     let dir = '';
     for (const part of parts.slice(0, -1)) {
       dir = dir ? `${dir}/${part}` : part;
-      expanded.add(dir);
+      toOpen.push(dir);
       if (!this.dirs.has(dir)) await this.load(dir);
     }
     const entry = this.dirs.get(dirname(path))?.find((e) => e.path === path);
     if (open && entry?.type === 'directory') {
-      expanded.add(path);
+      toOpen.push(path);
       if (!this.dirs.has(path)) await this.load(path);
     }
-    this.expanded = expanded;
+    this.expanded = new Set([...this.expanded, ...toOpen]);
     this.selected = { path, type: entry?.type ?? type, readOnly: entry?.readOnly ?? false };
     await this.updateComplete;
     this.renderRoot.querySelector('.row.selected')?.scrollIntoView({ block: 'nearest' });
@@ -257,14 +259,15 @@ export class EdithaFileTree extends LitElement {
   }
 
   private async toggle(entry: Entry): Promise<void> {
-    const expanded = new Set(this.expanded);
-    if (expanded.has(entry.path)) {
+    if (this.expanded.has(entry.path)) {
+      const expanded = new Set(this.expanded);
       expanded.delete(entry.path);
-    } else {
-      expanded.add(entry.path);
-      if (!this.dirs.has(entry.path)) await this.load(entry.path);
+      this.expanded = expanded;
+      return;
     }
-    this.expanded = expanded;
+    if (!this.dirs.has(entry.path)) await this.load(entry.path);
+    // Dopo l'attesa: l'insieme di adesso (un'altra cartella aperta nel frattempo resta aperta).
+    this.expanded = new Set(this.expanded).add(entry.path);
   }
 
   /** Se il contenuto della cartella è già stato letto vale quello (più recente), altrimenti l'indicazione del server. */
@@ -416,6 +419,11 @@ export class EdithaFileTree extends LitElement {
         if (current) this.emit('tree-action', { action: 'rename' });
         break;
       case 'Delete':
+        if (current) this.emit('tree-action', { action: 'delete' });
+        break;
+      // Sul Mac il tasto "delete" manda Backspace (fn+delete manda Delete).
+      case 'Backspace':
+        if (!MAC) return;
         if (current) this.emit('tree-action', { action: 'delete' });
         break;
       default:

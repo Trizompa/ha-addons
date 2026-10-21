@@ -20,5 +20,13 @@ export function registerIngressGuard(app: FastifyInstance, allowedIps: readonly 
         error: { code: 'forbidden_origin', message: 'Accesso consentito solo tramite Home Assistant' },
       });
     }
+    // Una pagina di un altro sito non può far partire richieste (per esempio un riavvio) con il
+    // browser dell'utente: i browser lo dicono con Sec-Fetch-Site.
+    if (request.headers['sec-fetch-site'] === 'cross-site') {
+      request.log.warn('richiesta rifiutata: arriva da un altro sito');
+      return reply.code(403).send({
+        error: { code: 'forbidden_origin', message: 'Richiesta da un altro sito rifiutata' },
+      });
+    }
   });
 }

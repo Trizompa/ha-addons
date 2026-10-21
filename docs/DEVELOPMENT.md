@@ -1,4 +1,4 @@
-# Sviluppo di Editha
+# Sviluppo di EDITHA
 
 ## Server (`editha/server`)
 
@@ -8,7 +8,7 @@ nativa: la compilazione produce solo JavaScript, identico su `amd64` e `aarch64`
 ```sh
 cd editha/server
 npm ci
-npm test          # compila e lancia i test (node:test, in test/: app, backups, files, ha, paths, state, transfer)
+npm test          # compila e lancia i test (node:test, in test/: app, backups, files, git, ha, paths, search, state, transfer)
 npm run typecheck
 npm run build     # produce dist/
 ```
@@ -92,7 +92,7 @@ cambia solo l'attributo `data-theme`.
 cd editha/web
 npm ci
 npm run typecheck
-npm test          # test unitari (test/): connessione, i18n, schema, snippet, tab, validatore YAML
+npm test          # test unitari (in test/: connection, editor-review, i18n, jinja-template, keys, outline, snippets, tabs, yaml-lint)
 npm run build     # produce dist/ (con versioni .gz e .br)
 npm run watch     # ricompila a ogni modifica
 npm run test:e2e  # compila server e interfaccia e lancia i test nel browser
@@ -112,11 +112,11 @@ Per provare l'interfaccia a mano: `npm run build`, poi avviare il server come so
 | `POST /api/settings` | campi da cambiare | Impostazioni aggiornate (POST e non PATCH: alcuni reverse proxy bloccano PATCH) |
 | `GET /api/snippets` / `PUT /api/snippets` | `{ snippets: [{ id, name, body }] }` | Snippet personali |
 | `POST /api/search` | `{ query, regex?, caseSensitive?, wholeWord? }` | `{ results: [{ path, matches: [{ line, column, length, text, offset }], total }], files, matches, truncated }`; `offset` è la posizione di `text` nella riga (righe lunghe accorciate). `matches` è limitato (200 per file, solo entro i primi 10.000 caratteri di una riga); `total` è il numero, senza limiti, di corrispondenze che `POST /api/replace` cambierebbe nel file (da mostrare nella conferma). Il totale `matches` della risposta resta la somma dei `matches` mostrati. Salta le cartelle di sistema al primo livello (`.storage`, `.cloud`, `.git` a qualunque profondità), collegamenti, file oltre `EDITHA_MAX_FILE_SIZE`, binari e i file segreti (vedi sotto) |
-| `POST /api/replace` | `{ paths, query, replacement, regex?, caseSensitive?, wholeWord? }` | `{ files: [{ path, count, etag }], skipped: [{ path, reason }] }`; `files` elenca solo i file cambiati (un file in cui la sostituzione non cambia nulla, es. `a` → `a`, non compare né in `files` né in `skipped`). `reason` è un codice di errore (`read_only` per i file segreti, `conflict`, `too_large`, `not_found`…), `binary` (non è testo UTF-8), `encoding` (il risultato spezzerebbe un carattere, es. una regex senza `u` su metà di un'emoji) o `error` |
+| `POST /api/replace` | `{ paths (al massimo 2500), query, replacement, regex?, caseSensitive?, wholeWord? }` | `{ files: [{ path, count, etag }], skipped: [{ path, reason }] }`; `files` elenca solo i file cambiati (un file in cui la sostituzione non cambia nulla, es. `a` → `a`, non compare né in `files` né in `skipped`). `reason` è un codice di errore (`read_only` per i file segreti, `conflict`, `too_large`, `not_found`…), `binary` (non è testo UTF-8), `encoding` (il risultato spezzerebbe un carattere, es. una regex senza `u` su metà di un'emoji) o `error` |
 | `GET /api/folders` | | `{ folders }`: cartelle scrivibili, destinazioni di "Sposta in…" (lo spostamento usa `POST /api/rename`) |
 | `GET /api/secrets?path=` | | `{ secrets: [{ key, path, line }] }`: chiavi di !secret visibili dal file, mai i valori |
 | `GET /api/drafts` | | `{ drafts: [{ path, content, etag, savedAt, client?, live, idleMs }] }`: modifiche non salvate; `live` = la finestra che le ha scritte si è fatta sentire negli ultimi 90 s |
-| `PUT /api/draft` / `DELETE /api/draft?path=&client=` | `{ path, content, etag, client? }` | Conserva o scarta la bozza di un file per una finestra (`client`, tenuto in sessionStorage); senza `client` la bozza di versioni precedenti |
+| `PUT /api/draft` / `DELETE /api/draft?path=&client=` | `{ path, content, etag, client? }` | Conserva o scarta la bozza di un file per una finestra (`client`, tenuto in sessionStorage); senza `client` la bozza di versioni precedenti. Mai per `secrets.yaml` e copie (403; `GET /api/drafts` e `claim` le ignorano) |
 | `POST /api/draft/claim` | `{ path, from?, client }` | Prende per `client` la bozza scritta da `from` (assente: versione precedente), in un'unica operazione: `{ claimed: true, draft }`, oppure `{ claimed: false }` se un'altra finestra l'ha già presa o scartata |
 | `POST /api/drafts/alive` | `{ client, closing? }` | La finestra è aperta (ogni 20 s e al ritorno in primo piano) o si sta chiudendo (`pagehide`) |
 | `GET /api/version?path=&id=` | | Testo di una versione conservata |
@@ -126,15 +126,15 @@ Per provare l'interfaccia a mano: `npm run build`, poi avviare il server come so
 | `GET /api/ha/entities` / `GET /api/ha/services` | `?fresh=true` per saltare la cache | Entità e azioni di HA |
 | `GET /api/git/info` | | `{ available, version, repo: 'none' \| 'ready' \| 'broken', branch, head: { hash, subject, date } \| null, gitignore }`: GIT-1, repository in /config (non nelle cartelle sopra) |
 | `POST /api/git/init` | | `{ info, gitignoreCreated }`: `git init` (ramo main) e `.gitignore` di base se manca; 409 se c'è già `.git` |
-| `GET /api/git/status` | | `{ files: [{ path, status: 'modified' \| 'added' \| 'deleted' \| 'conflict', blocked: 'secret' \| 'sensitive' \| 'filter' \| 'conflict' \| 'nested' \| null, folder?: { files, excluded, list } }], truncated, merging }`: GIT-2, cartelle nuove su una riga (`-unormal`), al massimo 2000 righe; `list` sono i primi 200 file che possono entrare nel commit, da scegliere uno per uno; il commit di una cartella include i suoi file tranne quelli bloccati |
-| `POST /api/git/commit` | `{ message, paths: [...] }` oppure `{ message, all: true }` | `{ hash, subject, files, skipped }`: GIT-4, solo i file indicati (`--only`), anche singoli file dentro una cartella nuova (solo quelli che potrebbero entrare con la cartella); file bloccati (`blocked`): 403 se indicati, saltati con `all`; 409 durante un merge; percorsi passati da stdin; autore EDITHA se il repository non ne ha uno. Filtri di `.gitattributes`, hook, firme e programmi esterni sempre spenti |
+| `GET /api/git/status` | | `{ files: [{ path, status: 'modified' \| 'added' \| 'deleted' \| 'conflict', blocked: 'secret' \| 'sensitive' \| 'filter' \| 'conflict' \| 'nested' \| null, folder?: { files, excluded, list }, untracked }], truncated, merging }`: GIT-2, cartelle nuove su una riga (`-unormal`), al massimo 2000 righe; `list` sono i primi 200 file che possono entrare nel commit, da scegliere uno per uno; il commit di una cartella include i suoi file tranne quelli bloccati |
+| `POST /api/git/commit` | `{ message, paths: [...] }` oppure `{ message, all: true }`, più `folders?: { [cartella]: numero }` | `{ hash, subject, files, skipped }`: GIT-4, solo i file indicati (`--only`), anche singoli file dentro una cartella nuova (solo quelli che potrebbero entrare con la cartella); file bloccati (`blocked`): 403 se indicati, saltati con `all`; 409 durante un merge; percorsi passati da stdin; autore EDITHA se il repository non ne ha uno; `folders` è il numero di file visti per ogni cartella nuova: se nel frattempo è cambiato, 409 `conflict`. Filtri di `.gitattributes`, hook, firme e programmi esterni sempre spenti |
 | `GET /api/git/head?path=` | | `{ path, content \| null }`: GIT-3, il file nell'ultimo commit (`cat-file blob`, senza filtri); 403 per segreti e dati interni |
 | `GET /api/git/show?path=&rev=` | | come sopra per un commit qualsiasi (`rev`: codice esadecimale) |
 | `GET /api/git/log?skip=` | | `{ commits: [{ hash, author, date, subject }], more }`: GIT-5, 50 per pagina |
 | `GET /api/git/commit-files?rev=` | | `{ hash, files: [{ path, status, blocked }] }`: file toccati (`diff-tree`, primo genitore) |
 | `POST /api/git/ignore` | `{ path }` | `{ ok }`: aggiunge `/<path>` (caratteri speciali protetti) al `.gitignore`, creato se manca; mai su un `.gitignore` che non è un file normale |
 | `GET /api/git/ignored` | | `{ entries: [{ line, path }] }`: righe del `.gitignore` che iniziano con `/` (percorsi precisi, come le scrive Escludi) |
-| `POST /api/git/unignore` | `{ line }` | `{ ok }`: toglie esattamente quella riga (e il titolo di Escludi se resta vuoto) |
+| `POST /api/git/unignore` | `{ line }` | `{ ok, stillIgnored }`: toglie esattamente quella riga (e il titolo di Escludi se resta vuoto); `stillIgnored` è vero se un'altra regola del `.gitignore` esclude ancora lo stesso percorso |
 | `POST /api/git/gitignore` | | `{ info, created }`: `.gitignore` di base, mai sopra uno esistente |
 | `GET /api/download/excluded?path=` | | `{ excluded: [path] }`: secrets.yaml e copie che lo ZIP di quella cartella lascerà fuori (SEC-7), al massimo 100 |
 | `POST /api/ha/check` | | `{ valid, errors, warnings }` |
@@ -156,10 +156,18 @@ l'interfaccia replica:
 - la ricerca e la sostituzione lavorano riga per riga (senza `\r` finale) e ignorano le
   corrispondenze vuote.
 
-File segreti (SEC-7, mai in ricerca né sostituzione): nome che corrisponde a
-`/^[.#~]?secrets?(?![a-z])[^/]*\.ya?ml/i`, cioè `secret.yaml`, `secrets.yml`,
-`secrets_copia.yaml.bak`, `secrets.yaml_copy.bak`, `secrets.yaml~`, `secrets.yaml.old`,
-`.secrets.yaml.swp`…, ma non `secretary.yaml` né `my_secrets.yaml`.
+File segreti (SEC-7, mai in ricerca, sostituzione, ZIP delle cartelle, commit Git e anteprima
+dei template): `isSecretsFile` in `editha/server/src/fs/search.ts`, sul nome del file, vero se
+corrisponde a una di queste due espressioni:
+
+- `/secrets[^/]*\.ya?ml/i`: `secrets` in un punto qualsiasi del nome, poi `.yaml`/`.yml` in un
+  punto qualsiasi: `secrets.yaml`, `secrets.yml`, `secrets_copia.yaml.bak`, `secrets.yaml_copy.bak`,
+  `secrets.yaml~`, `.secrets.yaml.swp`, `old_secrets.yaml`, `20240101_secrets.yaml`,
+  `secretsold.yaml`, `secrets_esphome.yaml` (la stessa regola dei dati sensibili del pannello Git);
+- `/^[.#~]?secret(?:[._~ -]?(?:\d+|bak|backup|old|orig|copy|copia|new|\(\d+\)))*\.ya?ml/i`: il
+  singolare `secret` solo come copia: `secret.yaml`, `secret_old.yaml`, `secret (2).yaml`.
+
+Non sono segreti `secretary.yaml`, `secret_sensors.yaml` né `mysecret.yaml`.
 
 ## Immagine
 

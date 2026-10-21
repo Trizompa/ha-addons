@@ -318,16 +318,36 @@ export class BackupStore {
     }
   }
 
-  /** Dopo una rinomina la cronologia segue il file, se la destinazione non ne ha già una. */
+  /**
+   * Dopo una rinomina la cronologia segue il file. Se la destinazione ne ha già una (un file con
+   * quel nome eliminato prima), le versioni si uniscono in ordine di tempo, tenendo le più recenti.
+   */
   async move(fromRel: string, toRel: string): Promise<void> {
     const from = this.keyDir(fromRel);
     const to = this.keyDir(toRel);
+    if (from === to) return;
     await this.lock.runAll([from, to], async () => {
-      try {
-        await stat(to);
+      const toExists = await stat(to).then(
+        () => true,
+        () => false,
+      );
+      if (toExists) {
+        let moved: string[];
+        try {
+          moved = await this.ids(from);
+        } catch {
+          return;
+        }
+        for (const id of moved) {
+          // Stesso id (stesso millisecondo) già nella destinazione: resta quella.
+          if (await stat(path.join(to, id)).then(() => true, () => false)) continue;
+          await rename(path.join(from, id), path.join(to, id));
+        }
+        await rm(from, { recursive: true, force: true });
+        await syncDir(to);
+        const all = await this.ids(to);
+        if (all.length > 0) await this.prune(to, all[all.length - 1]!);
         return;
-      } catch {
-        // nessuna cronologia per la destinazione: si può spostare
       }
       try {
         await rename(from, to);

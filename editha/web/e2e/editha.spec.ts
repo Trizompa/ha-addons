@@ -186,7 +186,7 @@ test('SEC-4 – file modificato fuori da Editha: ricarica dal disco', async ({ p
   await page.keyboard.press('Control+End');
   await page.keyboard.type('mia: modifica\n');
   await page.keyboard.press('Control+s');
-  await expect(page.locator('editha-dialog h2')).toHaveText('File modificato fuori da Editha');
+  await expect(page.locator('editha-dialog h2')).toHaveText('File modificato fuori da EDITHA');
   await dialogButton(page, 'Ricarica dal disco').click();
   await expect(editor(page)).toContainText('versione: esterna');
   await expect(activeTab(page)).not.toHaveClass(/dirty/);
@@ -328,11 +328,11 @@ test('Editha irraggiungibile: banner con "Ricarica", che sparisce da solo quando
   await page.route('**/api/**', (route) => route.abort());
   await row(page, 'configuration.yaml').click();
   const banner = page.locator('editha-app .banner');
-  await expect(banner).toContainText('Editha non risponde');
+  await expect(banner).toContainText('EDITHA non risponde');
   await expect(banner.locator('button')).toHaveText('Ricarica la pagina');
   await page.unroute('**/api/**');
   await expect(banner).toHaveCount(0, { timeout: 10_000 });
-  await expect(page.locator('editha-toasts')).toContainText('Connessione con Editha ripristinata');
+  await expect(page.locator('editha-toasts')).toContainText('Connessione con EDITHA ripristinata');
 });
 
 test.describe('Upload e download (FS-6)', () => {
@@ -695,7 +695,7 @@ test.describe('Vista divisa (ED-17)', () => {
 });
 
 test('Informazioni: autore, versione e licenza', async ({ page }) => {
-  await page.locator('editha-toolbar button[title="Informazioni su Editha"]').click();
+  await page.locator('editha-toolbar button[title="Informazioni su EDITHA"]').click();
   const about = page.locator('editha-about-dialog dialog[open]');
   await expect(about).toContainText('Trizompa');
   await expect(about).toContainText('MIT');

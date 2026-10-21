@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for wanting to help EDITHA. Bug reports and ideas are the most useful contribution:
+Thanks for helping improve EDITHA. Bug reports and ideas are the most useful contribution:
 [open an issue](https://github.com/Trizompa/ha-addons/issues/new/choose) and pick the right form.
 
 ## Before opening a pull request

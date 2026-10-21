@@ -199,7 +199,7 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
           type: 'object',
           required: ['paths', 'query', 'replacement'],
           properties: {
-            paths: { type: 'array', minItems: 1, maxItems: 1000, items: { type: 'string', minLength: 1 } },
+            paths: { type: 'array', minItems: 1, maxItems: 2500, items: { type: 'string', minLength: 1 } },
             query: { type: 'string', minLength: 1, maxLength: 500 },
             replacement: { type: 'string', maxLength: 5000 },
             regex: { type: 'boolean' },

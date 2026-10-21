@@ -2,6 +2,24 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.36.0
+
+Revisione finale prima della 1.0.
+
+- **Secrets, più severo**: ogni file con "secrets" nel nome ed estensione `.yaml`/`.yml` (per esempio `old_secrets.yaml`, `20240101_secrets.yaml`) ora vale come `secrets.yaml`: mai cercato, sostituito, messo in uno zip di cartella o usato per l'anteprima template. Le modifiche non salvate a questi file non vengono più conservate come bozze, così i valori non restano nella cartella dei dati di EDITHA.
+- **Zip di cartelle**: restano fuori anche le copie di `.storage` e `.cloud` più in basso (per esempio nei backup di altri add-on).
+- **Altri siti**: le richieste che il browser segna come partite da un altro sito vengono rifiutate, così una pagina malevola non può far riavviare Home Assistant attraverso il tuo browser.
+- **Sostituisci tutto** funziona anche con più di 1000 file nei risultati (fino a 2500).
+- **Cronologia del file**: rinominando un file con il nome di un file eliminato prima, le due cronologie si uniscono (dalla più recente) invece di nascondere le versioni del file rinominato.
+- **Riavvio**: su alcune installazioni un riavvio partito davvero veniva segnalato come errore; ora risulta inviato.
+- Vista divisa: dopo aver scelto una tab nella barra delle tab, Salva, Annulla e i pulsanti agiscono su quel file (prima potevano agire ancora sulla colonna destra).
+- Alt+W (Opzione+W) non chiude più la tab mentre scrivi in un campo di testo (sul Mac scrive ∑).
+- Esplora file: aprendo due cartelle in fretta non se ne chiude più una; sul Mac il tasto delete elimina la voce selezionata.
+- Pannello Git: messaggi di errore più chiari in inglese; l'elenco Esclusi non mostra più uno stato vecchio dopo clic veloci.
+- Pagina iniziale: sul Mac le scorciatoie mostrano ⌘ ⌥ ⇧.
+- Il nome è scritto EDITHA ovunque (barra laterale, titolo della pagina, messaggi); l'interfaccia inglese usa le virgolette “curve”.
+- Documentazione: guide verificate sul programma (barra, scorciatoie, limiti, sicurezza) e note per sviluppatori aggiornate.
+
 ## 0.35.0
 
 - **Git, cartelle apribili**: la freccetta accanto a una cartella nuova mostra i suoi file, ognuno con la sua spunta e il suo occhio barrato. Così puoi mettere nel commit, o escludere per sempre, solo alcuni file di una cartella. La spunta della cartella diventa "in parte" e il conteggio dice quanti file entrano (per esempio `3 di 8 file`). Si vedono al massimo 200 file per cartella: gli altri entrano solo con la cartella intera.

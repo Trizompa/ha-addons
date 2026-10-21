@@ -1,7 +1,7 @@
 import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { inflateRawSync } from 'node:zlib';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.js';
@@ -150,6 +150,11 @@ describe('upload e download (FS-6)', () => {
     assert.deepEqual(info.json().excluded.sort(), ['packages/secrets_old.yaml', 'secrets.yaml']);
     const sub = await app.inject({ method: 'GET', url: '/api/download/excluded?path=packages', remoteAddress: INGRESS });
     assert.deepEqual(sub.json().excluded, ['packages/secrets_old.yaml']);
+    // Copie di .storage più in basso (backup di altri add-on) restano fuori anche loro.
+    await mkdir(path.join(sb.configDir, 'packages/copia/.storage'), { recursive: true });
+    await writeFile(path.join(sb.configDir, 'packages/copia/.storage/auth'), 'TOKEN');
+    assert.ok(![...readZip((await download('packages')).rawPayload).keys()].some((n) => n.includes('.storage')));
+    await rm(path.join(sb.configDir, 'packages/copia'), { recursive: true });
     // Da solo, secrets.yaml si scarica (lo chiede chi lo vuole).
     assert.equal((await download('secrets.yaml')).statusCode, 200);
     // Gli altri test di questo file usano la stessa cartella.
