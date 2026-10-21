@@ -36,7 +36,7 @@ export class KeyboardController {
       case 'word-wrap':
         return void this.app.toggleWordWrap();
       case 'outline':
-        return void this.app.toggleOutline();
+        return void this.app.outlineView.toggleOutline();
       case 'theme':
         return void this.app.cycleTheme();
       case 'insert':

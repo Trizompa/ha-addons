@@ -49,7 +49,7 @@ import './search-panel.js';
 import './compare-panel.js';
 import './preview-panel.js';
 import './outline-panel.js';
-import { activeOutlineIndex, buildOutline, type OutlineItem } from '../editor/outline.js';
+import type { OutlineItem } from '../editor/outline.js';
 import './snippet-editor.js';
 import type { CompareSide } from './compare-panel.js';
 import type { SearchMatch } from '../api/types.js';
@@ -66,6 +66,7 @@ import { SaveController } from '../app/save.js';
 import { KeyboardController } from '../app/keyboard.js';
 import { SearchController } from '../app/search.js';
 import { SplitController } from '../app/split.js';
+import { OutlineController } from '../app/outline.js';
 
 /** Tasti della pagina iniziale: sul Mac ⌘ ⌥ ⇧ al posto di Ctrl, Alt e Shift. */
 const KEY = MAC ? { mod: '⌘', alt: '⌥', shift: '⇧' } : { mod: 'Ctrl', alt: 'Alt', shift: 'Shift' };
@@ -153,9 +154,6 @@ export class EdithaApp extends LitElement {
   /** ED-18: schema del file in uso (null se non è YAML) e voce in cui si trova il cursore. */
   declare outline: OutlineItem[] | null;
   declare outlineActive: number;
-  private outlineDoc: unknown = null;
-  private outlineTab: EditorTab | null = null;
-  private outlineTimer: ReturnType<typeof setTimeout> | undefined;
   private build: string | null = null;
   private offLang: (() => void) | null = null;
   private healthTimer: ReturnType<typeof setInterval> | undefined;
@@ -174,6 +172,8 @@ export class EdithaApp extends LitElement {
   readonly search = new SearchController(this);
   /** Vista divisa ("split" è già lo stato: colonna destra aperta o no). */
   readonly splitView = new SplitController(this);
+  /** Schema del file ("outline" è già lo stato mostrato dal pannello). */
+  readonly outlineView = new OutlineController(this);
 
   readonly tabs = new TabsModel<EditorState>();
   /** Testo salvato su disco per ogni tab: serve a sapere se ci sono modifiche. */
@@ -585,7 +585,7 @@ export class EdithaApp extends LitElement {
     if (this.narrow) this.splitView.closeSplit();
     this.toggleAttribute('narrow', this.narrow);
     // Lo schema non si aggiorna su schermo stretto: tornando larghi si ricalcola.
-    this.outlineDoc = null;
+    this.outlineView.outlineDoc = null;
     this.refreshStatus();
   };
 
@@ -883,57 +883,18 @@ export class EdithaApp extends LitElement {
     this.refreshToolbar();
   }
 
-  // ——— schema del file (ED-18) ———
-
-  /** Ricalcola lo schema quando cambia il testo (con un attimo di pausa mentre si scrive). */
-  private updateOutline(tab: EditorTab | null, s: EditorState | null): void {
-    if (!this.settings.outlineVisible || this.narrow) return;
-    if (!tab || !s || languageOf(tab.path).id !== 'yaml') {
-      clearTimeout(this.outlineTimer);
-      this.outlineDoc = null;
-      this.outline = null;
-      this.outlineActive = -1;
-      return;
-    }
-    const line = s.doc.lineAt(s.selection.main.head).number;
-    if (s.doc !== this.outlineDoc) {
-      // Altro file: subito; stesso file mentre si scrive: dopo una breve pausa.
-      const fresh = this.outlineDoc === null || this.outline === null || this.outlineTab !== tab;
-      this.outlineDoc = s.doc;
-      this.outlineTab = tab;
-      clearTimeout(this.outlineTimer);
-      if (fresh) {
-        this.outline = buildOutline(s.doc.toString());
-      } else {
-        this.outlineTimer = setTimeout(() => {
-          this.outline = buildOutline(s.doc.toString());
-          // Il cursore può essersi spostato nel frattempo: la voce attiva si rilegge adesso.
-          this.refreshStatus();
-        }, 300);
-      }
-    }
-    if (this.outline) this.outlineActive = activeOutlineIndex(this.outline, line);
-  }
-
-  async toggleOutline(): Promise<void> {
-    const visible = !this.settings.outlineVisible;
-    await this.updateSettings({ outlineVisible: visible });
-    this.outlineDoc = null;
-    this.refreshStatus();
-  }
-
   refreshStatus(state?: EditorState): void {
     // Cursore spostato, altra tab o altra colonna: l'anteprima segue il template sotto il cursore.
     this.ha.scheduleTemplate(null);
     const tab = this.focusedTab();
     if (!tab) {
       this.status = null;
-      this.updateOutline(null, null);
+      this.outlineView.updateOutline(null, null);
       return;
     }
     const onSide = tab !== this.tabs.active || (this.split && this.sideFocused);
     const s = (onSide ? this.side?.viewState : null) ?? state ?? this.pane.stateOf(tab);
-    this.updateOutline(tab, s);
+    this.outlineView.updateOutline(tab, s);
     const head = s.selection.main.head;
     const line = s.doc.lineAt(head);
     const lang = languageOf(tab.path);
@@ -1135,9 +1096,9 @@ export class EdithaApp extends LitElement {
             ? html`<editha-outline-panel
                 .items=${this.outline}
                 .active=${this.outlineActive}
-                .file=${this.outline ? (this.outlineTab?.path ?? null) : null}
+                .file=${this.outline ? (this.outlineView.outlineTab?.path ?? null) : null}
                 @outline-go=${(e: CustomEvent<{ line: number }>) => this.editor.goToLine(e.detail.line, 'start')}
-                @outline-close=${() => void this.toggleOutline()}
+                @outline-close=${() => void this.outlineView.toggleOutline()}
               ></editha-outline-panel>`
             : null}
           ${this.preview && this.previewShown
