@@ -3,7 +3,7 @@ import type { ChangeSet, EditorState, StateEffect, Text } from '@codemirror/stat
 import type { ViewUpdate } from '@codemirror/view';
 import { redoDepth, undoDepth } from '@codemirror/commands';
 import { forEachDiagnostic } from '@codemirror/lint';
-import { api, ApiError, errorText, whileLeaving } from '../api/client.js';
+import { api, ApiError, errorText } from '../api/client.js';
 import { getLang, onLangChange, resolveLang, setLang, t, type LanguageSetting, type MessageKey } from '../i18n/index.js';
 import { connection } from '../api/connection.js';
 import type { Entry, Settings, ThemeMode } from '../api/types.js';
@@ -12,7 +12,7 @@ import { languageOf } from '../editor/languages.js';
 import { LINT_MAX_CHARS } from '../editor/yaml-lint.js';
 import { basename, dirname, resolvePath } from '../state/paths.js';
 import { previewKind } from '../state/preview.js';
-import { MAC, shortcutKey } from '../state/keys.js';
+import { MAC } from '../state/keys.js';
 import { secretKeys } from '../state/secrets.js';
 import type { LinkKind } from '../editor/links.js';
 import { TabsModel } from '../state/tabs.js';
@@ -72,6 +72,7 @@ import { SnippetsController } from '../app/snippets.js';
 import { HistoryController } from '../app/history.js';
 import { SessionController } from '../app/session.js';
 import { SaveController } from '../app/save.js';
+import { KeyboardController } from '../app/keyboard.js';
 
 /** Tasti della pagina iniziale: sul Mac ⌘ ⌥ ⇧ al posto di Ctrl, Alt e Shift. */
 const KEY = MAC ? { mod: '⌘', alt: '⌥', shift: '⇧' } : { mod: 'Ctrl', alt: 'Alt', shift: 'Shift' };
@@ -176,6 +177,7 @@ export class EdithaApp extends LitElement {
   readonly versions = new HistoryController(this);
   readonly session = new SessionController(this);
   readonly saver = new SaveController(this);
+  readonly keys = new KeyboardController(this);
 
   readonly tabs = new TabsModel<EditorState>();
   /** Testo salvato su disco per ogni tab: serve a sapere se ci sono modifiche. */
@@ -440,9 +442,9 @@ export class EdithaApp extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    window.addEventListener('keydown', this.onKeyDown, true);
-    window.addEventListener('keydown', this.onEscape);
-    window.addEventListener('beforeunload', this.onBeforeUnload);
+    window.addEventListener('keydown', this.keys.onKeyDown, true);
+    window.addEventListener('keydown', this.keys.onEscape);
+    window.addEventListener('beforeunload', this.keys.onBeforeUnload);
     document.addEventListener('visibilitychange', this.drafts.onVisibility);
     window.addEventListener('pagehide', this.drafts.onPageHide);
     window.addEventListener('pageshow', this.drafts.onPageShow);
@@ -453,9 +455,9 @@ export class EdithaApp extends LitElement {
   }
 
   override disconnectedCallback(): void {
-    window.removeEventListener('keydown', this.onKeyDown, true);
-    window.removeEventListener('keydown', this.onEscape);
-    window.removeEventListener('beforeunload', this.onBeforeUnload);
+    window.removeEventListener('keydown', this.keys.onKeyDown, true);
+    window.removeEventListener('keydown', this.keys.onEscape);
+    window.removeEventListener('beforeunload', this.keys.onBeforeUnload);
     document.removeEventListener('visibilitychange', this.drafts.onVisibility);
     window.removeEventListener('pagehide', this.drafts.onPageHide);
     window.removeEventListener('pageshow', this.drafts.onPageShow);
@@ -486,7 +488,7 @@ export class EdithaApp extends LitElement {
 
   // ——— lingua ———
 
-  private async languageMenu(rect?: DOMRect): Promise<void> {
+  async languageMenu(rect?: DOMRect): Promise<void> {
     const current = this.settings.language;
     const items: MenuEntry[] = (['auto', 'it', 'en'] as const).map((id) => ({
       id,
@@ -608,7 +610,7 @@ export class EdithaApp extends LitElement {
     }
   }
 
-  private async cycleTheme(): Promise<void> {
+  async cycleTheme(): Promise<void> {
     const order: ThemeMode[] = ['auto', 'light', 'dark'];
     const next = order[(order.indexOf(this.settings.theme) + 1) % order.length]!;
     this.applyTheme(next);
@@ -616,13 +618,13 @@ export class EdithaApp extends LitElement {
     this.toasts.show(t('theme.toast', { name: t(`theme.${next}`) }), 'info');
   }
 
-  private async toggleWordWrap(): Promise<void> {
+  async toggleWordWrap(): Promise<void> {
     await this.updateSettings({ wordWrap: !this.settings.wordWrap });
     const prefs = { wordWrap: this.settings.wordWrap, fontSize: this.settings.fontSize };
     for (const tab of this.tabs.tabs) this.applyEffects(tab, reconfigureEffects({ prefs }));
   }
 
-  private toggleSidebar(): void {
+  toggleSidebar(): void {
     if (this.narrow) {
       this.drawerOpen = !this.drawerOpen;
       return;
@@ -801,7 +803,7 @@ export class EdithaApp extends LitElement {
     else this.searchPanel.focusInput();
   }
 
-  private closeSearch(): void {
+  closeSearch(): void {
     this.searchOpen = false;
     this.refreshToolbar();
   }
@@ -878,7 +880,7 @@ export class EdithaApp extends LitElement {
     this.compare = { left, right };
   }
 
-  private closeCompare(): void {
+  closeCompare(): void {
     this.compare = null;
     this.ha.scheduleTemplate(null);
   }
@@ -1012,7 +1014,7 @@ export class EdithaApp extends LitElement {
     if (tab) await this.showInSide(tab);
   }
 
-  private closeSplit(): void {
+  closeSplit(): void {
     if (!this.split) return;
     const side = this.side;
     const shown = side?.shown;
@@ -1066,115 +1068,6 @@ export class EdithaApp extends LitElement {
     </div>`;
   }
 
-  private onToolbarAction(e: CustomEvent<{ action: string; rect?: DOMRect }>): void {
-    switch (e.detail.action) {
-      case 'toggle-sidebar':
-        return this.toggleSidebar();
-      case 'save':
-        return void this.saver.save();
-      case 'save-all':
-        return void this.saver.saveAll();
-      case 'undo':
-        return this.editor.command('undo');
-      case 'redo':
-        return this.editor.command('redo');
-      case 'search':
-        return this.editor.command('search');
-      case 'search-all':
-        return this.searchOpen ? this.closeSearch() : void this.openSearch();
-      case 'split':
-        return void (this.split ? this.closeSplit() : this.tabs.active && this.showInSide(this.tabs.active));
-      case 'about':
-        return (this.renderRoot.querySelector('editha-about-dialog') as EdithaAboutDialog).show();
-      case 'history':
-        // Secondo clic: chiude, come gli altri pulsanti della barra.
-        if (this.history) return this.versions.closeHistory();
-        return void (this.focusedTab() && this.versions.openHistory(this.focusedTab()!.path));
-      case 'word-wrap':
-        return void this.toggleWordWrap();
-      case 'outline':
-        return void this.toggleOutline();
-      case 'theme':
-        return void this.cycleTheme();
-      case 'insert':
-        return this.snippets.toggleInsert();
-      case 'template':
-        return void this.ha.previewTemplate();
-      case 'ha-menu':
-        return void this.ha.haMenu(e.detail.rect);
-      case 'language':
-        return void this.languageMenu(e.detail.rect);
-    }
-  }
-
-  // ——— tastiera e uscita ———
-
-  private readonly onKeyDown = (e: KeyboardEvent) => {
-    if (e.isComposing) return;
-    const mod = e.ctrlKey || e.metaKey;
-    const key = shortcutKey(e);
-    // Con una finestra aperta (dialogo, scelta della cartella, snippet, informazioni) le
-    // scorciatoie non agiscono sui file sotto di lei.
-    const modal = () =>
-      this.dialog.busy || e.composedPath().some((n) => n instanceof HTMLDialogElement && n.open);
-    if (mod && e.shiftKey && key === 'f') {
-      e.preventDefault();
-      void this.openSearch();
-    } else if (mod && key === 's') {
-      e.preventDefault();
-      if (modal()) return;
-      if (e.altKey) void this.saver.saveAll();
-      else void this.saver.save();
-    } else if (e.altKey && !mod && key === 't') {
-      // In un campo di testo Alt+T resta un carattere (su Mac Option+T scrive †).
-      const target = e.composedPath()[0];
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
-      e.preventDefault();
-      if (modal()) return;
-      void this.ha.previewTemplate();
-    } else if (e.altKey && !mod && key === 'w') {
-      // In un campo di testo Alt+W resta un carattere (su Mac Option+W scrive ∑).
-      const target = e.composedPath()[0];
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
-      e.preventDefault();
-      if (modal()) return;
-      const tab = this.focusedTab();
-      if (this.previewShown) this.closePreview();
-      else if (tab) void this.closeTab(tab.path);
-    }
-  };
-
-  /**
-   * Esc chiude cronologia, confronto o anteprima. Ascoltato dopo i pannelli: un Esc dato in un
-   * campo (ricerca, filtro, pannello Inserisci) vale per quel campo e basta.
-   */
-  private readonly onEscape = (e: KeyboardEvent) => {
-    if (e.key !== 'Escape' || e.defaultPrevented || this.dialog.busy || this.menu.items) return;
-    const path = e.composedPath();
-    if (path.some((n) => n instanceof HTMLDialogElement && n.open)) return;
-    const target = path[0];
-    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
-    if (this.history) this.versions.closeHistory();
-    else if (this.compare) this.closeCompare();
-    else if (this.previewShown) this.closePreview();
-    else if (this.template) this.ha.closeTemplate();
-    else return;
-    e.preventDefault();
-  };
-
-  private readonly onBeforeUnload = (e: BeforeUnloadEvent) => {
-    if (this.tabs.tabs.some((t) => t.dirty)) {
-      e.preventDefault();
-      // Chrome meno recenti e le WebView (app Companion di Home Assistant) guardano returnValue.
-      e.returnValue = '';
-    }
-    whileLeaving(() => {
-      this.drafts.flushDrafts();
-      // Durante l'avvio la sessione non è ancora ripristinata: salvarla ora la cancellerebbe.
-      if (this.session.sessionReady) void this.session.saveSession();
-    });
-  };
-
   // ——— stato visualizzato ———
 
   refreshTabs(): void {
@@ -1215,7 +1108,7 @@ export class EdithaApp extends LitElement {
     if (this.outline) this.outlineActive = activeOutlineIndex(this.outline, line);
   }
 
-  private async toggleOutline(): Promise<void> {
+  async toggleOutline(): Promise<void> {
     const visible = !this.settings.outlineVisible;
     await this.updateSettings({ outlineVisible: visible });
     this.outlineDoc = null;
@@ -1334,7 +1227,10 @@ export class EdithaApp extends LitElement {
   override render() {
     const showSidebar = this.narrow ? this.drawerOpen : this.settings.sidebarVisible;
     return html`
-      <editha-toolbar .state=${this.toolbar} @toolbar-action=${this.onToolbarAction}></editha-toolbar>
+      <editha-toolbar
+        .state=${this.toolbar}
+        @toolbar-action=${(e: CustomEvent<{ action: string; rect?: DOMRect }>) => this.keys.onToolbarAction(e)}
+      ></editha-toolbar>
       ${this.renderBanner()}
       <div class="body">
         <aside style="width:${this.settings.sidebarWidth}px" ?hidden=${!showSidebar}>
