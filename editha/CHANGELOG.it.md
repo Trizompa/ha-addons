@@ -2,6 +2,10 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.37.0
+
+- Il `.gitignore` che EDITHA crea per un nuovo repository Git ora è in inglese, come le altre impostazioni di base dell'app. Copre anche tutte le copie `*secrets*.yaml` con una riga sola. Un `.gitignore` creato da una versione precedente funziona come prima, titolo in italiano compreso.
+
 ## 0.36.0
 
 Revisione finale prima della 1.0.

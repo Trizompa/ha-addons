@@ -1172,7 +1172,7 @@ test('GIT-1…6 – pannello Git: inizializza, modifiche, commit dei file scelti
   await expect(page.locator('editha-toasts')).toContainText('Repository Git creato');
   await expect(panel).toContainText('main');
   await expect(panel).toContainText('Nessun commit ancora');
-  expect(await disk('.gitignore')).toContain('[Ss][Ee][Cc][Rr][Ee][Tt][Ss].[Yy]*[Mm][Ll]*');
+  expect(await disk('.gitignore')).toContain('*[Ss][Ee][Cc][Rr][Ee][Tt][Ss]*.[Yy]*[Mm][Ll]*');
 
   // GIT-2 e GIT-4: elenco delle modifiche, scelta di un solo file, commit.
   await expect(panel.locator('.changes-head')).toContainText('Modifiche');

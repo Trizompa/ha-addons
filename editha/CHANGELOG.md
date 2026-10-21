@@ -2,6 +2,10 @@
 
 Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
+## 0.37.0
+
+- The `.gitignore` that EDITHA creates for a new Git repository is now in English, like the rest of the app's defaults. It also covers every `*secrets*.yaml` copy with a single line. A `.gitignore` created by an earlier version keeps working as it is, Italian heading included.
+
 ## 0.36.0
 
 Final review before 1.0.

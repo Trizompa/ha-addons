@@ -6,15 +6,12 @@ import { KeyedLock } from '../fs/lock.js';
 import { isSecretsFile } from '../fs/search.js';
 
 /** GIT-1: .gitignore di base, scritto solo se non ce n'è già uno. */
-export const DEFAULT_GITIGNORE = `# Creato da EDITHA: file e cartelle che non entrano nel repository Git.
-# Puoi modificarlo: ogni riga è un nome o un modello (* = qualunque testo).
+export const DEFAULT_GITIGNORE = `# Created by EDITHA: files and folders that stay out of the Git repository.
+# You can edit it: each line is a name or a pattern (* = any text).
 
-# Password e chiavi: secrets.yaml e le sue copie (secrets.yaml.bak, secrets_old.yaml,
-# .secrets.yaml.swp, secret.yaml, secret_old.yaml…), maiuscole comprese
-[Ss][Ee][Cc][Rr][Ee][Tt][Ss].[Yy]*[Mm][Ll]*
-[Ss][Ee][Cc][Rr][Ee][Tt][Ss][!a-zA-Z]*.[Yy]*[Mm][Ll]*
-[.#~][Ss][Ee][Cc][Rr][Ee][Tt][Ss].[Yy]*[Mm][Ll]*
-[.#~][Ss][Ee][Cc][Rr][Ee][Tt][Ss][!a-zA-Z]*.[Yy]*[Mm][Ll]*
+# Passwords and keys: secrets.yaml and its copies (secrets.yaml.bak, old_secrets.yaml,
+# .secrets.yaml.swp, secret.yaml, secret_old.yaml…), any upper/lower case
+*[Ss][Ee][Cc][Rr][Ee][Tt][Ss]*.[Yy]*[Mm][Ll]*
 [Ss][Ee][Cc][Rr][Ee][Tt].[Yy]*[Mm][Ll]*
 [Ss][Ee][Cc][Rr][Ee][Tt][0-9]*.[Yy]*[Mm][Ll]*
 [Ss][Ee][Cc][Rr][Ee][Tt][._~ -][0-9]*.[Yy]*[Mm][Ll]*
@@ -43,7 +40,7 @@ ip_bans.yaml
 .uuid
 zigbee2mqtt/
 
-# Dati interni di Home Assistant
+# Home Assistant internal data
 .storage/
 .cloud/
 .cache/
@@ -52,7 +49,7 @@ tts/
 .HA_VERSION
 .ha_run.lock
 
-# Database e registri
+# Databases and logs
 *.db
 *.db-shm
 *.db-wal
@@ -60,7 +57,7 @@ tts/
 *.log
 *.log.*
 
-# File temporanei (anche quelli lasciati da Home Assistant)
+# Temporary files (including those left by Home Assistant)
 .*.tmp.*
 __pycache__/
 *.pyc
@@ -69,7 +66,7 @@ __pycache__/
 *~
 .DS_Store
 
-# Componenti scaricati (HACS) e cartelle di lavoro di ESPHome
+# Downloaded components (HACS) and ESPHome working folders
 www/community/
 esphome/.esphome/
 `;
@@ -154,7 +151,9 @@ export interface GitCommit {
 
 const LOG_PAGE = 50;
 /** Titolo sopra le righe aggiunte con Escludi. */
-const IGNORE_HEADER = '# Esclusi con EDITHA (occhio barrato nel pannello Git)';
+const IGNORE_HEADER = '# Excluded with EDITHA (crossed-out eye in the Git panel)';
+/** Titolo scritto dalle versioni precedenti (in italiano): vale ancora. */
+const IGNORE_HEADERS = [IGNORE_HEADER, '# Esclusi con EDITHA (occhio barrato nel pannello Git)'];
 /** Un commit indicato per codice (abbreviato o intero). */
 const REV_RE = /^[0-9a-f]{4,64}$/;
 
@@ -631,7 +630,7 @@ export class GitService {
       if (lines.includes(line)) return;
       const sep = current === '' || current.endsWith('\n') ? '' : '\n';
       // Le esclusioni fatte da qui stanno sotto un titolo, così si ritrovano anche a mano.
-      const header = lines.includes(IGNORE_HEADER) ? '' : `${current === '' ? '' : '\n'}${IGNORE_HEADER}\n`;
+      const header = IGNORE_HEADERS.some((h) => lines.includes(h)) ? '' : `${current === '' ? '' : '\n'}${IGNORE_HEADER}\n`;
       await appendFile(file, `${sep}${header}${line}\n`);
     });
   }
@@ -671,7 +670,7 @@ export class GitService {
       if (!lines.includes(line)) throw new EdithaError('not_found', 'Questa esclusione non c\'è più nel .gitignore');
       let kept = lines.filter((l) => l !== line);
       // Il titolo di Escludi senza più righe sotto se ne va.
-      const h = kept.indexOf(IGNORE_HEADER);
+      const h = kept.findIndex((l) => IGNORE_HEADERS.includes(l));
       if (h !== -1 && kept.slice(h + 1).every((l) => l.trim() === '')) kept = kept.slice(0, h);
       while (kept.length > 1 && kept[kept.length - 1] === '' && kept[kept.length - 2] === '') kept.pop();
       // Solo gli a capo in fondo: uno spazio protetto (\ ) alla fine di una riga è parte della regola.

@@ -87,7 +87,7 @@ describe('Git locale (GIT-1)', () => {
       'secrets.yaml.old', 'secrets.yaml~', 'secrets_old.yaml', 'secrets2.yaml', '.secrets.yaml', '.secrets.yaml.swp', '#secrets.yaml#',
       'secret_old.yaml', 'secret.yaml.bak', 'secrets_esphome.yaml', 'secrets copy.yaml', 'secrets (1).yaml', 'secrets-old.yaml',
       'secret (1).yaml', 'secret2.yaml', 'secret.bak.yaml', 'esphome/secrets.yaml', '.secret.yaml', '#Secret.bak.yaml',
-      '~secret_old.yml', '.secret (1).yaml'];
+      '~secret_old.yml', '.secret (1).yaml', 'old_secrets.yaml', '20240101_secrets.yaml', 'secretsold.yaml'];
     const normal = ['secret_sensors.yaml', 'secret-door.yaml', 'secret_garage_automation.yml', 'secretary.yaml', 'secrets.json',
       'configuration.yaml'];
     for (const n of secrets) assert.equal(isSecretsFile(path.basename(n)), true, n);
@@ -428,7 +428,7 @@ describe('Git locale (GIT-1)', () => {
     assert.equal((await ignore('custom_components/')).statusCode, 200);
     assert.equal((await ignore('pacchetti/[strano] #1.yaml')).statusCode, 200);
     assert.equal((await ignore('custom_components/')).statusCode, 200);
-    const header = '# Esclusi con EDITHA (occhio barrato nel pannello Git)';
+    const header = '# Excluded with EDITHA (crossed-out eye in the Git panel)';
     assert.equal(
       await readFile(path.join(sb.configDir, '.gitignore'), 'utf8'),
       `*.db\n\n${header}\n/custom_components/\n/pacchetti/\\[strano\\] \\#1.yaml\n`,
@@ -537,6 +537,19 @@ describe('Git locale (GIT-1)', () => {
     await app.inject({ method: 'POST', url: '/api/git/ignore', payload: { path: 'x/' }, remoteAddress: INGRESS });
     await app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line: '/x/' }, remoteAddress: INGRESS });
     assert.equal(await readFile(path.join(sb.configDir, '.gitignore'), 'utf8'), '*.db\r\n');
+  });
+
+  it('il titolo in italiano delle versioni precedenti vale ancora (niente doppioni, se ne va con l\'ultima riga)', async () => {
+    await call('POST', '/api/git/init');
+    const old = '# Esclusi con EDITHA (occhio barrato nel pannello Git)';
+    await writeFile(path.join(sb.configDir, '.gitignore'), `*.db\n\n${old}\n/a/\n`);
+    await mkdir(path.join(sb.configDir, 'b'));
+    await writeFile(path.join(sb.configDir, 'b/x.yaml'), 'x\n');
+    await app.inject({ method: 'POST', url: '/api/git/ignore', payload: { path: 'b/' }, remoteAddress: INGRESS });
+    assert.equal(await readFile(path.join(sb.configDir, '.gitignore'), 'utf8'), `*.db\n\n${old}\n/a/\n/b/\n`);
+    await app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line: '/a/' }, remoteAddress: INGRESS });
+    await app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line: '/b/' }, remoteAddress: INGRESS });
+    assert.equal(await readFile(path.join(sb.configDir, '.gitignore'), 'utf8'), '*.db\n');
   });
 
   it('Includi: uno spazio protetto in fondo resta; dice se un\'altra regola esclude ancora', async () => {

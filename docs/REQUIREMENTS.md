@@ -234,6 +234,7 @@ editha/
 
 | Versione | Requisiti coperti |
 | --- | --- |
+| 0.37.0 | GIT-1: `.gitignore` di base in inglese, una riga per tutte le copie `*secrets*.yaml`; il titolo delle esclusioni scritto dalle versioni precedenti (in italiano) resta valido. |
 | 0.36.0 | Revisione finale prima della 1.0: SEC-7 più ampio (ogni `*secrets*.yaml`, niente bozze), SEC-1 (richieste da altri siti rifiutate), ZIP senza copie annidate di `.storage`/`.cloud`, sostituzione fino a 2500 file, BK (cronologie unite su rinomina), riavvio segnalato correttamente, correzioni dell'interfaccia, nome EDITHA ovunque, CHANGELOG in inglese (`CHANGELOG.it.md` in italiano). |
 | 0.35.0 | GIT-2 e GIT-4: cartelle nuove apribili, file scelti o esclusi uno per uno (al massimo 200 per cartella); pulsanti della barra che servono solo con un file aperto (a capo, schema, Inserisci) spenti senza file; immagini della guida inglese visibili. |
 | 0.34.0 | SEC-7: secrets.yaml e copie mai negli ZIP delle cartelle, con avviso; requisiti riordinati (BK-8 per i backup del Supervisor); immagini della documentazione aggiornate. |
