@@ -99,6 +99,28 @@ npm run test:e2e  # builds server and web interface and runs the browser tests
 The browser tests need Chromium (`npx playwright install chromium`). Each test maps to a
 requirement or to a File Editor Plus issue (`e2e/editha.spec.ts`).
 
+### Structure of the main component
+
+`src/components/app.ts` (`<editha-app>`) keeps the element itself: reactive state, lifecycle,
+styles, `render()`, tab handling, status and toolbar refresh, and the shared helpers. Each feature
+lives in a controller under `src/app/` that receives the app instance (`new XController(this)`)
+and imports its type only (`import type`), so there are no circular imports at runtime:
+
+- `drafts.ts`: drafts of unsaved changes (ED-14), including drafts left by other windows and the
+  keep-alive; `session.ts`: session restore and save; `save.ts`: saving, conflicts, reload from
+  disk.
+- `file-ops.ts`: the file tree (create, rename, move, delete, duplicate, upload, download, ZIP,
+  context menu); `history.ts`: file history and its space; `git.ts`: Git panel glue (diffs,
+  restore from a commit).
+- `ha.ts`: Home Assistant menu (check, reload, restart) and template preview (HA-7);
+  `snippets.ts`: Insert panel and user snippets; `search.ts`: search and replace in all files,
+  `!include`/`!secret` links.
+- `split.ts`: split view; `outline.ts`: file outline; `server.ts`: offline and "updated" banner;
+  `keyboard.ts`: toolbar actions, shortcuts and leaving the page.
+
+Reactive state stays on the app (setting it from a controller goes through `this.app`), and
+`disconnectedCallback` stops the controllers' timers and listeners.
+
 To try the web interface by hand: `npm run build`, then start the server as above with
 `EDITHA_WEB_DIR=../web/dist` and open `http://127.0.0.1:8099/`.
 

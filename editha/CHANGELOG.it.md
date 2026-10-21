@@ -2,6 +2,12 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.38.0
+
+- Pannello Git e guida: una breve nota spiega la differenza tra la cronologia dei file di EDITHA, Git e un backup di Home Assistant.
+- Dietro le quinte: la parte principale dell'interfaccia è stata divisa in pezzi più piccoli (nessun cambiamento visibile), così le prossime correzioni sono più sicure.
+- Documentazione per sviluppatori e nomi dei controlli automatici ora in inglese.
+
 ## 0.37.0
 
 - Il `.gitignore` che EDITHA crea per un nuovo repository Git ora è in inglese, come le altre impostazioni di base dell'app. Copre anche tutte le copie `*secrets*.yaml` con una riga sola. Un `.gitignore` creato da una versione precedente funziona come prima, titolo in italiano compreso.

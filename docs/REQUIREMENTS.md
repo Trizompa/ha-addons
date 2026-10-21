@@ -221,6 +221,7 @@ editha/
       api/               client and types shared with the server
       state/             tabs (ED-3, ED-4), paths, HA data, preview: logic without DOM
       editor/            CodeMirror setup, theme, languages, YAML validator, completions, links, outline
+      app/               controllers of the main component (drafts, file operations, Git, HA, history…)
       components/        app, toolbar, tree, tabs, editor, panels, status bar, dialogs, menus, notifications
       i18n/              interface in Italian and English (UI-3)
       ui/                shared icons and styles
@@ -234,6 +235,7 @@ editha/
 
 | Version | Requirements covered |
 | --- | --- |
+| 0.38.0 | History vs Git vs backup explained in the Git panel and guide; `app.ts` split into controllers under `src/app/` (no behaviour change); developer docs and CI names in English. |
 | 0.37.0 | GIT-1: basic `.gitignore` in English, one line for all `*secrets*.yaml` copies; the exclusions heading written by earlier versions (in Italian) is still valid. |
 | 0.36.0 | Final review before 1.0: broader SEC-7 (every `*secrets*.yaml`, no drafts), SEC-1 (requests from other sites rejected), ZIP without nested copies of `.storage`/`.cloud`, replace up to 2500 files, BK (histories merged on rename), restart reported correctly, web interface fixes, EDITHA name everywhere, CHANGELOG in English (`CHANGELOG.it.md` in Italian). |
 | 0.35.0 | GIT-2 and GIT-4: new folders can be opened, files chosen or excluded one by one (at most 200 per folder); toolbar buttons that only make sense with an open file (line wrap, outline, Insert) disabled without a file; English guide images visible. |

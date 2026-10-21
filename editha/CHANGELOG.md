@@ -2,6 +2,12 @@
 
 Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
+## 0.38.0
+
+- Git panel and guide: a short note explains the difference between EDITHA's file history, Git and a Home Assistant backup.
+- Behind the scenes: the main part of the interface has been split into smaller pieces (no visible change), so future fixes are safer.
+- Developer documentation and the names of the automatic checks are now in English.
+
 ## 0.37.0
 
 - The `.gitignore` that EDITHA creates for a new Git repository is now in English, like the rest of the app's defaults. It also covers every `*secrets*.yaml` copy with a single line. A `.gitignore` created by an earlier version keeps working as it is, Italian heading included.
