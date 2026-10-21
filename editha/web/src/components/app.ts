@@ -45,7 +45,6 @@ import type { TemplateView } from './template-panel.js';
 import './side-pane.js';
 import './about-dialog.js';
 import './history-space.js';
-import type { EdithaHistorySpace } from './history-space.js';
 import './folder-picker.js';
 import './search-panel.js';
 import './compare-panel.js';
@@ -65,12 +64,12 @@ import {
 import type { SearchMatch } from '../api/types.js';
 import type { EdithaAboutDialog } from './about-dialog.js';
 import type { EdithaSidePane } from './side-pane.js';
-import { formatVersionDate, type EdithaHistoryPanel } from './history-panel.js';
 import { DraftsController, PERMANENT_OPEN_ERRORS } from '../app/drafts.js';
 import { FileOpsController } from '../app/file-ops.js';
 import { GitController } from '../app/git.js';
 import { HaController } from '../app/ha.js';
 import { SnippetsController } from '../app/snippets.js';
+import { HistoryController } from '../app/history.js';
 
 /** Tasti della pagina iniziale: sul Mac ⌘ ⌥ ⇧ al posto di Ctrl, Alt e Shift. */
 const KEY = MAC ? { mod: '⌘', alt: '⌥', shift: '⇧' } : { mod: 'Ctrl', alt: 'Alt', shift: 'Shift' };
@@ -171,6 +170,8 @@ export class EdithaApp extends LitElement {
   readonly git = new GitController(this);
   readonly ha = new HaController(this);
   readonly snippets = new SnippetsController(this);
+  /** Cronologia dei file ("history" è già lo stato del pannello aperto). */
+  readonly versions = new HistoryController(this);
 
   readonly tabs = new TabsModel<EditorState>();
   /** Testo salvato su disco per ogni tab: serve a sapere se ci sono modifiche. */
@@ -178,7 +179,7 @@ export class EdithaApp extends LitElement {
   private sessionTimer: ReturnType<typeof setTimeout> | undefined;
   private sessionReady = false;
   private readonly narrowQuery = window.matchMedia(NARROW);
-  private readonly touchQuery = window.matchMedia('(pointer: coarse)');
+  readonly touchQuery = window.matchMedia('(pointer: coarse)');
   private editorFocused = false;
 
   constructor() {
@@ -939,6 +940,11 @@ export class EdithaApp extends LitElement {
     this.compare = { left, right };
   }
 
+  private closeCompare(): void {
+    this.compare = null;
+    this.ha.scheduleTemplate(null);
+  }
+
   // ——— anteprima di immagini e PDF (FS-10) ———
 
   /** Apre un'immagine o un PDF nella tab di anteprima, che è una sola e viene riusata. */
@@ -1196,17 +1202,6 @@ export class EdithaApp extends LitElement {
     }
   }
 
-  /** Versioni eliminate: la cronologia aperta di un file ricarica il suo elenco. */
-  private async afterHistoryPruned(): Promise<void> {
-    const panel = this.renderRoot.querySelector('editha-history-panel') as EdithaHistoryPanel | null;
-    if (panel && this.history) await panel.reload(this.history.current);
-  }
-
-  /** BK-7: spazio occupato dalla cronologia. */
-  private openHistorySpace(): Promise<void> {
-    return (this.renderRoot.querySelector('editha-history-space') as EdithaHistorySpace).show();
-  }
-
   /** Il file è cambiato su disco dopo l'apertura: decide l'utente. */
   private async resolveConflict(tab: EditorTab, err: ApiError): Promise<boolean> {
     const choice = await this.dialog.choose({
@@ -1254,66 +1249,6 @@ export class EdithaApp extends LitElement {
     if (n > 1) this.flash(t('save.doneMany', { n }));
   }
 
-  // ——— cronologia: confronto e ripristino (BK-2, BK-3, BK-4) ———
-
-  async openHistory(path: string): Promise<void> {
-    const tab = this.tabs.find(path);
-    let current: string;
-    let readOnly: boolean;
-    if (tab) {
-      current = docText(this.pane.stateOf(tab));
-      readOnly = tab.readOnly;
-    } else {
-      try {
-        const file = await api.read(path);
-        current = file.content;
-        readOnly = file.readOnly;
-      } catch (err) {
-        this.toasts.show(this.openErrorText(path, err), 'error');
-        return;
-      }
-    }
-    if (this.narrow) this.drawerOpen = false;
-    this.previewShown = false;
-    this.history = { path, current, readOnly };
-  }
-
-  private closeHistory(): void {
-    this.history = null;
-    // Modifiche fatte mentre la cronologia copriva l'editor: l'anteprima si rimette in pari.
-    this.ha.scheduleTemplate(null);
-    if (!this.touchQuery.matches) this.pane.focusEditor();
-  }
-
-  private async restoreVersion(id: string, createdAt: string): Promise<void> {
-    if (!this.history) return;
-    const { path } = this.history;
-    const name = basename(path);
-    const date = formatVersionDate(createdAt);
-    const tab = this.tabs.find(path);
-    const ok = await this.dialog.confirm({
-      title: t('history.confirmTitle'),
-      message: t('history.confirmMessage', { name, date }) + (tab?.dirty ? t('history.dirtyWarning') : ''),
-      confirmLabel: t('history.restore'),
-    });
-    if (!ok) return;
-    try {
-      await api.restore(path, id);
-    } catch (err) {
-      this.toasts.show(t('history.failed', { name, error: this.errorText(err) }), 'error');
-      return;
-    }
-    // La tab aperta mostra il contenuto ripristinato; Annulla nell'editor lo riporta indietro.
-    if (tab) await this.reloadFromDisk(tab, true);
-    this.history = null;
-    if (tab) this.activate(tab.path);
-    this.flash(t('history.restored', { date }));
-  }
-
-  private closeCompare(): void {
-    this.compare = null;
-    this.ha.scheduleTemplate(null);
-  }
 
   private onToolbarAction(e: CustomEvent<{ action: string; rect?: DOMRect }>): void {
     switch (e.detail.action) {
@@ -1337,8 +1272,8 @@ export class EdithaApp extends LitElement {
         return (this.renderRoot.querySelector('editha-about-dialog') as EdithaAboutDialog).show();
       case 'history':
         // Secondo clic: chiude, come gli altri pulsanti della barra.
-        if (this.history) return this.closeHistory();
-        return void (this.focusedTab() && this.openHistory(this.focusedTab()!.path));
+        if (this.history) return this.versions.closeHistory();
+        return void (this.focusedTab() && this.versions.openHistory(this.focusedTab()!.path));
       case 'word-wrap':
         return void this.toggleWordWrap();
       case 'outline':
@@ -1403,7 +1338,7 @@ export class EdithaApp extends LitElement {
     if (path.some((n) => n instanceof HTMLDialogElement && n.open)) return;
     const target = path[0];
     if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
-    if (this.history) this.closeHistory();
+    if (this.history) this.versions.closeHistory();
     else if (this.compare) this.closeCompare();
     else if (this.previewShown) this.closePreview();
     else if (this.template) this.ha.closeTemplate();
@@ -1637,10 +1572,10 @@ export class EdithaApp extends LitElement {
               .current=${this.history.current}
               .prefs=${{ wordWrap: this.settings.wordWrap, fontSize: this.settings.fontSize }}
               .canRestore=${!this.history.readOnly}
-              @history-close=${() => this.closeHistory()}
-              @history-space=${() => void this.openHistorySpace()}
+              @history-close=${() => this.versions.closeHistory()}
+              @history-space=${() => void this.versions.openHistorySpace()}
               @history-restore=${(e: CustomEvent<{ id: string; date: string }>) =>
-                void this.restoreVersion(e.detail.id, e.detail.date)}
+                void this.versions.restoreVersion(e.detail.id, e.detail.date)}
             ></editha-history-panel>`
           : null}
         <main>
@@ -1739,7 +1674,7 @@ export class EdithaApp extends LitElement {
       <editha-dialog></editha-dialog>
       <editha-context-menu></editha-context-menu>
       <editha-about-dialog></editha-about-dialog>
-      <editha-history-space @history-pruned=${() => void this.afterHistoryPruned()}></editha-history-space>
+      <editha-history-space @history-pruned=${() => void this.versions.afterHistoryPruned()}></editha-history-space>
       <editha-folder-picker></editha-folder-picker>
       <editha-snippet-editor></editha-snippet-editor>
       <editha-toasts></editha-toasts>

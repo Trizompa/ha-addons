@@ -469,7 +469,7 @@ export class FileOpsController {
       case 'compare':
         return entry && this.compareBase ? this.app.openCompare(this.compareBase, entry.path) : undefined;
       case 'history':
-        return entry ? this.app.openHistory(entry.path) : undefined;
+        return entry ? this.app.versions.openHistory(entry.path) : undefined;
     }
   }
 
