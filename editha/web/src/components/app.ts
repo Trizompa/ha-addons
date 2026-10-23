@@ -132,9 +132,9 @@ export class EdithaApp extends LitElement {
   declare userSnippets: Snippet[];
   /** Un'operazione su HA è in corso: il menu resta disabilitato. */
   declare haBusy: boolean;
-  /** Il server non risponde (add-on in aggiornamento o riavvio, sessione scaduta). */
+  /** Il server non risponde (app in aggiornamento o riavvio, sessione scaduta). */
   declare offline: boolean;
-  /** L'add-on è stato aggiornato mentre la pagina era aperta. */
+  /** L'app è stata aggiornata mentre la pagina era aperta. */
   declare addonUpdated: boolean;
   /** Cronologia aperta: file e contenuto attuale con cui confrontare le versioni. */
   declare history: { path: string; current: string; readOnly: boolean } | null;

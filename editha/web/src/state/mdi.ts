@@ -16,7 +16,7 @@ export function mdiIcons(): Promise<Map<string, string>> {
       })
       .then((data) => new Map<string, string>(Object.entries(data)))
       .catch(() => {
-        // Riprova la prossima volta (rete assente, add-on in riavvio).
+        // Riprova la prossima volta (rete assente, app in riavvio).
         icons = null;
         return new Map<string, string>();
       });

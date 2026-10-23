@@ -30,7 +30,7 @@ tag is only for the releases page on GitHub.
 ## First public release (1.0.0)
 
 - ☐ **Field test** on PC and phone; fix the problems found.
-- ☐ In `editha/config.yaml` remove `stage: experimental` (without the line the add-on is
+- ☐ In `editha/config.yaml` remove `stage: experimental` (without the line the app is
   considered stable) and set `version` to `1.0.0`.
 - ☐ On GitHub: **Settings → Emails → Keep my email addresses private**, so future commits made
   from the website use the `noreply` address. (The history contains no personal data.)
@@ -41,7 +41,7 @@ tag is only for the releases page on GitHub.
 - ☐ **Security**: Settings → Code security → enable *Private vulnerability reporting* (needed
   for SECURITY.md) and *Dependabot alerts*.
 - ☐ **Repository presentation** (gear next to *About* on the main page):
-  - description: `EDITHA – Every Day I Tweak HA. Smart file editor add-on for Home Assistant.`
+  - description: `EDITHA – Every Day I Tweak HA. Smart file editor app for Home Assistant.`
   - topics: `home-assistant`, `home-assistant-addon`, `hassio-addon`, `yaml`, `editor`,
     `codemirror`
   - Settings → General → *Social preview*: upload `docs/images/cover.png` (the image shown when
@@ -57,7 +57,7 @@ tag is only for the releases page on GitHub.
 
 ## Later (optional)
 
-- **Prebuilt images on GitHub (GHCR)**: today Home Assistant builds the add-on on the device at
+- **Prebuilt images on GitHub (GHCR)**: today Home Assistant builds the app on the device at
   every install or update (a few minutes on a Raspberry). By publishing prebuilt images, an
   update becomes a simple download. Requires one more workflow and the `image:` line in
   `config.yaml`.

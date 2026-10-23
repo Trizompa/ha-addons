@@ -131,7 +131,7 @@ function isSensitive(p: string): boolean {
   const parts = p.replace(/\/$/, '').split('/');
   const name = parts[parts.length - 1]!;
   return (
-    // Anche più in basso: le copie di backup di altri add-on contengono .storage interi.
+    // Anche più in basso: le copie di backup di altre app contengono .storage interi.
     parts.some((part) => part === '.storage' || part === '.cloud') ||
     // Copie di secrets.yaml con un nome qualsiasi (20240101_secrets.yaml, old-secrets.yaml…).
     /secrets.*\.ya?ml/i.test(name) ||

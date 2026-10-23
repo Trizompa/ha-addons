@@ -41,7 +41,7 @@ export async function registerWebRoutes(app: FastifyInstance, webDir: string): P
     index: false,
     wildcard: false,
     preCompressed: true,
-    // Nessuna cache a lungo termine: dopo un aggiornamento dell'add-on serve la nuova versione.
+    // Nessuna cache a lungo termine: dopo un aggiornamento dell'app serve la nuova versione.
     cacheControl: false,
     setHeaders: (res) => {
       res.header('Cache-Control', 'no-cache');

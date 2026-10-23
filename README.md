@@ -1,11 +1,11 @@
-# Trizompa – Home Assistant add-ons
+# Trizompa – Home Assistant apps
 
 [![CI](https://github.com/Trizompa/ha-addons/actions/workflows/editha.yaml/badge.svg)](https://github.com/Trizompa/ha-addons/actions/workflows/editha.yaml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 [![Add the repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FTrizompa%2Fha-addons)
 
-| Add-on | Description |
+| App | Description |
 | --- | --- |
 | [EDITHA](editha/) | Smart file editor for Home Assistant |
 
@@ -30,11 +30,12 @@ a local Git panel to commit your configuration (nothing leaves Home Assistant).
 
 ## Installation
 
-1. Press the button above, or in Home Assistant go to **Settings → Add-ons → Add-on store → ⋮ →
-   Repositories** and add `https://github.com/Trizompa/ha-addons`.
+1. Press the button above, or in Home Assistant go to **Settings → Apps → App store → ⋮ →
+   Repositories** and add `https://github.com/Trizompa/ha-addons`. (Before Home Assistant 2026.2,
+   apps were called add-ons: **Settings → Add-ons → Add-on store**.)
 2. Install **EDITHA**, start it and turn on **Show in sidebar**.
 
-Requires Home Assistant OS or a Supervised installation (add-ons), on `amd64` or `aarch64`.
+Requires Home Assistant OS or a Supervised installation (apps), on `amd64` or `aarch64`.
 
 ## Contributing
 
@@ -45,8 +46,8 @@ To work on the code see [CONTRIBUTING.md](CONTRIBUTING.md); security problems go
 ## Repository layout
 
 ```
-repository.yaml      add-on repository metadata, read by the Supervisor
-editha/              the EDITHA add-on (slug "editha")
+repository.yaml      app repository metadata, read by the Supervisor
+editha/              the EDITHA app (slug "editha")
 docs/                requirements, development notes, release checklist, images
 .github/             CI, release workflow, issue and pull request templates
 ```

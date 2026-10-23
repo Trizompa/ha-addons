@@ -11,7 +11,7 @@ may be declined even if it works.
 
 ## Development setup
 
-You need Node.js 22. The add-on has two parts:
+You need Node.js 22. The app has two parts:
 
 | Folder | What | Stack |
 | --- | --- | --- |

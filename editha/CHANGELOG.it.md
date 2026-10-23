@@ -2,6 +2,10 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.39.1
+
+- Terminologia: EDITHA ora dice **app** invece di add-on, come Home Assistant dalla versione 2026.2 (messaggi dell'interfaccia, documentazione, README). Le istruzioni di installazione indicano anche il vecchio percorso per le versioni precedenti di Home Assistant.
+
 ## 0.39.0
 
 - **Installazione e aggiornamenti più veloci**: EDITHA ora arriva come immagine già pronta, sia per `amd64` sia per `aarch64` (Raspberry Pi e simili). Home Assistant la scarica invece di costruirla sul tuo dispositivo: installare o aggiornare richiede secondi invece di minuti.

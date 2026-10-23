@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Tag and add-on version must match
+      - name: Tag and app version must match
         run: |
           tag="${GITHUB_REF_NAME#v}"
           version=$(sed -n 's/^version: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' editha/config.yaml)
@@ -31,7 +31,7 @@ jobs:
             on { print }
           ' editha/CHANGELOG.md > notes.md
           test -s notes.md || { echo "no CHANGELOG section for $version"; exit 1; }
-          printf '\n---\n[Documentation](https://github.com/%s/blob/%s/editha/DOCS.md) · update from the add-on page in Home Assistant.\n' \
+          printf '\n---\n[Documentation](https://github.com/%s/blob/%s/editha/DOCS.md) · update from the app page in Home Assistant.\n' \
             "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" >> notes.md
           cat notes.md
       - name: Publish

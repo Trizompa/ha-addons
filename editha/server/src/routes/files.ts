@@ -143,7 +143,7 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
       if (before.getTime() > now) throw new EdithaError('invalid_request', 'La data è nel futuro');
       const result = await files.pruneHistory(before, req.body.dryRun, all);
       if (!req.body.dryRun && (all || result.bytes > 0 || result.failed.length > 0)) {
-        // Traccia nel registro dell'add-on di ciò che è stato eliminato (solo percorsi, mai contenuti).
+        // Traccia nel registro dell'app di ciò che è stato eliminato (solo percorsi, mai contenuti).
         req.log.info(
           {
             before: before.toISOString(),

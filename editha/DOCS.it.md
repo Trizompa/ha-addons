@@ -4,7 +4,7 @@
 
 ![EDITHA su computer e telefono](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/cover.png)
 
-EDITHA è un editor di file per la configurazione di Home Assistant. È un add-on: si apre dalla
+EDITHA è un editor di file per la configurazione di Home Assistant. È un'app di Home Assistant: si apre dalla
 barra laterale e funziona su PC, tablet e telefono. Conosce Home Assistant: spiega gli errori YAML
 a parole, suggerisce entità, azioni e icone, e verifica la configurazione prima di ogni riavvio.
 A ogni salvataggio conserva la versione precedente, così si può sempre tornare indietro.
@@ -30,8 +30,10 @@ EDITHA è anche in italiano (pulsante della lingua in alto a destra).
 ## Installazione
 
 1. Aggiungi il repository a Home Assistant con questo pulsante, oppure a mano da
-   **Impostazioni → Componenti aggiuntivi → Negozio → ⋮ → Repository** con l'indirizzo
-   `https://github.com/Trizompa/ha-addons`.
+   **Impostazioni → App**, poi il negozio delle app → **⋮ → Repository** con l'indirizzo
+   `https://github.com/Trizompa/ha-addons`. Prima di Home Assistant 2026.2 le app si chiamavano
+   componenti aggiuntivi (add-on): il percorso è **Impostazioni → Componenti aggiuntivi → Negozio
+   → ⋮ → Repository**.
 
    [![Aggiungi il repository a Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FTrizompa%2Fha-addons)
 
@@ -58,7 +60,7 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
   cursore, codifica e linguaggio.
 
 Tab aperte, tab attiva, tema e lingua restano memorizzati quando esci da EDITHA o riavvii
-l'add-on.
+l'app.
 
 ![Tema chiaro](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-light.png)
 
@@ -136,7 +138,7 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
   propone, scarta o sovrascrive mai le bozze di un'altra ancora aperta. Se una finestra si chiude
   senza salvare (o il telefono chiude l'app), un'altra finestra aperta propone le sue modifiche
   dopo circa un minuto e mezzo.
-- Se EDITHA smette di rispondere per un momento (aggiornamento o riavvio dell'add-on), lascia la
+- Se EDITHA smette di rispondere per un momento (aggiornamento o riavvio dell'app), lascia la
   pagina aperta: le modifiche restano nelle tab e le bozze si scrivono appena torna. **Ricarica la
   pagina** nel banner scrive prima le bozze, e avvisa se EDITHA non risponde ancora.
 - Se un file aperto cambia su disco (per esempio lo ha riscritto Home Assistant), EDITHA avvisa
@@ -293,13 +295,13 @@ quanti file se ne andrebbero e quanto spazio liberano, poi **Elimina N versioni�
 conferma. L'ultima voce, **tutte**, cancella l'intera cronologia (compresi gli avanzi di
 salvataggi interrotti): per confermare bisogna scrivere **CANCELLA**. Le versioni eliminate non si
 possono più ripristinare; i tuoi file in `/config` e le modifiche non salvate non vengono mai
-toccati. Il registro dell'add-on elenca cosa è stato eliminato.
+toccati. Il registro di EDITHA elenca cosa è stato eliminato.
 
 Per confrontare due file qualsiasi: tasto destro sul primo → **Seleziona per il confronto**, poi
 tasto destro sul secondo → **Confronta con *nome*** (il nome del primo file). Esc chiude il
 confronto.
 
-La cronologia sta nello spazio dell'add-on, che viene incluso quando fai il backup dell'add-on.
+La cronologia sta nello spazio di EDITHA, che viene incluso quando fai il backup dell'app.
 
 ## Git locale
 
@@ -330,7 +332,7 @@ fuori (niente GitHub né altri server).
   (per esempio `custom_components/ · 1450 file`). L'**occhio barrato** accanto a un file o a
   una cartella nuovi li **esclude** dal repository: aggiunge una riga al `.gitignore`, così non
   compaiono più. Al primo commit, che di solito contiene tutta la configurazione, conviene
-  escludere prima le cartelle che non servono (scaricate da HACS, copie di altri add-on…).
+  escludere prima le cartelle che non servono (scaricate da HACS, copie di altre app…).
 - La **freccetta** accanto a una cartella nuova la apre: i suoi file compaiono uno per uno, ognuno
   con la sua spunta e il suo occhio barrato, così puoi metterne nel commit o escluderne solo
   alcuni. La spunta della cartella diventa allora "in parte" e il conteggio, per esempio,
@@ -422,12 +424,12 @@ Cmd+Maiusc+Z e i suggerimenti restano Ctrl+Spazio.
 - **Altri siti**: una pagina di un altro sito non può far fare niente a EDITHA (per esempio
   riavviare Home Assistant) attraverso il tuo browser.
 - **Cartelle di sistema** in sola lettura.
-- **Nessun bisogno di internet**: tutto quello che serve a EDITHA è dentro l'add-on.
+- **Nessun bisogno di internet**: tutto quello che serve a EDITHA è dentro l'app.
 
 ## Problemi frequenti
 
 **Dopo un aggiornamento l'icona o il titolo nella barra laterale non cambiano.** Home Assistant li
-tiene in memoria: spegni e riaccendi *Mostra nella barra laterale* nella pagina dell'add-on,
+tiene in memoria: spegni e riaccendi *Mostra nella barra laterale* nella pagina dell'app,
 oppure riavvia Home Assistant.
 
 **Nessuna entità nei suggerimenti o nel pannello Inserisci.** EDITHA le legge da Home Assistant:
@@ -438,4 +440,4 @@ Inserisci.
 aprire: scaricali (fino a 50 MB).
 
 **Altro?** Apri una segnalazione su [GitHub](https://github.com/Trizompa/ha-addons/issues) con
-cosa hai fatto, cosa ti aspettavi e, se puoi, il log dell'add-on (pagina dell'add-on → *Registro*).
+cosa hai fatto, cosa ti aspettavi e, se puoi, il registro di EDITHA (pagina dell'app → *Registro*).

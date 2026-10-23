@@ -4,7 +4,7 @@
 
 ![EDITHA on desktop and phone](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/cover.png)
 
-EDITHA is a file editor for your Home Assistant configuration. It runs as an add-on, opens from
+EDITHA is a file editor for your Home Assistant configuration. It runs as a Home Assistant app, opens from
 the sidebar and works on a PC, a tablet or a phone. It knows Home Assistant: it explains YAML
 errors in plain words, suggests your entities, actions and icons, and checks the configuration
 before every restart. Every save keeps the previous version, so you can always go back.
@@ -29,8 +29,9 @@ before every restart. Every save keeps the previous version, so you can always g
 ## Installation
 
 1. Add the repository to Home Assistant with this button, or by hand under
-   **Settings → Add-ons → Add-on store → ⋮ → Repositories** with the URL
-   `https://github.com/Trizompa/ha-addons`.
+   **Settings → Apps → App store → ⋮ → Repositories** with the URL
+   `https://github.com/Trizompa/ha-addons`. Before Home Assistant 2026.2, apps were called
+   add-ons: the path is **Settings → Add-ons → Add-on store → ⋮ → Repositories**.
 
    [![Add the repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FTrizompa%2Fha-addons)
 
@@ -55,7 +56,7 @@ through Home Assistant (Ingress), with your Home Assistant login.
 - **Status bar** (bottom): file path, YAML check result, cursor position, encoding and language.
 
 Open tabs, the active tab, the theme and the language are remembered when you leave EDITHA or
-restart the add-on.
+restart the app.
 
 ![Light theme](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-light.png)
 
@@ -131,7 +132,7 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
   offers, discards or overwrites the drafts of another window that is still open. If a window
   closes without saving (or a phone closes the app), another open window offers its changes
   after about a minute and a half.
-- If EDITHA stops responding for a moment (add-on update or restart), keep the page open: the
+- If EDITHA stops responding for a moment (app update or restart), keep the page open: the
   changes stay in the tabs and their drafts are written as soon as it comes back. **Reload page**
   in the banner writes the drafts first, and warns you if EDITHA is still unreachable.
 - If a file changes on disk while it is open (for example Home Assistant rewrote it), EDITHA warns
@@ -284,12 +285,12 @@ Below that you can delete the versions older than 7, 30, 90 days, one year or a 
 free, then **Delete N versions…** asks for confirmation. The last choice, **all**, deletes the
 whole history (including leftovers of interrupted saves): to confirm you have to type **DELETE**
 (**CANCELLA** in Italian). Deleted versions can no longer be restored; your files in `/config` and
-unsaved changes are never touched. The add-on log lists what was deleted.
+unsaved changes are never touched. The EDITHA log lists what was deleted.
 
 To compare any two files: right-click the first → **Select for compare**, then right-click the
 second → **Compare with *name*** (the name of the first file). Esc closes the comparison.
 
-The history lives in the add-on's own storage, which is included when you back up the add-on.
+The history lives in EDITHA's own storage, which is included when you back up the app.
 
 ## Local Git
 
@@ -320,7 +321,7 @@ sends nothing outside (no GitHub or other servers).
   example `custom_components/ · 1450 files`). The **crossed-out eye** next to a new file or
   folder **excludes** it from the repository: it adds a line to `.gitignore`, so it no longer
   shows up. Before the first commit, which usually contains the whole configuration, exclude the
-  folders you do not need (downloaded by HACS, other add-ons' copies…).
+  folders you do not need (downloaded by HACS, other apps' copies…).
 - The **arrow** next to a new folder opens it: its files show one by one, each with its own tick
   and crossed-out eye, so you can commit or exclude only some of them. The folder tick then shows
   as partly selected and the count becomes, for example, `3 of 8 files`; clicking the folder tick
@@ -409,12 +410,12 @@ and suggestions stay Ctrl+Space.
 - **Other sites**: a page from another website cannot make EDITHA do anything (for example restart
   Home Assistant) through your browser.
 - **System folders** are read-only.
-- **No internet needed**: everything EDITHA uses is inside the add-on.
+- **No internet needed**: everything EDITHA uses is inside the app.
 
 ## Troubleshooting
 
 **The sidebar icon or title did not change after an update.** Home Assistant caches it: turn
-*Show in sidebar* off and on again in the add-on page, or restart Home Assistant.
+*Show in sidebar* off and on again in the app page, or restart Home Assistant.
 
 **No entities in the suggestions or in the insert panel.** EDITHA reads them from Home Assistant:
 check that Home Assistant is running and press the refresh button in the insert panel.
@@ -424,4 +425,4 @@ opened; download them instead (up to 50 MB).
 
 **Something else?** Open an issue on
 [GitHub](https://github.com/Trizompa/ha-addons/issues) with what you did, what you expected and,
-if possible, the add-on log (add-on page → *Log*).
+if possible, the EDITHA log (app page → *Log*).

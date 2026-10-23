@@ -28,7 +28,7 @@ npm start
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `EDITHA_CONFIG_DIR` | `/config` | Folder exposed to the editor |
-| `EDITHA_DATA_DIR` | `/data` | Private add-on data (backups in `backups/`) |
+| `EDITHA_DATA_DIR` | `/data` | Private app data (backups in `backups/`) |
 | `EDITHA_HOST` | `0.0.0.0` | Address the server listens on |
 | `EDITHA_PORT` | `8099` | Ingress port (must match `ingress_port`) |
 | `EDITHA_ALLOWED_IPS` | `172.30.32.2` | Accepted addresses, comma-separated |
@@ -194,10 +194,10 @@ of these two expressions:
 (`.github/workflows/editha.yaml`) runs the tests, builds the image for `amd64` and `aarch64`
 (on a native ARM runner, no emulation) and checks that the server responds.
 
-Home Assistant does not build the add-on on the device: `image:` in `config.yaml` points to the
+Home Assistant does not build the app on the device: `image:` in `config.yaml` points to the
 ready-made images `ghcr.io/trizompa/{arch}-addon-editha`, published by
 `.github/workflows/publish.yaml` (run by hand, see RELEASING.md). To try a local build in Home
-Assistant (development only), remove the `image:` line from a local copy of the add-on.
+Assistant (development only), remove the `image:` line from a local copy of the app.
 
 Local build:
 

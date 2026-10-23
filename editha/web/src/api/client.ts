@@ -84,7 +84,7 @@ export function errorText(err: unknown): string {
 
 async function request<T>(method: Method, url: string, body?: unknown): Promise<T> {
   let result: { res: Response; data: unknown } | null = null;
-  // Le letture si ritentano una volta: un riavvio dell'add-on dura pochi secondi.
+  // Le letture si ritentano una volta: un riavvio dell'app dura pochi secondi.
   for (let attempt = 0; attempt < (method === 'GET' ? 2 : 1); attempt++) {
     if (attempt > 0) await new Promise((r) => setTimeout(r, 800));
     try {

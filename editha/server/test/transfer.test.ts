@@ -150,7 +150,7 @@ describe('upload e download (FS-6)', () => {
     assert.deepEqual(info.json().excluded.sort(), ['packages/secrets_old.yaml', 'secrets.yaml']);
     const sub = await app.inject({ method: 'GET', url: '/api/download/excluded?path=packages', remoteAddress: INGRESS });
     assert.deepEqual(sub.json().excluded, ['packages/secrets_old.yaml']);
-    // Copie di .storage più in basso (backup di altri add-on) restano fuori anche loro.
+    // Copie di .storage più in basso (backup di altre app) restano fuori anche loro.
     await mkdir(path.join(sb.configDir, 'packages/copia/.storage'), { recursive: true });
     await writeFile(path.join(sb.configDir, 'packages/copia/.storage/auth'), 'TOKEN');
     assert.ok(![...readZip((await download('packages')).rawPayload).keys()].some((n) => n.includes('.storage')));

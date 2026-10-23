@@ -2,6 +2,10 @@
 
 Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
+## 0.39.1
+
+- Wording: EDITHA now says **app** instead of add-on, as Home Assistant does since 2026.2 (interface messages, documentation, README). The installation steps also show the old menu path for older Home Assistant versions.
+
 ## 0.39.0
 
 - **Faster installs and updates**: EDITHA now comes as a ready-made image for both `amd64` and `aarch64` (Raspberry Pi and similar). Home Assistant downloads it instead of building it on your device, so installing or updating takes seconds instead of minutes.

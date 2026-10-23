@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify';
 
 /**
  * Stato del server e identificativo della build dell'interfaccia: la pagina lo
- * confronta con quello letto all'avvio per accorgersi di un aggiornamento dell'add-on.
+ * confronta con quello letto all'avvio per accorgersi di un aggiornamento dell'app.
  */
 export function registerHealthRoutes(app: FastifyInstance, webDir: string): void {
   let build: string | null = null;

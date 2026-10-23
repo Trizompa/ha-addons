@@ -13,7 +13,7 @@ answer within a week; a fix is released as soon as possible and credited to you 
 
 ## Supported versions
 
-Only the latest release receives fixes. Update from the add-on page in Home Assistant.
+Only the latest release receives fixes. Update from the app page in Home Assistant.
 
 ## Design
 

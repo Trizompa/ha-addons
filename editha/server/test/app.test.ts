@@ -308,7 +308,7 @@ describe('API', () => {
 });
 
 describe('loadConfig', () => {
-  it('usa i valori predefiniti dell\'add-on', () => {
+  it('usa i valori predefiniti dell\'app', () => {
     const cfg = loadConfig({});
     assert.equal(cfg.configDir, '/config');
     assert.equal(cfg.dataDir, '/data');

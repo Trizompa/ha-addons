@@ -19,7 +19,7 @@ WORKDIR /build
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY web/build.mjs ./
-# La versione dell'add-on, mostrata nella finestra "Informazioni".
+# La versione dell'app, mostrata nella finestra "Informazioni".
 COPY config.yaml ./
 COPY web/public ./public
 COPY web/src ./src

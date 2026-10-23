@@ -161,7 +161,7 @@ export const it = {
   'insert.openFileHint': 'Apri un file per inserire nel punto del cursore.',
   'insert.loading': 'Caricamento delle entità…',
   'insert.haUnavailable':
-    'Home Assistant non è raggiungibile da qui: le entità compaiono quando EDITHA gira come add-on.',
+    'Home Assistant non è raggiungibile da qui: le entità compaiono quando EDITHA gira come app di Home Assistant.',
   'insert.noEntities': 'Nessuna entità corrisponde alla ricerca.',
   'insert.moreEntities': 'Altre {n} entità: restringi la ricerca.',
   'insert.insertEntity': 'Inserisci {id}',
@@ -186,7 +186,7 @@ export const it = {
 
   // Home Assistant
   'tree.git': 'Git: repository locale di /config',
-  'git.unavailable': 'Il programma git non è disponibile in questa versione dell\'add-on.',
+  'git.unavailable': 'Il programma git non è disponibile in questa versione di EDITHA.',
   'git.broken': 'In /config c\'è una cartella .git, ma git non la riconosce come repository. EDITHA non la tocca: controllala o rimuovila da un terminale.',
   'git.noneIntro': 'In /config non c\'è ancora un repository Git. Git conserva la storia dei tuoi file con dei «commit»: istantanee che decidi tu quando fare, ognuna con un messaggio, da poter confrontare e ripristinare. La cronologia automatica di EDITHA resta attiva comunque: Git è in più.',
   'git.ignoredIntro': 'Verrà creato anche un file .gitignore che tiene fuori dal repository:',
@@ -242,7 +242,7 @@ export const it = {
   'git.folderHide': 'Nascondi i file',
   'git.ignore': 'Escludi dal repository (aggiunge una riga al .gitignore)',
   'git.ignored': 'Escluso dal repository: {path} (aggiunto al .gitignore)',
-  'git.firstCommitHint': 'È il primo commit: di solito contiene tutta la configurazione. Prima di farlo, escludi con l\'occhio barrato le cartelle che non ti servono (per esempio quelle scaricate da HACS o le copie di altri add-on).',
+  'git.firstCommitHint': 'È il primo commit: di solito contiene tutta la configurazione. Prima di farlo, escludi con l\'occhio barrato le cartelle che non ti servono (per esempio quelle scaricate da HACS o le copie di altre app).',
   'git.legend': 'Legenda',
   'git.legendCheck': 'Includi nel commit',
   'git.legendEye': 'Escludi per sempre (.gitignore)',
@@ -336,7 +336,7 @@ export const it = {
   'error.not_a_file': 'non è un file',
   'error.not_a_directory': 'non è una cartella',
   'error.not_previewable': 'anteprima non disponibile per questo tipo di file',
-  'error.internal': 'errore interno, vedi il registro dell\'add-on',
+  'error.internal': 'errore interno, vedi il registro di EDITHA',
 
   // Validatore YAML
   'yaml.DUPLICATE_KEY': 'Chiave duplicata',
@@ -485,8 +485,8 @@ export const it = {
   'clean.fileOne': '1 file o cartella',
   'clean.fileMany': '{n} file e cartelle',
   'clean.deleteOne': 'Elimina 1 versione…',
-  'clean.failed': 'Non è stato possibile pulire {n} cronologie (vedi il registro dell\'add-on).',
-  'clean.failedOne': 'Non è stato possibile pulire 1 cronologia (vedi il registro dell\'add-on).',
+  'clean.failed': 'Non è stato possibile pulire {n} cronologie (vedi il registro di EDITHA).',
+  'clean.failedOne': 'Non è stato possibile pulire 1 cronologia (vedi il registro di EDITHA).',
   'clean.title': 'Elimina versioni dalla cronologia',
   'clean.which': 'Versioni',
   'clean.days7': 'più vecchie di 7 giorni',

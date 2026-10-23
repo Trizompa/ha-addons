@@ -3,11 +3,11 @@ import { connection } from '../api/connection.js';
 import { t } from '../i18n/index.js';
 import type { EdithaApp } from '../components/app.js';
 
-/** Server che non risponde o add-on aggiornato: si riprova da soli e si ricarica la pagina. */
+/** Server che non risponde o app aggiornata: si riprova da soli e si ricarica la pagina. */
 export class ServerController {
   constructor(private readonly app: EdithaApp) {}
 
-  /** Build del server all'apertura della pagina: se cambia, l'add-on è stato aggiornato. */
+  /** Build del server all'apertura della pagina: se cambia, l'app è stata aggiornata. */
   build: string | null = null;
   private healthTimer: ReturnType<typeof setInterval> | undefined;
 

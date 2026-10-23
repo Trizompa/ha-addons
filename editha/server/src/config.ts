@@ -8,7 +8,7 @@ export const INGRESS_PROXY_IP = '172.30.32.2';
 export interface Config {
   /** Cartella esposta all'editor. */
   configDir: string;
-  /** Cartella privata dell'add-on (impostazioni, backup). */
+  /** Cartella privata dell'app (impostazioni, backup). */
   dataDir: string;
   host: string;
   port: number;

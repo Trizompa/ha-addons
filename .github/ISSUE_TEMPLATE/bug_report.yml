@@ -21,8 +21,8 @@ body:
     id: version
     attributes:
       label: EDITHA version
-      description: Add-on page in Home Assistant, or the About button in EDITHA.
-      placeholder: "0.39.0"
+      description: App page in Home Assistant, or the About button in EDITHA.
+      placeholder: "0.39.1"
     validations:
       required: true
   - type: dropdown
@@ -64,8 +64,8 @@ body:
   - type: textarea
     id: log
     attributes:
-      label: Add-on log
-      description: Add-on page → Log. Only the lines around the problem.
+      label: EDITHA log
+      description: App page → Log. Only the lines around the problem.
       render: text
   - type: textarea
     id: screenshots

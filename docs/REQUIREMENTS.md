@@ -1,6 +1,6 @@
 # EDITHA – requirements
 
-Every Day I Tweak HA. A Home Assistant add-on that provides an
+Every Day I Tweak HA. A Home Assistant app (formerly add-on) that provides an
 editor/IDE for the files in `/config`.
 
 Status: **agreed** (October 2026). Later changes go through this document.
@@ -68,10 +68,10 @@ The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits
 | ED-5 | Save with Ctrl/Cmd+S and a button; "Save all". | P0 |
 | ED-6 | Warning before closing a tab or the page with unsaved changes (FEP #10). | P0 |
 | ED-7 | Find/replace in the file (CM6 `search` extension). | P0 |
-| ED-8 | Theme Automatic (follows HA) / Light / Dark; the choice is remembered when leaving and re-entering the add-on (CFG-1, FEP #6). In both themes selected text stays readable, without overlapping characters, on Chrome, Firefox, Safari and the HA app (FEP #7). | P0 |
+| ED-8 | Theme Automatic (follows HA) / Light / Dark; the choice is remembered when leaving and re-entering the app (CFG-1, FEP #6). In both themes selected text stays readable, without overlapping characters, on Chrome, Firefox, Safari and the HA app (FEP #7). | P0 |
 | ED-9 | Warning when the open file changes on disk (see SEC-4), with reload. | P1 |
 | ED-10 | Line wrapping, font size, spaces for indentation: per-user settings. | P1 |
-| ED-11 | Leaving the add-on (or after a restart) and coming back restores the open tabs, with the same active tab and cursor position (FEP #13). | P0 |
+| ED-11 | Leaving the app (or after a restart) and coming back restores the open tabs, with the same active tab and cursor position (FEP #13). | P0 |
 | ED-14 | Unsaved changes survive closing the page as a draft, which can be recovered or discarded on reopening (FEP #13). | P1 |
 | ED-15 | The editor fills all the available height and scrolls to the last line of any file (FEP #15). | P0 |
 | ED-16 | Browser spell check, autocorrect and translation turned off in the editor: the only underlines are the validator's (FEP #5). | P0 |
@@ -144,8 +144,8 @@ Only the repository in `/config`, on the device: no network commands (no push, p
 
 | ID | Requirement | Pr. |
 | --- | --- | --- |
-| CFG-1 | Editha's settings have a single source (backend, in `/data`), apply immediately without reloading the page and survive an add-on restart. | P0 |
-| CFG-2 | The add-on options in the HA panel are limited to those needed before startup (e.g. log level); the rest is in the UI settings. | P1 |
+| CFG-1 | Editha's settings have a single source (backend, in `/data`), apply immediately without reloading the page and survive an app restart. | P0 |
+| CFG-2 | The app options in the HA panel are limited to those needed before startup (e.g. log level); the rest is in the UI settings. | P1 |
 
 ## 9. Web interface
 
@@ -168,13 +168,13 @@ Only the repository in `/config`, on the device: no network commands (no push, p
 | ENG-2 | Backend unit tests, in particular path confinement (SEC-2) and atomic write (SEC-3). | P0 |
 | ENG-3 | e2e tests (Playwright) of the main flows, including ED-4. | P1 |
 | ENG-4 | CI on GitHub Actions: lint, tests, image build for `amd64` and `aarch64`. | P0 |
-| ENG-7 | Updating the add-on must not be able to fail at build time on the device: the frontend is built in an architecture-independent stage (or in CI) and the final image contains only already built files; no native dependencies tied to musl/glibc in the frontend. Verified on `aarch64` before every release (FEP #17). | P0 |
+| ENG-7 | Updating the app must not be able to fail at build time on the device: the frontend is built in an architecture-independent stage (or in CI) and the final image contains only already built files; no native dependencies tied to musl/glibc in the frontend. Verified on `aarch64` before every release (FEP #17). | P0 |
 | ENG-5 | Semantic versioning, `CHANGELOG.md` updated at every release. | P0 |
 | ENG-6 | Lightweight image based on HA base images; frontend assets built at build time, no downloads at runtime. | P0 |
 
 ## Out of scope (for now)
 
-- **Terminal**: the SSH/Terminal add-on already exists; adding one would greatly widen the attack surface.
+- **Terminal**: the SSH/Terminal app already exists; adding one would greatly widen the attack surface.
 - **Remote Git** (push, pull, GitHub/Forgejo): possibly after local Git (GIT-1…6).
 - **Access outside `/config`** (`/share`, `/media`, `/addons`, `/ssl`): possibly as a future option, one folder at a time.
 
@@ -195,7 +195,7 @@ docs/
   RELEASING.md           how to publish a version
   images/                documentation images
 editha/
-  config.yaml            add-on manifest (ingress, /config, homeassistant_api)
+  config.yaml            app manifest (ingress, /config, homeassistant_api)
   build.yaml, Dockerfile image: server and web interface build + Node.js runtime
   icon.png, logo.png
   README.md, DOCS.md, DOCS.it.md, CHANGELOG.md, CHANGELOG.it.md
@@ -235,6 +235,7 @@ editha/
 
 | Version | Requirements covered |
 | --- | --- |
+| 0.39.1 | "App" instead of "add-on" everywhere (Home Assistant 2026.2 wording); old menu path kept in the installation steps. |
 | 0.39.0 | Ready-made images on GHCR for `amd64` and `aarch64` (`image:` in `config.yaml`, *Publish images* workflow); CI builds aarch64 on a native ARM runner; documentation images with absolute links (Documentation tab). |
 | 0.38.0 | History vs Git vs backup explained in the Git panel and guide; `app.ts` split into controllers under `src/app/` (no behaviour change); developer docs and CI names in English. |
 | 0.37.0 | GIT-1: basic `.gitignore` in English, one line for all `*secrets*.yaml` copies; the exclusions heading written by earlier versions (in Italian) is still valid. |
@@ -246,7 +247,7 @@ editha/
 | 0.31.0 | GIT-2: new folders grouped on one line, «Exclude» (a line in .gitignore), warning at the first commit; opaque Git panel on phones. |
 | 0.30.0 | GIT-3, GIT-5, GIT-6: differences against the latest commit, commit history with the files touched, comparison and restore of a file as it was in a commit (through EDITHA's save). Local Git complete. |
 | 0.29.0 | GIT-2 and GIT-4: changes since the latest commit with checkboxes, commit of the chosen files with a message; secrets.yaml and copies never. |
-| 0.28.0 | GIT-1: Git panel in the sidebar, initialization of the repository in /config with the basic .gitignore; git in the add-on image. |
+| 0.28.0 | GIT-1: Git panel in the sidebar, initialization of the repository in /config with the basic .gitignore; git in the app image. |
 | 0.27.1 | HA-7: the preview follows the cursor onto another template, without needing Alt+T. |
 | 0.27.0 | HA-7 (2/2): toolbar button, automatic refresh while typing, Copy, warning for nonexistent entities, syntax error line found by EDITHA. |
 | 0.26.0 | HA-7 (1/2): preview of the selected template or the one under the cursor (Alt+T, Home Assistant menu), computed by Home Assistant, in a panel below the editor. |
@@ -283,8 +284,8 @@ editha/
 | 0.7.0 | BK-2, BK-3, BK-4: history with compare and restore; BK-5: 10 versions per file; FS-8: duplicate; context menu with long press on phones. |
 | 0.6.0 | FS-6: upload from the PC (button, menu, drag and drop) and download (file, folder as zip). |
 | 0.5.0 | UI-3: interface in Italian and English with a selector (automatic from the browser). |
-| 0.4.2 | Supervisor token fix with s6-overlay (HA-2, ACT-* in the real add-on); 13/14 px font; updates without a forced refresh. |
-| 0.4.1 | Lost connection / add-on updated warning with page reload; retry of reads. |
+| 0.4.2 | Supervisor token fix with s6-overlay (HA-2, ACT-* in the real app); 13/14 px font; updates without a forced refresh. |
+| 0.4.1 | Lost connection / app updated warning with page reload; retry of reads. |
 | 0.4.0 | HA-2, HA-3 (entity and action autocompletion), ACT-1, ACT-2 (reload of all YAML), ACT-4, built-in and personal snippets; compact line number column. |
 | 0.3.1 | Description: just "Easy Developer IDE for The HA". |
 | 0.3.0 | New name: Editha (D10). |
@@ -301,13 +302,13 @@ editha/
 | --- | --- | --- |
 | D1 | Backend in **TypeScript** (Node.js). | One language for backend and frontend, shared API types, `yaml` library with support for HA tags. |
 | D2 | Frontend with **Lit**. | Small, lightweight components, same technology as the HA frontend; CodeMirror 6 integrates without adapters. |
-| D3 | File versions in **`/data/backups`**. | Outside `/config`, included in the add-on backup. |
+| D3 | File versions in **`/data/backups`**. | Outside `/config`, included in the app backup. |
 | D4 | Priority to **single-file versions** (BK-1…5); full Supervisor backups at P2 (BK-8). | |
 | D5 | The repository becomes **public at the first release**. | The Supervisor must be able to clone it without credentials. |
 | D7 | **`amd64`** and **`aarch64`** architectures. | HA has deprecated 32-bit architectures. |
 | D9 | `.storage` and similar **hidden by default** (Trizompa's proposal after the first trial), visible on request and **read-only** (SEC-8). | |
 | D10 | Final name **EDITHA**, written in uppercase in the interface and documentation, with the motto "Every Day I Tweak HA" (since 0.17.1, replacing "Easy Developer IDE for The HA"); slug `editha`. | Trizompa's choice after the first installation. |
-| D6 | **MIT** license. | Simple and widespread among HA add-ons. |
+| D6 | **MIT** license. | Simple and widespread among HA apps. |
 | D8 | FEP issues #4–#19 are covered by the requirements (see the table below). | |
 
 ### File Editor Plus issues → requirements
@@ -325,7 +326,7 @@ Reference only for expected behavior and problems found; no FEP code.
 | #10 | No warning when closing a file with unsaved changes | ED-6 |
 | #11 | "New file/folder" creates in the root ignoring the selected folder; impossible in empty folders | FS-2 |
 | #12 | "New file/folder" missing from the context menu | FS-2 |
-| #13 | Leaving the add-on loses the open tabs (HA's File Editor remembers the last file) | ED-11, ED-14 |
+| #13 | Leaving the app loses the open tabs (HA's File Editor remembers the last file) | ED-11, ED-14 |
 | #14 | Undo does not undo indentation done with Tab | ED-1 |
 | #15 | Active/inactive tabs with colors opposite to the toolbar and hard to tell apart; lines past 40 not visible; "Copy all" requested | ED-3, UI-6, ED-15, UI-7 |
 | #16 | "Reload YAML" says "started" but reloads nothing | ACT-2 |
