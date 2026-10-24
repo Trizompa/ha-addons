@@ -7,3 +7,7 @@ __pycache__/
 .env
 .DS_Store
 coverage/
+
+# Output di tsc finito per sbaglio accanto ai sorgenti TypeScript.
+editha/server/src/**/*.js
+editha/web/src/**/*.js
