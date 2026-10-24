@@ -222,13 +222,20 @@ export class EdithaEditorPane extends LitElement {
 
   /** Mette `text` al posto dei `typed` caratteri prima del cursore (valore iniziato a scrivere). */
   replaceBefore(typed: number, text: string): boolean {
+    const state = this.viewState;
+    if (!state) return false;
+    const { head, from, to } = state.selection.main;
+    const start = from === to ? Math.max(state.doc.lineAt(head).from, head - typed) : from;
+    return this.replaceRange(start, to, text);
+  }
+
+  /** Mette `text` al posto del testo tra `from` e `to` e porta lì il cursore. */
+  replaceRange(from: number, to: number, text: string): boolean {
     const view = this.view;
     if (!view || !this.current || this.current.readOnly) return false;
-    const { head, from, to } = view.state.selection.main;
-    const start = from === to ? Math.max(view.state.doc.lineAt(head).from, head - typed) : from;
     view.dispatch({
-      changes: { from: start, to, insert: text },
-      selection: { anchor: start + text.length },
+      changes: { from, to, insert: text },
+      selection: { anchor: from + text.length },
       scrollIntoView: true,
       userEvent: 'input',
     });

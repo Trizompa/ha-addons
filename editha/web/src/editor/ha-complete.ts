@@ -66,15 +66,19 @@ export function haCompletions(ctx: CompletionContext): CompletionResult | null {
  */
 export function detailAtPos(state: EditorState, pos: number, panel = false): DetailContext | null {
   if (!haData.available || !haData.hints) return null;
-  const line = state.doc.lineAt(pos);
-  const before = line.text.slice(0, pos - line.from);
+  const { lines, index, before } = linesAround(state, pos);
   if (/^\s*#/.test(before)) return null;
-  // Solo le righe vicine: il blocco di un'automazione non è mai lungo centinaia di righe.
+  return (panel ? panelContext : detailContext)(lines, index, before);
+}
+
+/** Righe vicine a `pos` (il blocco di un'automazione non è mai lungo centinaia di righe). */
+export function linesAround(state: EditorState, pos: number): { lines: string[]; index: number; before: string; lineFrom: number } {
+  const line = state.doc.lineAt(pos);
   const first = Math.max(1, line.number - 200);
   const last = Math.min(state.doc.lines, line.number + 200);
   const lines: string[] = [];
   for (let n = first; n <= last; n++) lines.push(state.doc.line(n).text);
-  return (panel ? panelContext : detailContext)(lines, line.number - first, before);
+  return { lines, index: line.number - first, before: line.text.slice(0, pos - line.from), lineFrom: line.from };
 }
 
 const detailAt = (ctx: CompletionContext) => detailAtPos(ctx.state, ctx.pos);

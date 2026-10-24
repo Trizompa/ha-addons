@@ -301,6 +301,10 @@ test.describe('Home Assistant', () => {
     await expect(card.locator('.chip.cur')).toContainText('heat');
     await card.locator('.chip', { hasText: /^off$/ }).click();
     await expect(editor(page)).toContainText('to: "off"');
+    // Secondo clic con il cursore dopo le virgolette chiuse: sostituisce tutto il valore.
+    await card.locator('.chip', { hasText: /^cool$/ }).click();
+    await expect(editor(page)).toContainText('to: cool');
+    await expect(editor(page)).not.toContainText('"off"');
     // Fuori dal blocco di un'entità il riquadro sparisce.
     await page.keyboard.insertText('\nnome: prova');
     await expect(card).toHaveCount(0);

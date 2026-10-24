@@ -181,6 +181,36 @@ export function detailContext(lines: string[], index: number, before: string): D
   return null;
 }
 
+/** Inizio del valore: «chiave:» (con gli eventuali trattini davanti) o «-» di un elemento di elenco. */
+const VALUE_START = /^(?:\s*(?:-\s+)*[A-Za-z_][\w-]*\s*:|\s*-)([ \t]*)/;
+
+/**
+ * Valore intero della riga `index` dopo «state:» / «to:» / «attribute:»… (o «- » sotto di loro), se
+ * il cursore (colonna `col`) sta lì: il clic nel pannello lo sostituisce tutto, virgolette comprese.
+ * `from`/`to` sono colonne della riga; `space` dice se dopo i due punti manca lo spazio.
+ */
+export function valueAt(lines: string[], index: number, col: number): { ctx: DetailContext; from: number; to: number; space: boolean } | null {
+  const line = lines[index] ?? '';
+  const m = VALUE_START.exec(line);
+  if (!m) return null;
+  const from = m[0].length;
+  if (col < from - m[1]!.length) return null;
+  // Il contesto si calcola come se il valore fosse vuoto: conta la chiave, non quello che c'è scritto.
+  const ctx = detailContext(lines, index, line.slice(0, from - m[1]!.length) + ' ');
+  if (!ctx || ctx.template || ctx.kind === null) return null;
+  const rest = line.slice(from);
+  let len: number;
+  const quote = rest[0];
+  if (quote === '"' || quote === "'") {
+    // Fino alla virgoletta di chiusura ('' e \" sono virgolette dentro il testo).
+    const re = quote === '"' ? /^"(?:[^"\\]|\\.)*"?/ : /^'(?:[^']|'')*'?/;
+    len = re.exec(rest)![0].length;
+  } else {
+    len = rest.replace(/\s+#.*$/, '').trimEnd().length;
+  }
+  return { ctx: { ...ctx, typed: 0, quote: '' }, from, to: from + len, space: m[1] === '' };
+}
+
 /** Stati tipici per dominio: quelli che Home Assistant non elenca negli attributi. */
 const DOMAIN_STATES: Record<string, string[]> = {
   light: ['on', 'off'],

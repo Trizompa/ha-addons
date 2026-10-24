@@ -490,6 +490,7 @@ export class EdithaApp extends LitElement {
       const tab = this.focusedTab();
       const s = this.editor.viewState;
       if (tab && s) this.updateInsertDetail(tab, s, s.selection.main.head);
+      else this.insertDetail = null;
     });
     void haData.start();
     void this.snippets.loadSnippets();
@@ -872,6 +873,7 @@ export class EdithaApp extends LitElement {
     const tab = this.focusedTab();
     if (!tab) {
       this.status = null;
+      this.insertDetail = null;
       this.outlineView.updateOutline(null, null);
       return;
     }

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { detailContext, detailOptions, entityDetails, insertText, panelContext, type DetailEntity } from '../src/editor/ha-detail.js';
+import { detailContext, detailOptions, entityDetails, insertText, panelContext, valueAt, type DetailEntity } from '../src/editor/ha-detail.js';
 
 /** Contesto con il cursore dove c'è «|» nel testo (`panel`: quello del pannello Inserisci). */
 function at(text: string, panel = false) {
@@ -135,5 +135,31 @@ describe('attributi e stati nei suggerimenti (HA-12)', () => {
     assert.deepEqual(d.states.map((s) => s.label), ['heat', 'off', 'cool', 'unavailable', 'unknown']);
     assert.deepEqual(d.attributes, ['hvac_modes', 'current_temperature', 'hvac_action']);
     assert.deepEqual(entityDetails(['sensor.nuovo'], ENTITIES), { states: [], attributes: [] });
+  });
+
+  it('clic nel pannello: si sostituisce tutto il valore della riga, virgolette comprese', () => {
+    /** Riga con il cursore su «|»: il valore che il clic sostituirebbe con «off». */
+    const replace = (text: string, label = 'off') => {
+      const pos = text.indexOf('|');
+      const doc = text.slice(0, pos) + text.slice(pos + 1);
+      const lines = doc.split('\n');
+      const index = doc.slice(0, pos).split('\n').length - 1;
+      const col = pos - (doc.lastIndexOf('\n', pos - 1) + 1);
+      const v = valueAt(lines, index, col);
+      if (!v) return null;
+      const line = lines[index]!;
+      return line.slice(0, v.from) + (v.space ? ' ' : '') + insertText(v.ctx, label) + line.slice(v.to);
+    };
+    const block = '- trigger: state\n  entity_id: climate.salotto\n';
+    assert.equal(replace(block + '  to: he|at\n'), '  to: "off"');
+    assert.equal(replace(block + '  to: "heat"|\n'), '  to: "off"');
+    assert.equal(replace(block + "  to: 'heat'|  # commento\n"), '  to: "off"  # commento');
+    assert.equal(replace(block + '  to:|\n'), '  to: "off"');
+    assert.equal(replace(block + '  to: |\n', 'cool'), '  to: cool');
+    assert.equal(replace(block + '  to:\n    - he|\n'), '    - "off"');
+    // Cursore sulla chiave, su un'altra chiave o dopo «attribute:» con uno stato: niente sostituzione.
+    assert.equal(replace(block + '  t|o: heat\n'), null);
+    assert.equal(replace(block + '  for: |\n'), null);
+    assert.equal(valueAt(['- entity_id: climate.salotto', '  attribute: hv'], 1, 15)?.ctx.kind, 'attribute');
   });
 });
