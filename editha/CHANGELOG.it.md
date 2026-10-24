@@ -2,6 +2,10 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.40.0
+
+- **Entità sconosciute**: dopo `entity_id:`, `entity:` ed `entities:` EDITHA avvisa quando l'entità non esiste nel tuo Home Assistant (sottolineatura gialla). Se esiste un'entità simile, il messaggio la propone e **Sostituisci con…** la corregge con un clic. È un avviso e non un errore, perché un'entità appena creata esiste solo dopo un riavvio o un ricaricamento.
+
 ## 0.39.1
 
 - Terminologia: EDITHA ora dice **app** invece di add-on, come Home Assistant dalla versione 2026.2 (messaggi dell'interfaccia, documentazione, README). Le istruzioni di installazione indicano anche il vecchio percorso per le versioni precedenti di Home Assistant.

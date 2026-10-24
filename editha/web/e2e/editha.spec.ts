@@ -255,6 +255,22 @@ test.describe('Home Assistant', () => {
     await expect(editor(page)).toContainText('entity_id: sensor.temperatura');
   });
 
+  test('HA-11 – entità sconosciuta: avviso con la correzione proposta', async ({ page }) => {
+    await openFile(page, 'tabs/b.yaml');
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('entity_id: light.cucin');
+    await page.keyboard.press('Escape');
+    const warning = page.locator('.cm-lintRange-warning', { hasText: 'light.cucin' });
+    await expect(warning).toBeVisible();
+    await warning.hover();
+    const tooltip = page.locator('.cm-tooltip-hover .cm-diagnostic-warning');
+    await expect(tooltip).toContainText('«light.cucin» non è un\'entità del tuo Home Assistant. Forse intendevi «light.cucina»?');
+    await tooltip.locator('.cm-diagnosticAction', { hasText: 'Sostituisci con light.cucina' }).click();
+    await expect(editor(page)).toContainText('entity_id: light.cucina');
+    await expect(page.locator('.cm-lintRange-warning')).toHaveCount(0);
+  });
+
   test('Snippet predefiniti e personali', async ({ page }) => {
     await openFile(page, 'tabs/c.yaml');
     await editor(page).click();

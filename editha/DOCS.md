@@ -157,6 +157,12 @@ It also warns about common Home Assistant mistakes that are valid YAML, such as 
 `on`/`off`/`yes`/`no` (YAML turns them into true/false) or `name:Casa` without a space after the
 colon.
 
+**Unknown entities**: after `entity_id:`, `entity:` and `entities:` EDITHA checks that the entity
+exists in your Home Assistant. A misspelled one (`light.livingroon`) gets a yellow underline;
+when a similar entity exists, the message suggests it and **Replace with…** fixes it in one click.
+It is a warning, not an error: an entity you have just created in the configuration only exists
+after a restart or a reload. Without a connection to Home Assistant there is no check.
+
 Very large files (over 1 MB) are not checked, and get no outline, so the editor stays responsive.
 
 Click the error count in the status bar (or press Ctrl+Shift+M) for the list of problems; F8 jumps

@@ -2,6 +2,10 @@
 
 Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
+## 0.40.0
+
+- **Unknown entities**: after `entity_id:`, `entity:` and `entities:` EDITHA warns when the entity does not exist in your Home Assistant (a yellow underline). When a similar entity exists, the message suggests it and **Replace with…** fixes it in one click. It is a warning, not an error, because a newly created entity only exists after a restart or a reload.
+
 ## 0.39.1
 
 - Wording: EDITHA now says **app** instead of add-on, as Home Assistant does since 2026.2 (interface messages, documentation, README). The installation steps also show the old menu path for older Home Assistant versions.

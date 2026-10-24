@@ -228,3 +228,61 @@ describe('correzioni della revisione (HA-9)', () => {
     assert.equal(validateName('e'.repeat(200)), null);
   });
 });
+
+describe('entità sconosciute (HA-11)', () => {
+  const known = new Set(['light.salotto', 'light.cucina', 'sensor.temperatura', 'scene.sera']);
+  const unknown = (text: string) => lintYaml(text, '', known).filter((p) => /entità/.test(p.message));
+
+  it('segnala un\'entità scritta male e propone quella giusta', () => {
+    const text = 'action: light.turn_on\ntarget:\n  entity_id: light.salotoo\n';
+    const [p, ...rest] = unknown(text);
+    assert.equal(rest.length, 0);
+    assert.equal(p!.severity, 'warning');
+    assert.equal(text.slice(p!.from, p!.to), 'light.salotoo');
+    assert.equal(p!.fix, 'light.salotto');
+    assert.match(p!.message, /Forse intendevi «light\.salotto»/);
+  });
+
+  it('elenchi, valori separati da virgole, card e scene', () => {
+    const text = [
+      'entity_id: [light.salotto, light.studio]',
+      'entities:',
+      '  - sensor.temperatura',
+      '  - entity: sensor.umidita',
+      'b:',
+      '  entity_id: light.cucina, light.bagno',
+      'scene:',
+      '  - name: Sera',
+      '    entities:',
+      '      light.salotto: "on"',
+      '      light.garage: "off"',
+      '',
+    ].join('\n');
+    const ids = unknown(text).map((p) => text.slice(p.from, p.to));
+    assert.deepEqual(ids, ['light.studio', 'sensor.umidita', 'light.bagno', 'light.garage']);
+  });
+
+  it('niente avvisi senza l\'elenco delle entità, per i template, «all» e i tag', () => {
+    assert.deepEqual(lintYaml('entity_id: light.nessuna\n'), []);
+    assert.deepEqual(lintYaml('entity_id: light.nessuna\n', '', new Set()), []);
+    const text = [
+      'a:',
+      '  entity_id: all',
+      'b:',
+      '  entity_id: "{{ states.light | map(attribute=\'entity_id\') | list }}"',
+      'c:',
+      '  entity_id: !input luce',
+      'd:',
+      '  entity: sensor.temperatura',
+      'name: light.qualcosa',
+      '',
+    ].join('\n');
+    assert.deepEqual(unknown(text), []);
+  });
+
+  it('senza un\'entità simile non propone niente', () => {
+    const [p] = unknown('entity_id: switch.irrigazione_giardino\n');
+    assert.equal(p!.fix, undefined);
+    assert.match(p!.message, /riavvio o un ricaricamento/);
+  });
+});

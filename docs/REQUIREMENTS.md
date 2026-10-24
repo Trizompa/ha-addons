@@ -94,6 +94,7 @@ The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits
 | HA-8 | Entity/service cache refreshed on request and periodically (or via WebSocket `state_changed`). | P1 |
 | HA-9 | Check with concrete explanations (lines involved, expected indentation) and warnings for typical HA mistakes that are still valid YAML: unquoted `on`/`off`/`yes`/`no`, `key:value` without a space, odd indentation. Also explained: unquoted `{{ }}` templates (read as a key), a key that is a list or a `{ }` block, `*name` alias without an anchor, repeated keys, missing colon between key and value. List of problems with line and link. | P1 |
 | HA-10 | Autocompletion of Material Design icons after `mdi:`, with preview. | P1 |
+| HA-11 | Warning (not error) for entity ids after `entity_id:`, `entity:`, `entities:` (also comma-separated, lists, scene maps, `include_/exclude_entities`) that Home Assistant does not know; the closest entity of the same domain is suggested with a one-click fix. No check without the entity list; templates and tagged values are skipped. | P1 |
 
 ## 5. Home Assistant actions
 
@@ -235,6 +236,7 @@ editha/
 
 | Version | Requirements covered |
 | --- | --- |
+| 0.40.0 | HA-11: unknown entity warning with suggested fix. |
 | 0.39.1 | "App" instead of "add-on" everywhere (Home Assistant 2026.2 wording); old menu path kept in the installation steps. |
 | 0.39.0 | Ready-made images on GHCR for `amd64` and `aarch64` (`image:` in `config.yaml`, *Publish images* workflow); CI builds aarch64 on a native ARM runner; documentation images with absolute links (Documentation tab). |
 | 0.38.0 | History vs Git vs backup explained in the Git panel and guide; `app.ts` split into controllers under `src/app/` (no behaviour change); developer docs and CI names in English. |

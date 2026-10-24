@@ -1,4 +1,16 @@
-import { isCollection, parseAllDocuments, visit, type ScalarTag, type CollectionTag, type YAMLError } from 'yaml';
+import {
+  isCollection,
+  isMap,
+  isScalar,
+  isSeq,
+  parseAllDocuments,
+  visit,
+  type Document,
+  type Scalar,
+  type ScalarTag,
+  type CollectionTag,
+  type YAMLError,
+} from 'yaml';
 import { t, type MessageKey } from '../i18n/index.js';
 
 export interface YamlProblem {
@@ -6,6 +18,8 @@ export interface YamlProblem {
   to: number;
   severity: 'error' | 'warning';
   message: string;
+  /** Correzione proposta: il testo da mettere al posto di from–to (entità scritta male). */
+  fix?: string;
 }
 
 /**
@@ -516,13 +530,122 @@ const YAML11_BOOLEANS = new Set(['on', 'off', 'yes', 'no']);
 /** Testo `chiave:valore` (manca lo spazio) all'inizio di una riga di un valore semplice. */
 const KEY_NO_SPACE = /^([A-Za-z_][\w-]*):([^\s:/].*)$/;
 
+/** Chiavi il cui valore è un'entità, un elenco di entità o (scene) una mappa con le entità come chiavi. */
+const ENTITY_KEYS = new Set(['entity_id', 'entity', 'entities', 'include_entities', 'exclude_entities']);
+/** Forma di un id di entità: «dominio.nome». Testi come «all», «none» o i template restano fuori. */
+const ENTITY_ID = /^[a-z_][a-z0-9_]*\.[a-z0-9_]+$/;
+
+/** Entità divise per dominio, e suggerimenti già calcolati: validi finché l'elenco è lo stesso. */
+let entityIndex: {
+  known: ReadonlySet<string>;
+  byDomain: Map<string, string[]>;
+  suggestions: Map<string, string | null>;
+} | null = null;
+
+/** Suggerimenti nuovi calcolati in un solo controllo: gli altri arrivano ai controlli successivi. */
+const SUGGESTIONS_PER_RUN = 25;
+
+const domainOf = (id: string) => id.slice(0, id.indexOf('.'));
+
+function indexFor(known: ReadonlySet<string>) {
+  if (entityIndex?.known !== known) {
+    const byDomain = new Map<string, string[]>();
+    for (const id of known) {
+      const list = byDomain.get(domainOf(id));
+      if (list) list.push(id);
+      else byDomain.set(domainOf(id), [id]);
+    }
+    entityIndex = { known, byDomain, suggestions: new Map() };
+  }
+  return entityIndex;
+}
+
+/**
+ * Entità esistente più simile a quella scritta, se la differenza è piccola (light.salotoo → light.salotto).
+ * Si cerca nello stesso dominio; con un dominio inesistente (ligth.) in quello più simile.
+ * `undefined`: non calcolato, perché il budget del controllo è finito.
+ */
+function closestEntity(id: string, known: ReadonlySet<string>, budget: { left: number }): string | null | undefined {
+  const index = indexFor(known);
+  const cached = index.suggestions.get(id);
+  if (cached !== undefined) return cached;
+  if (budget.left <= 0) return undefined;
+  budget.left--;
+  let domain = domainOf(id);
+  if (!index.byDomain.has(domain)) {
+    let bestDomain = 3;
+    for (const candidate of index.byDomain.keys()) {
+      const d = editDistance(domain, candidate);
+      if (d < bestDomain) [domain, bestDomain] = [candidate, d];
+    }
+  }
+  const limit = Math.max(2, Math.floor(id.length / 5));
+  let best: string | null = null;
+  let bestDistance = limit + 1;
+  for (const candidate of index.byDomain.get(domain) ?? []) {
+    // Lunghezze troppo diverse non possono stare sotto il limite: si salta il calcolo.
+    if (Math.abs(candidate.length - id.length) >= bestDistance) continue;
+    const d = editDistance(id, candidate);
+    if (d < bestDistance) [best, bestDistance] = [candidate, d];
+  }
+  index.suggestions.set(id, best);
+  return best;
+}
+
+/**
+ * Entità che Home Assistant non conosce (scritte male, cancellate, rinominate): avvisi, non errori,
+ * perché un'entità appena creata nella configurazione esiste solo dopo un riavvio o un ricaricamento.
+ */
+function unknownEntities(doc: Document.Parsed, text: string, known: ReadonlySet<string>, out: YamlProblem[]): void {
+  const budget = { left: SUGGESTIONS_PER_RUN };
+  const check = (node: Scalar) => {
+    // Valori con tag (!input, !secret) e testi su più righe non sono entità da controllare.
+    if (node.tag || !node.range || typeof node.value !== 'string') return;
+    if (node.type === 'BLOCK_LITERAL' || node.type === 'BLOCK_FOLDED') return;
+    // «entity_id: light.a, light.b» è valido per Home Assistant: si controlla ogni parte.
+    const source = text.slice(node.range[0], node.range[1]);
+    // Un template ({{ }}, {% %}) calcola le entità: i pezzi «dominio.nome» lì dentro non sono id.
+    if (/\{[{%#]/.test(source)) return;
+    for (const m of source.matchAll(/[^\s,"']+/g)) {
+      const id = m[0];
+      if (!ENTITY_ID.test(id) || known.has(id)) continue;
+      const from = node.range[0] + m.index;
+      const suggestion = closestEntity(id, known, budget);
+      out.push({
+        from,
+        to: from + id.length,
+        severity: 'warning',
+        message: suggestion
+          ? t('yaml.explain.unknownEntitySuggest', { id, suggestion })
+          : t('yaml.explain.unknownEntity', { id }),
+        ...(suggestion ? { fix: suggestion } : {}),
+      });
+    }
+  };
+  visit(doc, {
+    Pair: (_key, pair) => {
+      const key = pair.key;
+      if (!isScalar(key) || !ENTITY_KEYS.has(String(key.value))) return;
+      const value = pair.value;
+      if (isScalar(value)) {
+        check(value);
+      } else if (isSeq(value)) {
+        for (const item of value.items) if (isScalar(item)) check(item);
+      } else if (isMap(value) && key.value === 'entities') {
+        for (const item of value.items) if (isScalar(item.key)) check(item.key);
+      }
+    },
+  });
+}
+
 /**
  * Validazione YAML (HA-1) con spiegazioni concrete degli errori di indentazione e avvisi
  * per gli errori tipici di Home Assistant che restano YAML valido. Le posizioni coincidono
  * con quelle dell'editor (offset nel testo), così la sottolineatura cade nel punto giusto (FEP #5).
  * `path` (relativo a /config) decide quali tag sono validi: in esphome/ anche quelli di ESPHome.
+ * `knownEntities` (le entità di Home Assistant) attiva l'avviso per le entità sconosciute (HA-11).
  */
-export function lintYaml(text: string, path = ''): YamlProblem[] {
+export function lintYaml(text: string, path = '', knownEntities?: ReadonlySet<string>): YamlProblem[] {
   // File enormi (dati, log incollati): niente controllo, l'editor resta reattivo.
   if (text.length > LINT_MAX_CHARS) return [];
   const problems: YamlProblem[] = [];
@@ -618,6 +741,8 @@ export function lintYaml(text: string, path = ''): YamlProblem[] {
       },
     });
   }
+
+  if (knownEntities?.size) for (const doc of list) unknownEntities(doc, text, knownEntities, warnings);
 
   // Tabulazioni e spazi speciali: la spiegazione chiara sostituisce gli errori della libreria sulla riga.
   const spaces = whitespaceProblems(lines);

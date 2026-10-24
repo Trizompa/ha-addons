@@ -10,13 +10,14 @@ import {
   keymap,
   lineNumbers,
   rectangularSelection,
+  ViewPlugin,
   type ViewUpdate,
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { bracketMatching, foldGutter, foldKeymap, indentOnInput, indentUnit } from '@codemirror/language';
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete';
-import { linter, lintKeymap } from '@codemirror/lint';
+import { forceLinting, linter, lintKeymap } from '@codemirror/lint';
 import { indentationMarkers } from '@replit/codemirror-indentation-markers';
 import { languageOf, languageSupport, type LanguageId } from './languages.js';
 import { edithaHighlighting, edithaTheme, fontSizeTheme } from './theme.js';
@@ -24,6 +25,7 @@ import { lintYaml } from './yaml-lint.js';
 import { wrapIndent } from './wrap-indent.js';
 import { haCompletions, mdiCompletions, secretCompletions, type MdiCompletion } from './ha-complete.js';
 import { mdiSvg } from '../state/mdi.js';
+import { haData } from '../state/ha-data.js';
 import { filePath, haLinks } from './links.js';
 import { hideKeyboardButton } from './keyboard.js';
 import { dictionary, getLang, t } from '../i18n/index.js';
@@ -60,17 +62,46 @@ function yamlLinter(path: string): Extension {
   return linter(
     // Il testo con «\n» (anche per i file CRLF): le posizioni coincidono con quelle del documento.
     (view) =>
-      lintYaml(view.state.doc.toString(), path).map((p) => ({
+      lintYaml(view.state.doc.toString(), path, haData.entityIds()).map((p) => ({
         from: p.from,
         to: p.to,
         severity: p.severity,
         message: p.message,
         // Nell'elenco dei problemi ogni voce dice a che riga si trova.
         source: t('status.lineN', { n: view.state.doc.lineAt(p.from).number }),
+        ...(p.fix !== undefined ? { actions: [replaceAction(p.fix)] } : {}),
       })),
     { delay: 300 },
   );
 }
+
+/** Pulsante nel suggerimento dell'errore: mette `text` al posto della parte sottolineata. */
+function replaceAction(text: string) {
+  return {
+    name: t('yaml.fix.replace', { text }),
+    apply: (view: EditorView, from: number, to: number) => view.dispatch({ changes: { from, to, insert: text } }),
+  };
+}
+
+/** Quando arrivano o cambiano le entità di Home Assistant il controllo riparte (entità sconosciute). */
+const relintOnHaData = ViewPlugin.fromClass(
+  class {
+    private readonly unsubscribe: () => void;
+    private ids: ReadonlySet<string>;
+    constructor(view: EditorView) {
+      this.ids = haData.entityIds();
+      this.unsubscribe = haData.subscribe(() => {
+        const ids = haData.entityIds();
+        if (ids === this.ids) return;
+        this.ids = ids;
+        forceLinting(view);
+      });
+    }
+    destroy(): void {
+      this.unsubscribe();
+    }
+  },
+);
 
 /** Testo del documento con i suoi fine riga (CRLF se il file li aveva): è quello da salvare. */
 export function docText(state: EditorState): string {
@@ -115,6 +146,7 @@ function languageExtensions(path: string): { language: Extension; lint: Extensio
       id === 'yaml'
         ? [
             yamlLinter(path),
+            relintOnHaData,
             haLinks,
             EditorState.languageData.of(() => [{ autocomplete: haCompletions }, { autocomplete: secretCompletions }, { autocomplete: mdiCompletions }]),
           ]

@@ -13,6 +13,21 @@ class HaData {
   services: ServiceInfo[] = [];
   loaded = false;
   private readonly listeners = new Set<Listener>();
+  private idsFor: EntityInfo[] | null = null;
+  private ids: ReadonlySet<string> = new Set();
+
+  /**
+   * Id delle entità, per l'avviso sulle entità sconosciute. Vuoto se HA non è raggiungibile:
+   * senza l'elenco non si può dire che un'entità non esiste. Lo stesso Set finché i dati non cambiano.
+   */
+  entityIds(): ReadonlySet<string> {
+    if (!this.available) return new Set();
+    if (this.idsFor !== this.entities) {
+      this.idsFor = this.entities;
+      this.ids = new Set(this.entities.map((e) => e.entity_id));
+    }
+    return this.ids;
+  }
   private timer: ReturnType<typeof setInterval> | undefined;
 
   subscribe(fn: Listener): () => void {

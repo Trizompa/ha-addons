@@ -163,6 +163,12 @@ Avvisa anche di errori tipici di Home Assistant che sono YAML valido, come `on`/
 senza virgolette (lo YAML li trasforma in vero/falso) o `name:Casa` senza lo spazio dopo i due
 punti.
 
+**Entità sconosciute**: dopo `entity_id:`, `entity:` ed `entities:` EDITHA controlla che l'entità
+esista nel tuo Home Assistant. Una scritta male (`light.salotoo`) viene sottolineata in giallo;
+se esiste un'entità simile, il messaggio la propone e **Sostituisci con…** la corregge con un clic.
+È un avviso, non un errore: un'entità appena creata nella configurazione esiste solo dopo un
+riavvio o un ricaricamento. Senza collegamento a Home Assistant il controllo non c'è.
+
 I file molto grandi (oltre 1 MB) non vengono controllati e non hanno lo schema, così l'editor resta
 reattivo.
 
