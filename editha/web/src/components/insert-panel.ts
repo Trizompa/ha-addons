@@ -1,12 +1,22 @@
 import { LitElement, css, html, nothing } from 'lit';
 import type { EntityInfo, Snippet } from '../api/types.js';
 import { builtinSnippets } from '../editor/snippets.js';
+import { entityDetails, type DetailContext } from '../editor/ha-detail.js';
 import { t } from '../i18n/index.js';
 import { haData } from '../state/ha-data.js';
 import { icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
 
 export type InsertTab = 'entities' | 'snippets';
+
+/** Entità del blocco dove sta il cursore (HA-12): il riquadro in cima alle entità. */
+export interface InsertDetail {
+  ctx: DetailContext;
+  line: number;
+}
+
+/** Stati mostrati al massimo nel riquadro (un select può averne moltissimi). */
+const MAX_STATES = 60;
 
 const MAX_ROWS = 300;
 
@@ -21,6 +31,7 @@ export class EdithaInsertPanel extends LitElement {
     canInsert: { type: Boolean },
     query: { state: true },
     tick: { state: true },
+    detail: { attribute: false },
   };
 
   declare tab: InsertTab;
@@ -28,6 +39,7 @@ export class EdithaInsertPanel extends LitElement {
   declare canInsert: boolean;
   declare query: string;
   declare tick: number;
+  declare detail: InsertDetail | null;
   private unsubscribe: (() => void) | null = null;
 
   constructor() {
@@ -186,6 +198,97 @@ export class EdithaInsertPanel extends LitElement {
         color: var(--text-muted);
         line-height: 1.5;
       }
+      .ctx {
+        margin: 0 12px 10px;
+        padding: 10px 12px 12px;
+        border: 1px solid var(--accent);
+        border-radius: var(--radius);
+        background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+      }
+      .ctx .head {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+      }
+      .ctx .name {
+        font-weight: 600;
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .ctx .id {
+        font-family: var(--font-code);
+        font-size: 12px;
+        color: var(--text-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .ctx .where {
+        margin: 2px 0 2px;
+        font-size: 11.5px;
+        color: var(--text-faint);
+      }
+      .ctx .lbl {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin: 8px 0 5px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .ctx .lbl em {
+        font-style: normal;
+        font-weight: 500;
+        letter-spacing: 0;
+        text-transform: none;
+        color: var(--accent);
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      .chips.dim .chip {
+        opacity: 0.5;
+      }
+      .chip {
+        padding: 3px 8px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        color: var(--text);
+        font-family: var(--font-code);
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .chip:hover:not(:disabled),
+      .chip:focus-visible {
+        background: var(--surface-3);
+        outline: none;
+      }
+      .chip:disabled {
+        cursor: default;
+      }
+      .chip.cur {
+        border-color: var(--accent);
+      }
+      .chip.cur small {
+        margin-left: 5px;
+        font-family: var(--font-ui);
+        font-size: 10.5px;
+        color: var(--accent);
+      }
+      .ctx .foot {
+        margin-top: 9px;
+        font-size: 11.5px;
+        color: var(--text-faint);
+      }
       footer {
         padding: 10px 12px;
         border-top: 1px solid var(--border);
@@ -223,6 +326,47 @@ export class EdithaInsertPanel extends LitElement {
       const hay = `${e.entity_id} ${e.name}`.toLowerCase();
       return words.every((w) => hay.includes(w));
     });
+  }
+
+  /** Riquadro dell'entità del blocco: stati e attributi, un clic li inserisce al cursore. */
+  private renderDetail() {
+    const d = this.detail;
+    if (!d || !haData.available) return nothing;
+    // Solo le entità che Home Assistant conosce: per le altre c'è già l'avviso giallo.
+    const ids = d.ctx.entities.filter((id) => haData.entityIds().has(id));
+    if (ids.length === 0) return nothing;
+    const { states, attributes } = entityDetails(ids, haData.entities);
+    const first = haData.entities.find((e) => e.entity_id === ids[0])!;
+    const more = ids.length - 1;
+    const here = (kind: 'state' | 'attribute') =>
+      d.ctx.kind === kind
+        ? html`<em>${d.ctx.key ? t('insert.detailHereKey', { key: d.ctx.key }) : t('insert.detailHere')}</em>`
+        : nothing;
+    const chip = (kind: 'state' | 'attribute', label: string, current = false) =>
+      html`<button
+        class="chip ${current ? 'cur' : ''}"
+        ?disabled=${!this.canInsert}
+        title=${this.canInsert ? t('insert.detailInsert', { value: label }) : t('insert.openFirst')}
+        @click=${() => this.emit('insert-detail', { label, kind })}
+      >${label}${current ? html`<small>${t('insert.detailCurrent')}</small>` : nothing}</button>`;
+    return html`<div class="ctx">
+      <div class="head">
+        <span class="name">${first.name || first.entity_id}</span>
+        <span class="id">${first.entity_id}${more > 0 ? ` +${more}` : ''}</span>
+      </div>
+      <div class="where">${t('insert.detailWhere', { line: d.line })}</div>
+      ${states.length
+        ? html`<div class="lbl"><span>${t('insert.detailStates')}</span>${here('state')}</div>
+            <div class="chips ${d.ctx.kind === 'attribute' ? 'dim' : ''}">
+              ${states.slice(0, MAX_STATES).map((s) => chip('state', s.label, s.current))}
+            </div>`
+        : nothing}
+      ${attributes.length
+        ? html`<div class="lbl"><span>${t('insert.detailAttributes')}</span>${here('attribute')}</div>
+            <div class="chips">${attributes.map((a) => chip('attribute', a))}</div>`
+        : nothing}
+      <div class="foot">${t('insert.detailFoot')}</div>
+    </div>`;
   }
 
   private renderEntities() {
@@ -345,6 +489,7 @@ export class EdithaInsertPanel extends LitElement {
         />
       </div>
       ${!this.canInsert ? html`<div class="hint">${t('insert.openFileHint')}</div>` : nothing}
+      ${entities ? this.renderDetail() : nothing}
       <div class="list">${entities ? this.renderEntities() : this.renderSnippets()}</div>
       ${entities
         ? nothing

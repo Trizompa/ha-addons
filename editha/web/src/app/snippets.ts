@@ -2,6 +2,8 @@ import { api } from '../api/client.js';
 import type { Snippet } from '../api/types.js';
 import { t } from '../i18n/index.js';
 import { fillIds, normalizeSnippetBody } from '../editor/snippets.js';
+import { detailAtPos } from '../editor/ha-complete.js';
+import { insertText } from '../editor/ha-detail.js';
 import type { EdithaApp } from '../components/app.js';
 import type { EdithaInsertPanel } from '../components/insert-panel.js';
 import type { EdithaSnippetEditor } from '../components/snippet-editor.js';
@@ -15,6 +17,7 @@ export class SnippetsController {
   toggleInsert(): void {
     this.app.insertOpen = !this.app.insertOpen;
     this.app.refreshToolbar();
+    this.app.refreshStatus();
     if (this.app.insertOpen) {
       void this.app.updateComplete.then(() =>
         (this.app.renderRoot.querySelector('editha-insert-panel') as EdithaInsertPanel | null)?.focusSearch(),
@@ -24,6 +27,21 @@ export class SnippetsController {
 
   insertText(text: string): void {
     if (!this.app.editor.insertText(text)) this.app.toasts.show(t('insert.needEditable'), 'warning');
+  }
+
+  /**
+   * Stato o attributo dal riquadro dell'entità (HA-12). Se il cursore è proprio dopo «state:» /
+   * «attribute:» il valore prende il posto di quello iniziato, con le virgolette se servono;
+   * altrove si inserisce così com'è.
+   */
+  insertDetail(label: string, kind: 'state' | 'attribute'): void {
+    const s = this.app.editor.viewState;
+    const ctx = s ? detailAtPos(s, s.selection.main.head) : null;
+    const ok =
+      ctx && ctx.kind === kind
+        ? this.app.editor.replaceBefore(ctx.typed, insertText(ctx, label))
+        : this.app.editor.insertText(label);
+    if (!ok) this.app.toasts.show(t('insert.needEditable'), 'warning');
   }
 
   insertSnippet(body: string, fields: boolean): void {

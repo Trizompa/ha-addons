@@ -181,17 +181,21 @@ Press Ctrl+Space, or just type:
   suggestions);
 - **Material Design icons** after `mdi:`, with a preview.
 
-**Home Assistant hints** (the light bulb in the toolbar, on by default) add two more suggestions
-and the [unknown entity](#yaml-check-explained) warning:
+**Home Assistant hints** (the light bulb in the toolbar, on by default) show the **states and
+attributes** of the entity you are working on, without getting in the way while you type:
 
-- **attributes** after `attribute:` and in templates (`state_attr('climate.living', '…')`,
-  `states.climate.living.attributes.…`), for the entity of the same block;
-- **states** after `state:`, `to:` and `from:`, and in `is_state('…', '…')`: the current state
-  first, then the ones Home Assistant declares (`hvac_modes`, the options of a select) and the
-  usual ones of the domain (`on`/`off`, `open`/`closed`, `home`/`not_home`…). `on` and `off` are
-  inserted with quotes, as Home Assistant needs.
+- in the **Insert panel** (Entities tab), a box at the top shows the entity of the block where the
+  cursor is: its states (the current one marked, then the possible ones: `hvac_modes`, the options
+  of a select, the usual ones of the domain such as `on`/`off` or `open`/`closed`) and its
+  attributes (`current_temperature`, `hvac_action`…). A click inserts the value at the cursor; after
+  `state:`, `to:` or `from:` it replaces what you have started typing and adds quotes when Home
+  Assistant needs them (`"on"`, `"Away: long"`);
+- **Ctrl+Space** after `attribute:`, `state:`, `to:` or `from:`, or inside `state_attr('…', '…')`,
+  `is_state('…', '…')` and `states.….attributes.`, shows the same values in the editor. They never
+  pop up by themselves.
 
-Turn the light bulb off when you want a plain editor: EDITHA remembers the choice.
+The light bulb also turns the [unknown entity](#yaml-check-explained) warning on and off. Turn it
+off when you want a plain editor: EDITHA remembers the choice.
 
 ![Entity suggestions](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/autocomplete-entities.png)
 

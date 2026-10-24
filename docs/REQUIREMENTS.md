@@ -95,7 +95,7 @@ The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits
 | HA-9 | Check with concrete explanations (lines involved, expected indentation) and warnings for typical HA mistakes that are still valid YAML: unquoted `on`/`off`/`yes`/`no`, `key:value` without a space, odd indentation. Also explained: unquoted `{{ }}` templates (read as a key), a key that is a list or a `{ }` block, `*name` alias without an anchor, repeated keys, missing colon between key and value. List of problems with line and link. | P1 |
 | HA-10 | Autocompletion of Material Design icons after `mdi:`, with preview. | P1 |
 | HA-11 | Warning (not error) for entity ids after `entity_id:`, `entity:`, `entities:` (also comma-separated, lists, scene maps, `include_/exclude_entities`) that Home Assistant does not know; the closest entity of the same domain is suggested with a one-click fix. No check without the entity list; templates and tagged values are skipped. | P1 |
-| HA-12 | Autocompletion of attributes (after `attribute:`, in `state_attr`/`is_state_attr`/`states.x.attributes.`) and states (after `state:`/`to:`/`from:`, in `is_state`) of the entity in the same block; only attribute names reach the browser, never values. HA-11 and HA-12 can be turned off with a toolbar button (setting `haHints`). | P1 |
+| HA-12 | States and attributes of the entity of the block under the cursor: a box in the Insert panel (click to insert, replacing the started value, quoted when YAML needs it) and Ctrl+Space only (never automatic) after `attribute:`, `state:`/`to:`/`from:`, in `state_attr`/`is_state_attr`/`is_state`/`states.x.attributes.`. Only attribute names and declared state lists reach the browser, never other attribute values. HA-11 and HA-12 can be turned off with a toolbar button (setting `haHints`). | P1 |
 
 ## 5. Home Assistant actions
 
@@ -237,7 +237,7 @@ editha/
 
 | Version | Requirements covered |
 | --- | --- |
-| 0.41.0 | HA-12: attributes and states in the suggestions; Home Assistant hints toggle; HA-11 warning also right after opening a file. |
+| 0.41.0 | HA-12: states and attributes box in the Insert panel and on Ctrl+Space; Home Assistant hints toggle; HA-11 warning also right after opening a file. |
 | 0.40.0 | HA-11: unknown entity warning with suggested fix. |
 | 0.39.1 | "App" instead of "add-on" everywhere (Home Assistant 2026.2 wording); old menu path kept in the installation steps. |
 | 0.39.0 | Ready-made images on GHCR for `amd64` and `aarch64` (`image:` in `config.yaml`, *Publish images* workflow); CI builds aarch64 on a native ARM runner; documentation images with absolute links (Documentation tab). |

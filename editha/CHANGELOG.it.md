@@ -4,8 +4,8 @@ Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella ing
 
 ## 0.41.0
 
-- **Attributi e stati nei suggerimenti**: dopo `attribute:` EDITHA suggerisce gli attributi dell'entità dello stesso blocco (`current_temperature`, `hvac_action`…); dopo `state:`, `to:` e `from:` lo stato attuale e quelli possibili (`hvac_modes`, opzioni di un select, `on`/`off`…). Anche nei template: `state_attr(…)`, `is_state(…)`, `states.….attributes.…`. `on` e `off` vengono inseriti tra virgolette.
-- **Pulsante aiuti di Home Assistant** (lampadina nella barra): accende e spegne questi suggerimenti e l'avviso per le entità sconosciute. EDITHA ricorda la scelta.
+- **Stati e attributi dell'entità su cui lavori**: nel pannello Inserisci un riquadro mostra l'entità del blocco dove si trova il cursore, con i suoi stati (prima quello attuale, poi `hvac_modes`, opzioni di un select, `on`/`off`…) e attributi (`current_temperature`, `hvac_action`…). Un clic inserisce il valore al cursore, tra virgolette quando servono a Home Assistant. Ctrl+Spazio mostra gli stessi valori nell'editor dopo `attribute:`, `state:`, `to:`, `from:` e in `state_attr(…)`, `is_state(…)`; non compaiono mai da soli.
+- **Pulsante aiuti di Home Assistant** (lampadina nella barra): accende e spegne il riquadro, questi suggerimenti e l'avviso per le entità sconosciute. EDITHA ricorda la scelta.
 - Corretto: l'avviso per le entità sconosciute compariva solo dopo aver scritto qualcosa; ora compare appena si apre il file.
 
 ## 0.40.0

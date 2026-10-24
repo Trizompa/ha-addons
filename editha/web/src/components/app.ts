@@ -25,7 +25,8 @@ import type { StatusInfo } from './status-bar.js';
 import type { TabView } from './tab-bar.js';
 import type { EdithaToasts } from './toasts.js';
 import type { ToolbarState } from './toolbar.js';
-import type { InsertTab } from './insert-panel.js';
+import type { InsertDetail, InsertTab } from './insert-panel.js';
+import { detailAtPos } from '../editor/ha-complete.js';
 import type { Snippet } from '../api/types.js';
 import { haData } from '../state/ha-data.js';
 import './context-menu.js';
@@ -101,6 +102,7 @@ export class EdithaApp extends LitElement {
     narrow: { state: true },
     drawerOpen: { state: true },
     insertOpen: { state: true },
+    insertDetail: { state: true },
     template: { state: true },
     insertTab: { state: true },
     userSnippets: { state: true },
@@ -127,6 +129,8 @@ export class EdithaApp extends LitElement {
   declare narrow: boolean;
   declare drawerOpen: boolean;
   declare insertOpen: boolean;
+  /** Entità del blocco del cursore per il riquadro del pannello Inserisci (HA-12). */
+  declare insertDetail: InsertDetail | null;
   /** HA-7: anteprima di un template aperta (file e prima riga del template). */
   declare template: { view: TemplateView; file: string; line: number; updating: boolean } | null;
   declare insertTab: InsertTab;
@@ -192,6 +196,7 @@ export class EdithaApp extends LitElement {
     this.narrow = this.narrowQuery.matches;
     this.drawerOpen = false;
     this.insertOpen = false;
+    this.insertDetail = null;
     this.template = null;
     this.insertTab = 'entities';
     this.userSnippets = [];
@@ -480,6 +485,12 @@ export class EdithaApp extends LitElement {
     this.refreshToolbar();
     this.drafts.startAlive();
     await this.drafts.recoverDrafts();
+    // Entità arrivate o aiuti accesi/spenti: il riquadro del pannello Inserisci si aggiorna.
+    haData.subscribe(() => {
+      const tab = this.focusedTab();
+      const s = this.editor.viewState;
+      if (tab && s) this.updateInsertDetail(tab, s, s.selection.main.head);
+    });
     void haData.start();
     void this.snippets.loadSnippets();
   }
@@ -846,6 +857,15 @@ export class EdithaApp extends LitElement {
     this.refreshToolbar();
   }
 
+  /** Riquadro dell'entità nel pannello Inserisci: solo se il pannello è aperto e gli aiuti accesi. */
+  private updateInsertDetail(tab: EditorTab, s: EditorState, head: number): void {
+    const ctx =
+      this.insertOpen && languageOf(tab.path).id === 'yaml' ? detailAtPos(s, head, true) : null;
+    const next = ctx ? { ctx, line: s.doc.lineAt(head).number } : null;
+    // Lo stesso contenuto non ridisegna il pannello a ogni tasto.
+    if (JSON.stringify(next) !== JSON.stringify(this.insertDetail ?? null)) this.insertDetail = next;
+  }
+
   refreshStatus(state?: EditorState): void {
     // Cursore spostato, altra tab o altra colonna: l'anteprima segue il template sotto il cursore.
     this.ha.scheduleTemplate(null);
@@ -859,6 +879,7 @@ export class EdithaApp extends LitElement {
     const s = (onSide ? this.side?.viewState : null) ?? state ?? this.pane.stateOf(tab);
     this.outlineView.updateOutline(tab, s);
     const head = s.selection.main.head;
+    this.updateInsertDetail(tab, s, head);
     const line = s.doc.lineAt(head);
     const lang = languageOf(tab.path);
     let errors = 0;
@@ -1090,7 +1111,10 @@ export class EdithaApp extends LitElement {
                 .tab=${this.insertTab}
                 .userSnippets=${this.userSnippets}
                 .canInsert=${!!this.focusedTab() && !this.focusedTab()!.readOnly}
+                .detail=${this.insertDetail}
                 @insert-text=${(e: CustomEvent<{ text: string }>) => this.snippets.insertText(e.detail.text)}
+                @insert-detail=${(e: CustomEvent<{ label: string; kind: 'state' | 'attribute' }>) =>
+                  this.snippets.insertDetail(e.detail.label, e.detail.kind)}
                 @insert-snippet=${(e: CustomEvent<{ body: string; fields: boolean }>) =>
                   this.snippets.insertSnippet(e.detail.body, e.detail.fields)}
                 @snippet-save=${() => void this.snippets.saveSelectionAsSnippet()}

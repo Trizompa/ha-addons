@@ -4,8 +4,8 @@ Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
 ## 0.41.0
 
-- **Attributes and states in the suggestions**: after `attribute:` EDITHA suggests the attributes of the entity in the same block (`current_temperature`, `hvac_action`…); after `state:`, `to:` and `from:` its current state and the possible ones (`hvac_modes`, select options, `on`/`off`…). Also in templates: `state_attr(…)`, `is_state(…)`, `states.….attributes.…`. `on` and `off` are inserted with quotes.
-- **Home Assistant hints button** (light bulb in the toolbar): turns these suggestions and the unknown entity warning on and off. EDITHA remembers the choice.
+- **States and attributes of the entity you are working on**: in the Insert panel a box shows the entity of the block where the cursor is, with its states (current one first, then `hvac_modes`, select options, `on`/`off`…) and attributes (`current_temperature`, `hvac_action`…). A click inserts the value at the cursor, with quotes when Home Assistant needs them. Ctrl+Space shows the same values in the editor after `attribute:`, `state:`, `to:`, `from:` and in `state_attr(…)`, `is_state(…)`; they never pop up by themselves.
+- **Home Assistant hints button** (light bulb in the toolbar): turns the box, these suggestions and the unknown entity warning on and off. EDITHA remembers the choice.
 - Fixed: the unknown entity warning only appeared after typing something; now it appears as soon as the file opens.
 
 ## 0.40.0

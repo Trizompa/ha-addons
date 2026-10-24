@@ -8,6 +8,6 @@ __pycache__/
 .DS_Store
 coverage/
 
-# Output di tsc finito per sbaglio accanto ai sorgenti TypeScript.
+# tsc output accidentally emitted next to the TypeScript sources.
 editha/server/src/**/*.js
 editha/web/src/**/*.js

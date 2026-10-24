@@ -13,13 +13,18 @@ export interface DetailEntity {
 }
 
 export interface DetailContext {
-  kind: 'attribute' | 'state';
+  /** Cosa va scritto al cursore; null: il cursore è solo nel blocco di un'entità (pannello Inserisci). */
+  kind: 'attribute' | 'state' | null;
   /** Entità di cui suggerire attributi o stati. */
   entities: string[];
   /** Quanti caratteri prima del cursore sostituisce il suggerimento. */
   typed: number;
-  /** Il valore è già tra virgolette (o dentro un template): «on» si scrive così com'è. */
-  quoted: boolean;
+  /** Virgolette già aperte prima del valore ('' se nessuna). */
+  quote: '' | '"' | "'";
+  /** Dentro un template Jinja: le virgolette sono quelle di Jinja, non dello YAML. */
+  template: boolean;
+  /** Chiave dopo cui si scrive («to», «attribute»…); null nei template e nel solo blocco. */
+  key: string | null;
 }
 
 const STATE_KEYS = new Set(['state', 'to', 'from', 'not_to', 'not_from']);
@@ -58,7 +63,7 @@ const indentOf = (line: string) => /^\s*/.exec(line)![0].length;
  * allo stesso livello, sopra o sotto, anche come elenco. `attribute` dice se nel blocco c'è anche
  * «attribute:» (allora «state:» è il valore di un attributo, non lo stato dell'entità).
  */
-function blockEntities(lines: string[], at: number, col: number): { entities: string[]; attribute: boolean } {
+function blockEntities(lines: string[], at: number, col: number, self = false): { entities: string[]; attribute: boolean } {
   const entities: string[] = [];
   let attribute = false;
   const collect = (index: number, kl: KeyLine) => {
@@ -87,7 +92,7 @@ function blockEntities(lines: string[], at: number, col: number): { entities: st
     }
     if (kl.col < col) break;
     if (kl.col === col) {
-      if (i !== at) collect(i, kl);
+      if (i !== at || self) collect(i, kl);
       if (kl.dash !== null) break;
     }
   }
@@ -106,14 +111,30 @@ function blockEntities(lines: string[], at: number, col: number): { entities: st
   return { entities: [...new Set(entities)], attribute };
 }
 
+/** Valore che si sta scrivendo: parole con «.» e «-», anche separate da spazi (opzioni come «Fuori casa»). */
+const VALUE = String.raw`[\w.-]*(?: [\w.-]*)*`;
+/** «chiave: valore» con il cursore nel valore. */
+const KEY_VALUE = new RegExp(String.raw`^(\s*)((?:-\s+)*)([A-Za-z_][\w-]*)\s*:\s+(["']?)(${VALUE})$`);
+/** «- valore» in un elenco. */
+const ITEM_VALUE = new RegExp(String.raw`^(\s*)-\s+(["']?)(${VALUE})$`);
+
 /** Template: state_attr('x', '…'), is_state_attr('x', '…'), states.x.attributes.…, is_state('x', '…'). */
 function templateContext(before: string): DetailContext | null {
-  const attr = /\b(?:state_attr|is_state_attr)\(\s*['"]([a-z_][a-z0-9_]*\.[a-z0-9_]+)['"]\s*,\s*['"](\w*)$/.exec(before);
-  if (attr) return { kind: 'attribute', entities: [attr[1]!], typed: attr[2]!.length, quoted: true };
+  const tpl = (kind: 'attribute' | 'state', id: string, quote: string, typed: string): DetailContext => ({
+    kind,
+    entities: [id],
+    typed: typed.length,
+    quote: quote as "'" | '"',
+    template: true,
+    key: null,
+  });
+  const attr = /\b(?:state_attr|is_state_attr)\(\s*['"]([a-z_][a-z0-9_]*\.[a-z0-9_]+)['"]\s*,\s*(['"])(\w*)$/.exec(before);
+  if (attr) return tpl('attribute', attr[1]!, attr[2]!, attr[3]!);
   const dotted = /\bstates\.([a-z_][a-z0-9_]*\.[a-z0-9_]+)\.attributes\.(\w*)$/.exec(before);
-  if (dotted) return { kind: 'attribute', entities: [dotted[1]!], typed: dotted[2]!.length, quoted: true };
-  const state = /\bis_state\(\s*['"]([a-z_][a-z0-9_]*\.[a-z0-9_]+)['"]\s*,\s*['"]([\w-]*)$/.exec(before);
-  if (state) return { kind: 'state', entities: [state[1]!], typed: state[2]!.length, quoted: true };
+  // Qui l'attributo è un nome in un'espressione, non un testo: niente virgolette.
+  if (dotted) return { ...tpl('attribute', dotted[1]!, '', dotted[2]!), quote: '' };
+  const state = /\bis_state\(\s*['"]([a-z_][a-z0-9_]*\.[a-z0-9_]+)['"]\s*,\s*(['"])([\w -]*)$/.exec(before);
+  if (state) return tpl('state', state[1]!, state[2]!, state[3]!);
   return null;
 }
 
@@ -125,7 +146,7 @@ export function detailContext(lines: string[], index: number, before: string): D
   const tpl = templateContext(before);
   if (tpl) return tpl;
   // «chiave: valore» con il cursore nel valore.
-  const m = /^(\s*)((?:-\s+)*)([A-Za-z_][\w-]*)\s*:\s+(["']?)([\w.-]*)$/.exec(before);
+  const m = KEY_VALUE.exec(before);
   if (m) {
     const key = m[3]!;
     if (key !== 'attribute' && !STATE_KEYS.has(key)) return null;
@@ -133,10 +154,17 @@ export function detailContext(lines: string[], index: number, before: string): D
     const block = blockEntities(lines, index, col);
     if (block.entities.length === 0) return null;
     if (key !== 'attribute' && block.attribute) return null;
-    return { kind: key === 'attribute' ? 'attribute' : 'state', entities: block.entities, typed: m[5]!.length, quoted: !!m[4] };
+    return {
+      kind: key === 'attribute' ? 'attribute' : 'state',
+      entities: block.entities,
+      typed: m[5]!.length,
+      quote: m[4] as DetailContext['quote'],
+      template: false,
+      key,
+    };
   }
   // «- valore» in un elenco sotto «state:» / «to:» / «from:».
-  const item = /^(\s*)-\s+(["']?)([\w.-]*)$/.exec(before);
+  const item = ITEM_VALUE.exec(before);
   if (!item) return null;
   const dash = item[1]!.length;
   for (let i = index - 1; i >= 0; i--) {
@@ -148,7 +176,7 @@ export function detailContext(lines: string[], index: number, before: string): D
     if (!kl || kl.value !== '' || kl.col > dash || !STATE_KEYS.has(kl.key)) return null;
     const block = blockEntities(lines, i, kl.col);
     if (block.entities.length === 0 || block.attribute) return null;
-    return { kind: 'state', entities: block.entities, typed: item[3]!.length, quoted: !!item[2] };
+    return { kind: 'state', entities: block.entities, typed: item[3]!.length, quote: item[2] as DetailContext['quote'], template: false, key: kl.key };
   }
   return null;
 }
@@ -187,32 +215,67 @@ const COMMON_STATES = ['unavailable', 'unknown'];
 
 export interface DetailOption {
   label: string;
-  /** È lo stato attuale di una delle entità: lo dice il testo grigio a destra. */
+  /** È lo stato attuale di una delle entità. */
   current: boolean;
 }
 
-/** Attributi o stati da suggerire per le entità del contesto, nell'ordine in cui conviene vederli. */
-export function detailOptions(ctx: DetailContext, entities: readonly DetailEntity[]): DetailOption[] {
-  const found = entities.filter((e) => ctx.entities.includes(e.entity_id));
-  const out = new Map<string, DetailOption>();
-  if (ctx.kind === 'attribute') {
-    for (const e of found) for (const a of e.attributes ?? []) if (!out.has(a)) out.set(a, { label: a, current: false });
-    return [...out.values()];
+/** Stati (prima quello attuale) e attributi delle entità `ids`, nell'ordine in cui conviene vederli. */
+export function entityDetails(ids: readonly string[], entities: readonly DetailEntity[]): { states: DetailOption[]; attributes: string[] } {
+  const found = entities.filter((e) => ids.includes(e.entity_id));
+  const states = new Map<string, DetailOption>();
+  for (const e of found) states.set(e.state, { label: e.state, current: true });
+  for (const e of found) for (const s of e.states ?? []) if (!states.has(s)) states.set(s, { label: s, current: false });
+  for (const id of ids) {
+    for (const s of DOMAIN_STATES[id.slice(0, id.indexOf('.'))] ?? []) if (!states.has(s)) states.set(s, { label: s, current: false });
   }
-  for (const e of found) out.set(e.state, { label: e.state, current: true });
-  for (const e of found) for (const s of e.states ?? []) if (!out.has(s)) out.set(s, { label: s, current: false });
-  for (const id of ctx.entities) {
-    for (const s of DOMAIN_STATES[id.slice(0, id.indexOf('.'))] ?? []) if (!out.has(s)) out.set(s, { label: s, current: false });
-  }
-  if (out.size === 0) return [];
-  for (const s of COMMON_STATES) if (!out.has(s)) out.set(s, { label: s, current: false });
-  return [...out.values()];
+  if (states.size > 0) for (const s of COMMON_STATES) if (!states.has(s)) states.set(s, { label: s, current: false });
+  const attributes = [...new Set(found.flatMap((e) => e.attributes ?? []))];
+  return { states: [...states.values()], attributes };
 }
 
-/** Valori che Home Assistant (YAML 1.1) leggerebbe come vero/falso: vanno tra virgolette. */
-const YAML11_BOOLEANS = new Set(['on', 'off', 'yes', 'no', 'true', 'false']);
+/** Attributi o stati da suggerire al cursore (Ctrl+Spazio). */
+export function detailOptions(ctx: DetailContext, entities: readonly DetailEntity[]): DetailOption[] {
+  const details = entityDetails(ctx.entities, entities);
+  if (ctx.kind === 'attribute') return details.attributes.map((label) => ({ label, current: false }));
+  return ctx.kind === 'state' ? details.states : [];
+}
 
-/** Testo da inserire: «on» diventa «"on"» se il valore non è già tra virgolette. */
+/**
+ * Entità del blocco dove sta il cursore, per il riquadro del pannello Inserisci: come
+ * `detailContext` dopo «attribute:» / «state:», altrimenti l'entità del blocco della riga
+ * (anche se il cursore è proprio sulla riga «entity_id:»), con `kind` null.
+ */
+export function panelContext(lines: string[], index: number, before: string): DetailContext | null {
+  const detail = detailContext(lines, index, before);
+  if (detail) return detail;
+  // La chiave della riga del cursore, o quella più vicina sopra con un rientro non maggiore.
+  const indent = indentOf(lines[index] ?? '') || (/^\s*$/.test(before) ? before.length : 0);
+  for (let i = index; i >= 0; i--) {
+    const line = lines[i]!;
+    if (!isContent(line)) continue;
+    const kl = keyLine(line);
+    if (!kl) continue;
+    if (i !== index && kl.col > indent) continue;
+    const block = blockEntities(lines, i, kl.col, true);
+    if (block.entities.length === 0) return null;
+    return { kind: null, entities: block.entities, typed: 0, quote: '', template: false, key: null };
+  }
+  return null;
+}
+
+/** Parole che Home Assistant (YAML 1.1) leggerebbe come vero/falso o vuoto, non come testo. */
+const YAML_SPECIAL = new Set(['on', 'off', 'yes', 'no', 'y', 'n', 'true', 'false', 'null', '~']);
+/** Testo che lo YAML legge così com'è senza virgolette: parole, anche con spazi, che iniziano con una lettera. */
+const PLAIN = /^[A-Za-z_][\w.-]*(?: [\w.-]+)*$/;
+
+/**
+ * Testo da inserire per `label`. Negli stati senza virgolette, «on» diventa «"on"» e così ogni
+ * valore che lo YAML leggerebbe diversamente (`Fuori: casa`, `#1`, `01`); tra virgolette già
+ * aperte si raddoppia o si protegge la virgoletta dentro il testo (`l'ingresso`).
+ */
 export function insertText(ctx: DetailContext, label: string): string {
-  return ctx.kind === 'state' && !ctx.quoted && YAML11_BOOLEANS.has(label.toLowerCase()) ? `"${label}"` : label;
+  if (ctx.quote === "'") return ctx.template ? label.replace(/'/g, "\\'") : label.replace(/'/g, "''");
+  if (ctx.quote === '"') return label.replace(/["\\]/g, (c) => '\\' + c);
+  if (ctx.kind !== 'state' || ctx.template) return label;
+  return PLAIN.test(label) && !YAML_SPECIAL.has(label.toLowerCase()) ? label : JSON.stringify(label);
 }

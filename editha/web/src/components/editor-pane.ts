@@ -220,6 +220,22 @@ export class EdithaEditorPane extends LitElement {
     return true;
   }
 
+  /** Mette `text` al posto dei `typed` caratteri prima del cursore (valore iniziato a scrivere). */
+  replaceBefore(typed: number, text: string): boolean {
+    const view = this.view;
+    if (!view || !this.current || this.current.readOnly) return false;
+    const { head, from, to } = view.state.selection.main;
+    const start = from === to ? Math.max(view.state.doc.lineAt(head).from, head - typed) : from;
+    view.dispatch({
+      changes: { from: start, to, insert: text },
+      selection: { anchor: start + text.length },
+      scrollIntoView: true,
+      userEvent: 'input',
+    });
+    view.focus();
+    return true;
+  }
+
   /**
    * Con `fields` i segnaposto ${...} diventano campi da percorrere con Tab.
    * Con \`fields\` i segnaposto \${...} diventano campi da percorrere con Tab.

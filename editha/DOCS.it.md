@@ -187,17 +187,21 @@ Premi Ctrl+Spazio, oppure scrivi e basta:
   suggerimenti);
 - **icone Material Design** dopo `mdi:`, con l'anteprima.
 
-Gli **aiuti di Home Assistant** (la lampadina nella barra, accesa all'inizio) aggiungono altri due
-suggerimenti e l'avviso per le [entità sconosciute](#controllo-yaml-spiegato):
+Gli **aiuti di Home Assistant** (la lampadina nella barra, accesa all'inizio) mostrano **stati e
+attributi** dell'entità su cui stai lavorando, senza disturbare mentre scrivi:
 
-- **attributi** dopo `attribute:` e nei template (`state_attr('climate.salotto', '…')`,
-  `states.climate.salotto.attributes.…`), per l'entità dello stesso blocco;
-- **stati** dopo `state:`, `to:` e `from:`, e in `is_state('…', '…')`: prima lo stato attuale,
-  poi quelli che Home Assistant dichiara (`hvac_modes`, le opzioni di un select) e quelli tipici
-  del dominio (`on`/`off`, `open`/`closed`, `home`/`not_home`…). `on` e `off` vengono inseriti tra
-  virgolette, come serve a Home Assistant.
+- nel **pannello Inserisci** (scheda Entità), un riquadro in alto mostra l'entità del blocco dove
+  si trova il cursore: i suoi stati (quello attuale segnato, poi quelli possibili: `hvac_modes`, le
+  opzioni di un select, quelli tipici del dominio come `on`/`off` o `open`/`closed`) e i suoi
+  attributi (`current_temperature`, `hvac_action`…). Un clic inserisce il valore al cursore; dopo
+  `state:`, `to:` o `from:` sostituisce quello che hai iniziato a scrivere e aggiunge le virgolette
+  quando servono a Home Assistant (`"on"`, `"Fuori: casa"`);
+- **Ctrl+Spazio** dopo `attribute:`, `state:`, `to:` o `from:`, oppure dentro
+  `state_attr('…', '…')`, `is_state('…', '…')` e `states.….attributes.`, mostra gli stessi valori
+  nell'editor. Non compaiono mai da soli.
 
-Spegni la lampadina quando vuoi un editor semplice: EDITHA ricorda la scelta.
+La lampadina accende e spegne anche l'avviso per le [entità sconosciute](#controllo-yaml-spiegato).
+Spegnila quando vuoi un editor semplice: EDITHA ricorda la scelta.
 
 ![Suggerimenti delle entità](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/autocomplete-entities.png)
 

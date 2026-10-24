@@ -277,39 +277,54 @@ test.describe('Home Assistant', () => {
     await expect(page.locator('editha-status-bar')).toContainText('1 avviso');
   });
 
-  test('HA-12 – attributi e stati nei suggerimenti; il pulsante li spegne', async ({ page }) => {
+  test('HA-12 – attributi e stati: niente menu scrivendo, Ctrl+Spazio e riquadro nel pannello', async ({ page }) => {
     await openFile(page, 'tabs/c.yaml');
     await editor(page).click();
     await page.keyboard.press('Control+End');
     await page.keyboard.insertText('- condition: state\n  entity_id: climate.salotto\n  attribute: hv');
     await page.keyboard.type('a');
     const list = page.locator('.cm-tooltip-autocomplete');
+    // Mentre si scrive non compare niente: solo a richiesta.
+    await page.waitForTimeout(400);
+    await expect(list).toHaveCount(0);
+    await page.keyboard.press('Control+Space');
     await expect(list.locator('li', { hasText: 'hvac_action' })).toBeVisible();
     await expect(list.locator('li', { hasText: 'hvac_modes' })).toBeVisible();
     await page.keyboard.press('Escape');
 
-    // Gli stati: quello attuale (segnato) e quelli dichiarati da Home Assistant.
-    await page.keyboard.insertText('\n- condition: state\n  entity_id: climate.salotto\n  state: ');
-    await page.keyboard.type('c');
-    await expect(list.locator('li', { hasText: 'cool' })).toBeVisible();
-    await page.keyboard.press('Backspace');
-    await page.keyboard.press('Control+Space');
-    await expect(list.locator('li', { hasText: 'heat' })).toContainText('stato attuale');
-    await page.keyboard.press('Escape');
+    // Riquadro nel pannello Inserisci: l'entità del blocco, stati e attributi; un clic inserisce.
+    await page.keyboard.insertText('\n- trigger: state\n  entity_id: climate.salotto\n  to: ');
+    await page.locator('editha-toolbar button[title^="Inserisci"]').click();
+    const card = page.locator('editha-insert-panel .ctx');
+    await expect(card).toContainText('Termostato');
+    await expect(card).toContainText('dopo «to:» → inserisce qui');
+    await expect(card.locator('.chip.cur')).toContainText('heat');
+    await card.locator('.chip', { hasText: /^off$/ }).click();
+    await expect(editor(page)).toContainText('to: "off"');
+    // Fuori dal blocco di un'entità il riquadro sparisce.
+    await page.keyboard.insertText('\nnome: prova');
+    await expect(card).toHaveCount(0);
 
-    // Spenti: niente attributi e niente avviso per le entità sconosciute.
+    // Lampadina spenta: niente riquadro, niente Ctrl+Spazio, niente avviso per le entità sconosciute.
     const button = page.locator('editha-toolbar button[title^="Aiuti di Home Assistant"]');
     await page.keyboard.insertText('\nx:\n  entity_id: light.cucin');
     await expect(page.locator('.cm-lintRange-warning', { hasText: 'light.cucin' })).toBeVisible();
+    await expect(card).toHaveCount(0);
+    await page.keyboard.insertText('\n- entity_id: climate.salotto\n  attribute: ');
+    await expect(card).toBeVisible();
     await button.click();
+    await expect(card).toHaveCount(0);
     await expect(page.locator('.cm-lintRange-warning', { hasText: 'light.cucin' })).toHaveCount(0);
-    await page.keyboard.insertText('\n- entity_id: climate.salotto\n  attribute: hv');
-    await page.keyboard.type('a');
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.press('Control+Space');
     await page.waitForTimeout(400);
     await expect(list.locator('li', { hasText: 'hvac_action' })).toHaveCount(0);
     // Riaccesi (l'impostazione resta salvata per gli altri test).
+    await page.keyboard.press('Escape');
     await button.click();
     await expect(page.locator('.cm-lintRange-warning', { hasText: 'light.cucin' })).toBeVisible();
+    await expect(card).toBeVisible();
   });
 
   test('Snippet predefiniti e personali', async ({ page }) => {

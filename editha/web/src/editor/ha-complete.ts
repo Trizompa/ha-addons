@@ -4,7 +4,8 @@ import { secretKeys } from '../state/secrets.js';
 import { mdiIcons } from '../state/mdi.js';
 import { filePath } from './links.js';
 import { t } from '../i18n/index.js';
-import { detailContext, detailOptions, insertText, type DetailContext } from './ha-detail.js';
+import { detailContext, detailOptions, insertText, panelContext, type DetailContext } from './ha-detail.js';
+import type { EditorState } from '@codemirror/state';
 
 const SERVICE_KEY = /\b(service|action|perform_action)\s*:\s*["']?[\w.]*$/;
 /** Dopo «!secret » e «mdi:» ci sono suggerimenti propri: niente entità in mezzo. */
@@ -39,13 +40,13 @@ export function haCompletions(ctx: CompletionContext): CompletionResult | null {
   const line = ctx.state.doc.lineAt(ctx.pos);
   const before = line.text.slice(0, ctx.pos - line.from);
   if (/^\s*#/.test(before) || OTHER_CONTEXT.test(before)) return null;
-  // Dopo «attribute:» o «state:» si suggeriscono attributi e stati, non le entità.
-  if (detailAt(ctx)) return null;
   const isService = SERVICE_KEY.test(before);
   const isEntity = ENTITY_KEY.test(before);
   const dotted = !!word?.text.includes('.');
   if (!ctx.explicit && !dotted && !isService && !isEntity) return null;
   if (!ctx.explicit && !word && !isService && !isEntity) return null;
+  // Dopo «attribute:» o «state:» con Ctrl+Spazio: attributi e stati, non le entità.
+  if (ctx.explicit && detailAt(ctx)) return null;
   const from = word ? word.from : ctx.pos;
   let options: Completion[];
   if (isService) {
@@ -59,25 +60,32 @@ export function haCompletions(ctx: CompletionContext): CompletionResult | null {
   return { from, options, validFor: /^[a-z0-9_.]*$/ };
 }
 
-/** Contesto di attributi o stati al cursore, se gli aiuti di Home Assistant sono accesi. */
-function detailAt(ctx: CompletionContext): DetailContext | null {
+/**
+ * Contesto di attributi o stati alla posizione `pos`, se gli aiuti di Home Assistant sono accesi.
+ * Con `panel` anche il solo blocco di un'entità (riquadro del pannello Inserisci).
+ */
+export function detailAtPos(state: EditorState, pos: number, panel = false): DetailContext | null {
   if (!haData.available || !haData.hints) return null;
-  const line = ctx.state.doc.lineAt(ctx.pos);
-  const before = line.text.slice(0, ctx.pos - line.from);
+  const line = state.doc.lineAt(pos);
+  const before = line.text.slice(0, pos - line.from);
   if (/^\s*#/.test(before)) return null;
   // Solo le righe vicine: il blocco di un'automazione non è mai lungo centinaia di righe.
   const first = Math.max(1, line.number - 200);
-  const last = Math.min(ctx.state.doc.lines, line.number + 200);
+  const last = Math.min(state.doc.lines, line.number + 200);
   const lines: string[] = [];
-  for (let n = first; n <= last; n++) lines.push(ctx.state.doc.line(n).text);
-  return detailContext(lines, line.number - first, before);
+  for (let n = first; n <= last; n++) lines.push(state.doc.line(n).text);
+  return (panel ? panelContext : detailContext)(lines, line.number - first, before);
 }
+
+const detailAt = (ctx: CompletionContext) => detailAtPos(ctx.state, ctx.pos);
 
 /**
  * HA-12: attributi dopo «attribute:» e in state_attr(), stati dopo «state:» / «to:» / «from:» e in
- * is_state(), per le entità del blocco. Solo con gli aiuti di Home Assistant accesi.
+ * is_state(), per le entità del blocco. Solo con gli aiuti di Home Assistant accesi e con Ctrl+Spazio.
  */
 export function haDetailCompletions(ctx: CompletionContext): CompletionResult | null {
+  // Solo a richiesta (Ctrl+Spazio): mentre si scrive l'editor resta pulito, c'è il pannello Inserisci.
+  if (!ctx.explicit) return null;
   const detail = detailAt(ctx);
   if (!detail) return null;
   const options = detailOptions(detail, haData.entities);
