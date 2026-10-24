@@ -3,6 +3,8 @@ import type { EntityInfo, ServiceInfo } from '../api/types.js';
 
 type Listener = () => void;
 
+const NO_IDS: ReadonlySet<string> = new Set();
+
 /**
  * Entità e servizi di Home Assistant condivisi tra autocompletamento e pannello
  * "Inserisci". Si aggiornano all'avvio, ogni minuto e su richiesta.
@@ -14,17 +16,19 @@ class HaData {
   loaded = false;
   private readonly listeners = new Set<Listener>();
   private idsFor: EntityInfo[] | null = null;
-  private ids: ReadonlySet<string> = new Set();
+  private ids: ReadonlySet<string> = NO_IDS;
 
   /**
    * Id delle entità, per l'avviso sulle entità sconosciute. Vuoto se HA non è raggiungibile:
    * senza l'elenco non si può dire che un'entità non esiste. Lo stesso Set finché i dati non cambiano.
    */
   entityIds(): ReadonlySet<string> {
-    if (!this.available) return new Set();
+    if (!this.available) return NO_IDS;
     if (this.idsFor !== this.entities) {
       this.idsFor = this.entities;
-      this.ids = new Set(this.entities.map((e) => e.entity_id));
+      // Dati ricaricati ogni minuto: se gli id sono gli stessi resta lo stesso Set (niente nuovo controllo).
+      const ids = new Set(this.entities.map((e) => e.entity_id));
+      if (ids.size !== this.ids.size || [...ids].some((id) => !this.ids.has(id))) this.ids = ids;
     }
     return this.ids;
   }

@@ -231,7 +231,7 @@ describe('correzioni della revisione (HA-9)', () => {
 
 describe('entità sconosciute (HA-11)', () => {
   const known = new Set(['light.salotto', 'light.cucina', 'sensor.temperatura', 'scene.sera']);
-  const unknown = (text: string) => lintYaml(text, '', known).filter((p) => /entità/.test(p.message));
+  const unknown = (text: string) => lintYaml(text, '', known).filter((p) => /del tuo Home Assistant/.test(p.message));
 
   it('segnala un\'entità scritta male e propone quella giusta', () => {
     const text = 'action: light.turn_on\ntarget:\n  entity_id: light.salotoo\n';

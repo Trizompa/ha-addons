@@ -21,7 +21,7 @@ import { forceLinting, linter, lintKeymap } from '@codemirror/lint';
 import { indentationMarkers } from '@replit/codemirror-indentation-markers';
 import { languageOf, languageSupport, type LanguageId } from './languages.js';
 import { edithaHighlighting, edithaTheme, fontSizeTheme } from './theme.js';
-import { lintYaml } from './yaml-lint.js';
+import { lintYaml, suggestionsPending } from './yaml-lint.js';
 import { wrapIndent } from './wrap-indent.js';
 import { haCompletions, mdiCompletions, secretCompletions, type MdiCompletion } from './ha-complete.js';
 import { mdiSvg } from '../state/mdi.js';
@@ -61,8 +61,11 @@ export const compartments = {
 function yamlLinter(path: string): Extension {
   return linter(
     // Il testo con «\n» (anche per i file CRLF): le posizioni coincidono con quelle del documento.
-    (view) =>
-      lintYaml(view.state.doc.toString(), path, haData.entityIds()).map((p) => ({
+    (view) => {
+      const problems = lintYaml(view.state.doc.toString(), path, haData.entityIds());
+      // Suggestioni non ancora calcolate (tante entità sconosciute): un altro giro subito dopo.
+      if (suggestionsPending) setTimeout(() => view.dom.isConnected && forceLinting(view), 50);
+      return problems.map((p) => ({
         from: p.from,
         to: p.to,
         severity: p.severity,
@@ -70,7 +73,8 @@ function yamlLinter(path: string): Extension {
         // Nell'elenco dei problemi ogni voce dice a che riga si trova.
         source: t('status.lineN', { n: view.state.doc.lineAt(p.from).number }),
         ...(p.fix !== undefined ? { actions: [replaceAction(p.fix)] } : {}),
-      })),
+      }));
+    },
     { delay: 300 },
   );
 }

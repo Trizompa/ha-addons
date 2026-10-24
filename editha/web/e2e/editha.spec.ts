@@ -265,7 +265,7 @@ test.describe('Home Assistant', () => {
     await expect(warning).toBeVisible();
     await warning.hover();
     const tooltip = page.locator('.cm-tooltip-hover .cm-diagnostic-warning');
-    await expect(tooltip).toContainText('«light.cucin» non è un\'entità del tuo Home Assistant. Forse intendevi «light.cucina»?');
+    await expect(tooltip).toContainText('«light.cucin» non è tra le entità attive del tuo Home Assistant. Forse intendevi «light.cucina»?');
     await tooltip.locator('.cm-diagnosticAction', { hasText: 'Sostituisci con light.cucina' }).click();
     await expect(editor(page)).toContainText('entity_id: light.cucina');
     await expect(page.locator('.cm-lintRange-warning')).toHaveCount(0);

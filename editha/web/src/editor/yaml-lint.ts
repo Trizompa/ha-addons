@@ -54,15 +54,23 @@ export function isEsphomePath(path: string): boolean {
   return /(?:^|\/)esphome\//.test(path);
 }
 
-/** Distanza di modifica tra due parole (tag scritti male: !secrets → !secret). */
-function editDistance(a: string, b: string): number {
-  let prev = Array.from({ length: b.length + 1 }, (_v, i) => i);
+/**
+ * Distanza di modifica tra due parole (tag scritti male: !secrets → !secret). Con `max` il calcolo
+ * si ferma appena la distanza supera il limite (restituisce max + 1): confronti veloci su migliaia di entità.
+ */
+function editDistance(a: string, b: string, max = Infinity): number {
+  let prev = new Uint16Array(b.length + 1);
+  let row = new Uint16Array(b.length + 1);
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
   for (let i = 1; i <= a.length; i++) {
-    const row = [i];
+    row[0] = i;
+    let rowMin = i;
     for (let j = 1; j <= b.length; j++) {
       row[j] = Math.min(prev[j]! + 1, row[j - 1]! + 1, prev[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (row[j]! < rowMin) rowMin = row[j]!;
     }
-    prev = row;
+    if (rowMin > max) return max + 1;
+    [prev, row] = [row, prev];
   }
   return prev[b.length]!;
 }
@@ -542,8 +550,11 @@ let entityIndex: {
   suggestions: Map<string, string | null>;
 } | null = null;
 
-/** Suggerimenti nuovi calcolati in un solo controllo: gli altri arrivano ai controlli successivi. */
-const SUGGESTIONS_PER_RUN = 25;
+/** Tempo massimo (ms) per i suggerimenti nuovi in un solo controllo: gli altri arrivano al controllo dopo. */
+const SUGGESTIONS_MS = 40;
+
+/** Vero se l'ultimo controllo ha lasciato suggerimenti da calcolare: l'editor ne lancia subito un altro. */
+export let suggestionsPending = false;
 
 const domainOf = (id: string) => id.slice(0, id.indexOf('.'));
 
@@ -565,12 +576,16 @@ function indexFor(known: ReadonlySet<string>) {
  * Si cerca nello stesso dominio; con un dominio inesistente (ligth.) in quello più simile.
  * `undefined`: non calcolato, perché il budget del controllo è finito.
  */
-function closestEntity(id: string, known: ReadonlySet<string>, budget: { left: number }): string | null | undefined {
+function closestEntity(id: string, known: ReadonlySet<string>, run: { deadline: number; computed: number }): string | null | undefined {
   const index = indexFor(known);
   const cached = index.suggestions.get(id);
   if (cached !== undefined) return cached;
-  if (budget.left <= 0) return undefined;
-  budget.left--;
+  // Almeno uno per controllo: anche su un file lento da controllare i suggerimenti arrivano tutti.
+  if (run.computed > 0 && performance.now() > run.deadline) {
+    suggestionsPending = true;
+    return undefined;
+  }
+  run.computed++;
   let domain = domainOf(id);
   if (!index.byDomain.has(domain)) {
     let bestDomain = 3;
@@ -585,7 +600,7 @@ function closestEntity(id: string, known: ReadonlySet<string>, budget: { left: n
   for (const candidate of index.byDomain.get(domain) ?? []) {
     // Lunghezze troppo diverse non possono stare sotto il limite: si salta il calcolo.
     if (Math.abs(candidate.length - id.length) >= bestDistance) continue;
-    const d = editDistance(id, candidate);
+    const d = editDistance(id, candidate, bestDistance - 1);
     if (d < bestDistance) [best, bestDistance] = [candidate, d];
   }
   index.suggestions.set(id, best);
@@ -597,7 +612,7 @@ function closestEntity(id: string, known: ReadonlySet<string>, budget: { left: n
  * perché un'entità appena creata nella configurazione esiste solo dopo un riavvio o un ricaricamento.
  */
 function unknownEntities(doc: Document.Parsed, text: string, known: ReadonlySet<string>, out: YamlProblem[]): void {
-  const budget = { left: SUGGESTIONS_PER_RUN };
+  const run = { deadline: performance.now() + SUGGESTIONS_MS, computed: 0 };
   const check = (node: Scalar) => {
     // Valori con tag (!input, !secret) e testi su più righe non sono entità da controllare.
     if (node.tag || !node.range || typeof node.value !== 'string') return;
@@ -610,7 +625,7 @@ function unknownEntities(doc: Document.Parsed, text: string, known: ReadonlySet<
       const id = m[0];
       if (!ENTITY_ID.test(id) || known.has(id)) continue;
       const from = node.range[0] + m.index;
-      const suggestion = closestEntity(id, known, budget);
+      const suggestion = closestEntity(id, known, run);
       out.push({
         from,
         to: from + id.length,
@@ -742,6 +757,7 @@ export function lintYaml(text: string, path = '', knownEntities?: ReadonlySet<st
     });
   }
 
+  suggestionsPending = false;
   if (knownEntities?.size) for (const doc of list) unknownEntities(doc, text, knownEntities, warnings);
 
   // Tabulazioni e spazi speciali: la spiegazione chiara sostituisce gli errori della libreria sulla riga.
