@@ -50,7 +50,7 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
 
 - **Barra degli strumenti** (in alto): esplora file, salva e salva tutto, annulla e ripeti, cerca
   e sostituisci, cronologia del file, a capo automatico, vista divisa, schema, pannello Inserisci,
-  anteprima template e menu di Home Assistant. A destra: lingua (Automatica (browser), Italiano,
+  anteprima template, aiuti di Home Assistant e menu di Home Assistant. A destra: lingua (Automatica (browser), Italiano,
   English), tema (automatico, chiaro, scuro) e Informazioni.
 - **Esplora file** (a sinistra): il contenuto di `/config`. Sopra: cerca in tutti i file, Git,
   nuovo file, nuova cartella, cartelle di sistema, carica, aggiorna e comprimi tutto.
@@ -167,7 +167,8 @@ punti.
 esista nel tuo Home Assistant. Una scritta male (`light.salotoo`) viene sottolineata in giallo;
 se esiste un'entità simile, il messaggio la propone e **Sostituisci con…** la corregge con un clic.
 È un avviso, non un errore: un'entità appena creata nella configurazione esiste solo dopo un
-riavvio o un ricaricamento. Senza collegamento a Home Assistant il controllo non c'è.
+riavvio o un ricaricamento. Senza collegamento a Home Assistant, o con gli aiuti di Home Assistant
+spenti, il controllo non c'è.
 
 I file molto grandi (oltre 1 MB) non vengono controllati e non hanno lo schema, così l'editor resta
 reattivo.
@@ -185,6 +186,18 @@ Premi Ctrl+Spazio, oppure scrivi e basta:
 - **chiavi `!secret`** da `secrets.yaml` (solo i nomi: i valori non vengono mai inviati per i
   suggerimenti);
 - **icone Material Design** dopo `mdi:`, con l'anteprima.
+
+Gli **aiuti di Home Assistant** (la lampadina nella barra, accesa all'inizio) aggiungono altri due
+suggerimenti e l'avviso per le [entità sconosciute](#controllo-yaml-spiegato):
+
+- **attributi** dopo `attribute:` e nei template (`state_attr('climate.salotto', '…')`,
+  `states.climate.salotto.attributes.…`), per l'entità dello stesso blocco;
+- **stati** dopo `state:`, `to:` e `from:`, e in `is_state('…', '…')`: prima lo stato attuale,
+  poi quelli che Home Assistant dichiara (`hvac_modes`, le opzioni di un select) e quelli tipici
+  del dominio (`on`/`off`, `open`/`closed`, `home`/`not_home`…). `on` e `off` vengono inseriti tra
+  virgolette, come serve a Home Assistant.
+
+Spegni la lampadina quando vuoi un editor semplice: EDITHA ricorda la scelta.
 
 ![Suggerimenti delle entità](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/autocomplete-entities.png)
 

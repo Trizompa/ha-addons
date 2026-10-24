@@ -1,4 +1,4 @@
-import { Compartment, EditorState, type Extension } from '@codemirror/state';
+import { Compartment, EditorState, StateEffect, type Extension } from '@codemirror/state';
 import {
   crosshairCursor,
   drawSelection,
@@ -17,13 +17,13 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import { bracketMatching, foldGutter, foldKeymap, indentOnInput, indentUnit } from '@codemirror/language';
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete';
-import { forceLinting, linter, lintKeymap } from '@codemirror/lint';
+import { linter, lintKeymap } from '@codemirror/lint';
 import { indentationMarkers } from '@replit/codemirror-indentation-markers';
 import { languageOf, languageSupport, type LanguageId } from './languages.js';
 import { edithaHighlighting, edithaTheme, fontSizeTheme } from './theme.js';
 import { lintYaml, suggestionsPending } from './yaml-lint.js';
 import { wrapIndent } from './wrap-indent.js';
-import { haCompletions, mdiCompletions, secretCompletions, type MdiCompletion } from './ha-complete.js';
+import { haCompletions, haDetailCompletions, mdiCompletions, secretCompletions, type MdiCompletion } from './ha-complete.js';
 import { mdiSvg } from '../state/mdi.js';
 import { haData } from '../state/ha-data.js';
 import { filePath, haLinks } from './links.js';
@@ -64,7 +64,7 @@ function yamlLinter(path: string): Extension {
     (view) => {
       const problems = lintYaml(view.state.doc.toString(), path, haData.entityIds());
       // Suggestioni non ancora calcolate (tante entità sconosciute): un altro giro subito dopo.
-      if (suggestionsPending) setTimeout(() => view.dom.isConnected && forceLinting(view), 50);
+      if (suggestionsPending) setTimeout(() => view.dom.isConnected && view.dispatch({ effects: relint.of(null) }), 50);
       return problems.map((p) => ({
         from: p.from,
         to: p.to,
@@ -75,9 +75,13 @@ function yamlLinter(path: string): Extension {
         ...(p.fix !== undefined ? { actions: [replaceAction(p.fix)] } : {}),
       }));
     },
-    { delay: 300 },
+    // forceLinting non basta: non fa niente se non c'è già un controllo in attesa.
+    { delay: 300, needsRefresh: (update) => update.transactions.some((tr) => tr.effects.some((e) => e.is(relint))) },
   );
 }
+
+/** Fa ripartire il controllo senza cambiare il testo (entità arrivate, suggerimenti da completare). */
+const relint = StateEffect.define<null>();
 
 /** Pulsante nel suggerimento dell'errore: mette `text` al posto della parte sottolineata. */
 function replaceAction(text: string) {
@@ -98,7 +102,7 @@ const relintOnHaData = ViewPlugin.fromClass(
         const ids = haData.entityIds();
         if (ids === this.ids) return;
         this.ids = ids;
-        forceLinting(view);
+        view.dispatch({ effects: relint.of(null) });
       });
     }
     destroy(): void {
@@ -152,7 +156,7 @@ function languageExtensions(path: string): { language: Extension; lint: Extensio
             yamlLinter(path),
             relintOnHaData,
             haLinks,
-            EditorState.languageData.of(() => [{ autocomplete: haCompletions }, { autocomplete: secretCompletions }, { autocomplete: mdiCompletions }]),
+            EditorState.languageData.of(() => [{ autocomplete: haCompletions }, { autocomplete: haDetailCompletions }, { autocomplete: secretCompletions }, { autocomplete: mdiCompletions }]),
           ]
         : [],
   };

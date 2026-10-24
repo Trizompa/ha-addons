@@ -467,6 +467,10 @@ export const it = {
   'drafts.deferredKept': 'La bozza vecchia di {name} resta per la prossima apertura: le modifiche nuove di questo file non vengono conservate come bozza.',
   'drafts.changedOnDisk': '{name} è stato modificato fuori da EDITHA dopo queste modifiche: al salvataggio EDITHA chiederà cosa fare.',
   // Vista divisa
+  'toolbar.haHints': 'Aiuti di Home Assistant: attributi, stati, entità sconosciute',
+  'haHints.on': 'Aiuti di Home Assistant attivi',
+  'haHints.off': 'Aiuti di Home Assistant spenti',
+  'complete.currentState': 'stato attuale',
   'toolbar.outline': 'Schema del file: automazioni, script e sezioni',
   'outline.title': 'Schema',
   'outline.filter': 'Filtra',

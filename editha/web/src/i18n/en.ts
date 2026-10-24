@@ -454,6 +454,10 @@ export const en: Record<keyof Dictionary, string> = {
   'drafts.changedOnDisk': '{name} was changed outside EDITHA after these changes: EDITHA will ask what to do when you save.',
   // Vista divisa
   'toolbar.split': 'Split view in two columns',
+  'toolbar.haHints': 'Home Assistant hints: attributes, states, unknown entities',
+  'haHints.on': 'Home Assistant hints on',
+  'haHints.off': 'Home Assistant hints off',
+  'complete.currentState': 'current state',
   'toolbar.outline': 'File outline: automations, scripts and sections',
   'outline.title': 'Outline',
   'outline.filter': 'Filter',

@@ -2,6 +2,12 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.41.0
+
+- **Attributi e stati nei suggerimenti**: dopo `attribute:` EDITHA suggerisce gli attributi dell'entità dello stesso blocco (`current_temperature`, `hvac_action`…); dopo `state:`, `to:` e `from:` lo stato attuale e quelli possibili (`hvac_modes`, opzioni di un select, `on`/`off`…). Anche nei template: `state_attr(…)`, `is_state(…)`, `states.….attributes.…`. `on` e `off` vengono inseriti tra virgolette.
+- **Pulsante aiuti di Home Assistant** (lampadina nella barra): accende e spegne questi suggerimenti e l'avviso per le entità sconosciute. EDITHA ricorda la scelta.
+- Corretto: l'avviso per le entità sconosciute compariva solo dopo aver scritto qualcosa; ora compare appena si apre il file.
+
 ## 0.40.0
 
 - **Entità sconosciute**: dopo `entity_id:`, `entity:` ed `entities:` EDITHA avvisa quando l'entità non esiste nel tuo Home Assistant (sottolineatura gialla). Se esiste un'entità simile, il messaggio la propone e **Sostituisci con…** la corregge con un clic. È un avviso e non un errore, perché un'entità appena creata esiste solo dopo un riavvio o un ricaricamento.

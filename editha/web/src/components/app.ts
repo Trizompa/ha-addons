@@ -81,6 +81,7 @@ const DEFAULT_SETTINGS: Settings = {
   showSystem: false,
   language: 'auto',
   outlineVisible: false,
+  haHints: true,
 };
 
 const NARROW = '(max-width: 760px)';
@@ -474,6 +475,7 @@ export class EdithaApp extends LitElement {
     }
     this.applyTheme(this.settings.theme);
     setLang(resolveLang(this.settings.language));
+    haData.setHints(this.settings.haHints);
     this.side!.makeState = (tab) => this.splitView.mirrorState(tab);
     this.refreshToolbar();
     this.drafts.startAlive();
@@ -571,6 +573,14 @@ export class EdithaApp extends LitElement {
     await this.updateSettings({ wordWrap: !this.settings.wordWrap });
     const prefs = { wordWrap: this.settings.wordWrap, fontSize: this.settings.fontSize };
     for (const tab of this.tabs.tabs) this.applyEffects(tab, reconfigureEffects({ prefs }));
+  }
+
+  /** Aiuti di Home Assistant: il controllo delle entità riparte da solo (cambia l'elenco usato). */
+  async toggleHaHints(): Promise<void> {
+    const on = !this.settings.haHints;
+    haData.setHints(on);
+    await this.updateSettings({ haHints: on });
+    this.toasts.show(t(on ? 'haHints.on' : 'haHints.off'), 'info');
   }
 
   toggleSidebar(): void {
@@ -889,6 +899,7 @@ export class EdithaApp extends LitElement {
       searchOpen: this.searchOpen ?? false,
       outline: this.settings.outlineVisible,
       historyOpen: !!this.history,
+      haHints: this.settings.haHints,
     };
   }
 

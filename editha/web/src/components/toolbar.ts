@@ -25,6 +25,8 @@ export interface ToolbarState {
   outline: boolean;
   /** Cronologia del file aperta: il pulsante la chiude. */
   historyOpen: boolean;
+  /** Aiuti di Home Assistant accesi (HA-12). */
+  haHints: boolean;
 }
 
 const THEME_ICON: Record<ThemeMode, string> = { auto: icons.themeAuto, light: icons.themeLight, dark: icons.themeDark };
@@ -169,6 +171,7 @@ export class EdithaToolbar extends LitElement {
       <span class="sep"></span>
       ${this.button('insert', t('toolbar.insert'), icons.insert, { on: s.insertOpen, disabled: !s.hasTab && !s.insertOpen })}
       ${this.button('template', t('toolbar.template'), icons.template, { disabled: !s.hasTab })}
+      ${this.button('ha-hints', t('toolbar.haHints'), icons.haHints, { on: s.haHints, cls: 'hide-narrow' })}
       ${this.button('ha-menu', t('toolbar.ha'), icons.homeAssistant, { disabled: s.haBusy })}
       <span class="spacer"></span>
       ${this.renderPrefs()}

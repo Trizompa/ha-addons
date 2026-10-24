@@ -15,6 +15,8 @@ class HaData {
   services: ServiceInfo[] = [];
   loaded = false;
   private readonly listeners = new Set<Listener>();
+  /** Aiuti di Home Assistant (pulsante nella barra): attributi e stati, entità sconosciute. */
+  hints = true;
   private idsFor: EntityInfo[] | null = null;
   private ids: ReadonlySet<string> = NO_IDS;
 
@@ -23,7 +25,7 @@ class HaData {
    * senza l'elenco non si può dire che un'entità non esiste. Lo stesso Set finché i dati non cambiano.
    */
   entityIds(): ReadonlySet<string> {
-    if (!this.available) return NO_IDS;
+    if (!this.available || !this.hints) return NO_IDS;
     if (this.idsFor !== this.entities) {
       this.idsFor = this.entities;
       // Dati ricaricati ogni minuto: se gli id sono gli stessi resta lo stesso Set (niente nuovo controllo).
@@ -33,6 +35,12 @@ class HaData {
     return this.ids;
   }
   private timer: ReturnType<typeof setInterval> | undefined;
+
+  setHints(on: boolean): void {
+    if (this.hints === on) return;
+    this.hints = on;
+    this.notify();
+  }
 
   subscribe(fn: Listener): () => void {
     this.listeners.add(fn);

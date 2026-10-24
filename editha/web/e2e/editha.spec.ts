@@ -271,6 +271,47 @@ test.describe('Home Assistant', () => {
     await expect(page.locator('.cm-lintRange-warning')).toHaveCount(0);
   });
 
+  test('HA-11 – l\'avviso compare anche aprendo un file, senza scrivere', async ({ page }) => {
+    await openFile(page, 'entita/sbagliata.yaml');
+    await expect(page.locator('.cm-lintRange-warning', { hasText: 'light.soggiorn' })).toBeVisible();
+    await expect(page.locator('editha-status-bar')).toContainText('1 avviso');
+  });
+
+  test('HA-12 – attributi e stati nei suggerimenti; il pulsante li spegne', async ({ page }) => {
+    await openFile(page, 'tabs/c.yaml');
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.insertText('- condition: state\n  entity_id: climate.salotto\n  attribute: hv');
+    await page.keyboard.type('a');
+    const list = page.locator('.cm-tooltip-autocomplete');
+    await expect(list.locator('li', { hasText: 'hvac_action' })).toBeVisible();
+    await expect(list.locator('li', { hasText: 'hvac_modes' })).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    // Gli stati: quello attuale (segnato) e quelli dichiarati da Home Assistant.
+    await page.keyboard.insertText('\n- condition: state\n  entity_id: climate.salotto\n  state: ');
+    await page.keyboard.type('c');
+    await expect(list.locator('li', { hasText: 'cool' })).toBeVisible();
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Control+Space');
+    await expect(list.locator('li', { hasText: 'heat' })).toContainText('stato attuale');
+    await page.keyboard.press('Escape');
+
+    // Spenti: niente attributi e niente avviso per le entità sconosciute.
+    const button = page.locator('editha-toolbar button[title^="Aiuti di Home Assistant"]');
+    await page.keyboard.insertText('\nx:\n  entity_id: light.cucin');
+    await expect(page.locator('.cm-lintRange-warning', { hasText: 'light.cucin' })).toBeVisible();
+    await button.click();
+    await expect(page.locator('.cm-lintRange-warning', { hasText: 'light.cucin' })).toHaveCount(0);
+    await page.keyboard.insertText('\n- entity_id: climate.salotto\n  attribute: hv');
+    await page.keyboard.type('a');
+    await page.waitForTimeout(400);
+    await expect(list.locator('li', { hasText: 'hvac_action' })).toHaveCount(0);
+    // Riaccesi (l'impostazione resta salvata per gli altri test).
+    await button.click();
+    await expect(page.locator('.cm-lintRange-warning', { hasText: 'light.cucin' })).toBeVisible();
+  });
+
   test('Snippet predefiniti e personali', async ({ page }) => {
     await openFile(page, 'tabs/c.yaml');
     await editor(page).click();

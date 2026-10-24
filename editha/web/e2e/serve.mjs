@@ -35,6 +35,7 @@ const files = {
   'sost/aperto.yaml': 'x: light.vecchia\n',
   'cerca/uno.yaml': 'ago_nel_pagliaio: 1\naltro: AGO_NEL_PAGLIAIO\n',
   'cerca/due.yaml': 'target: light.cucina\nlight.cucina_2: no\nvalue: "{{ states.light.cucina.state }}"\n',
+  'entita/sbagliata.yaml': 'automation:\n  - triggers:\n      - trigger: state\n        entity_id: light.soggiorn\n',
   'move/dest/.keep': '',
   'move/cartella/dentro.yaml': 'x: 1\n',
   'links/sensori/a.yaml': '- platform: template\n',
@@ -113,6 +114,11 @@ const fakeHa = http.createServer(async (req, res) => {
       { entity_id: 'light.cucina', state: 'on', attributes: { friendly_name: 'Luce cucina' } },
       { entity_id: 'light.soggiorno', state: 'off', attributes: { friendly_name: 'Luce soggiorno' } },
       { entity_id: 'sensor.temperatura', state: '21.5', attributes: { friendly_name: 'Temperatura', unit_of_measurement: '°C' } },
+      {
+        entity_id: 'climate.salotto',
+        state: 'heat',
+        attributes: { friendly_name: 'Termostato', hvac_modes: ['off', 'heat', 'cool'], hvac_action: 'heating', current_temperature: 20 },
+      },
     ]);
   }
   if (req.url === '/api/services') return json([{ domain: 'light', services: { turn_on: { name: 'Accendi' } } }]);

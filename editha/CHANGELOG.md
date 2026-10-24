@@ -2,6 +2,12 @@
 
 Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
+## 0.41.0
+
+- **Attributes and states in the suggestions**: after `attribute:` EDITHA suggests the attributes of the entity in the same block (`current_temperature`, `hvac_action`…); after `state:`, `to:` and `from:` its current state and the possible ones (`hvac_modes`, select options, `on`/`off`…). Also in templates: `state_attr(…)`, `is_state(…)`, `states.….attributes.…`. `on` and `off` are inserted with quotes.
+- **Home Assistant hints button** (light bulb in the toolbar): turns these suggestions and the unknown entity warning on and off. EDITHA remembers the choice.
+- Fixed: the unknown entity warning only appeared after typing something; now it appears as soon as the file opens.
+
 ## 0.40.0
 
 - **Unknown entities**: after `entity_id:`, `entity:` and `entities:` EDITHA warns when the entity does not exist in your Home Assistant (a yellow underline). When a similar entity exists, the message suggests it and **Replace with…** fixes it in one click. It is a warning, not an error, because a newly created entity only exists after a restart or a reload.

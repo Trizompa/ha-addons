@@ -4,6 +4,7 @@ import { secretKeys } from '../state/secrets.js';
 import { mdiIcons } from '../state/mdi.js';
 import { filePath } from './links.js';
 import { t } from '../i18n/index.js';
+import { detailContext, detailOptions, insertText, type DetailContext } from './ha-detail.js';
 
 const SERVICE_KEY = /\b(service|action|perform_action)\s*:\s*["']?[\w.]*$/;
 /** Dopo «!secret » e «mdi:» ci sono suggerimenti propri: niente entità in mezzo. */
@@ -38,6 +39,8 @@ export function haCompletions(ctx: CompletionContext): CompletionResult | null {
   const line = ctx.state.doc.lineAt(ctx.pos);
   const before = line.text.slice(0, ctx.pos - line.from);
   if (/^\s*#/.test(before) || OTHER_CONTEXT.test(before)) return null;
+  // Dopo «attribute:» o «state:» si suggeriscono attributi e stati, non le entità.
+  if (detailAt(ctx)) return null;
   const isService = SERVICE_KEY.test(before);
   const isEntity = ENTITY_KEY.test(before);
   const dotted = !!word?.text.includes('.');
@@ -54,6 +57,43 @@ export function haCompletions(ctx: CompletionContext): CompletionResult | null {
     options = entityOptions();
   }
   return { from, options, validFor: /^[a-z0-9_.]*$/ };
+}
+
+/** Contesto di attributi o stati al cursore, se gli aiuti di Home Assistant sono accesi. */
+function detailAt(ctx: CompletionContext): DetailContext | null {
+  if (!haData.available || !haData.hints) return null;
+  const line = ctx.state.doc.lineAt(ctx.pos);
+  const before = line.text.slice(0, ctx.pos - line.from);
+  if (/^\s*#/.test(before)) return null;
+  // Solo le righe vicine: il blocco di un'automazione non è mai lungo centinaia di righe.
+  const first = Math.max(1, line.number - 200);
+  const last = Math.min(ctx.state.doc.lines, line.number + 200);
+  const lines: string[] = [];
+  for (let n = first; n <= last; n++) lines.push(ctx.state.doc.line(n).text);
+  return detailContext(lines, line.number - first, before);
+}
+
+/**
+ * HA-12: attributi dopo «attribute:» e in state_attr(), stati dopo «state:» / «to:» / «from:» e in
+ * is_state(), per le entità del blocco. Solo con gli aiuti di Home Assistant accesi.
+ */
+export function haDetailCompletions(ctx: CompletionContext): CompletionResult | null {
+  const detail = detailAt(ctx);
+  if (!detail) return null;
+  const options = detailOptions(detail, haData.entities);
+  if (options.length === 0) return null;
+  return {
+    from: ctx.pos - detail.typed,
+    options: options.map((o, i) => ({
+      label: o.label,
+      apply: insertText(detail, o.label),
+      type: detail.kind === 'attribute' ? 'property' : 'enum',
+      ...(o.current ? { detail: t('complete.currentState') } : {}),
+      // Nell'ordine dato: prima lo stato attuale e quelli dichiarati dall'entità.
+      boost: -i / options.length,
+    })),
+    validFor: /^[\w.-]*$/,
+  };
 }
 
 /** HA-4: dopo `!secret ` propone le chiavi dei secrets.yaml visibili dal file (solo i nomi). */

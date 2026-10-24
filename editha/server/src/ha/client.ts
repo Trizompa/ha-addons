@@ -5,6 +5,23 @@ export interface EntityInfo {
   name: string;
   state: string;
   unit: string | null;
+  /** Nomi degli attributi (mai i valori): suggerimenti dopo «attribute:» e in state_attr(). */
+  attributes: string[];
+  /** Stati possibili dichiarati dall'entità (options, hvac_modes, operation_list). */
+  states: string[];
+}
+
+/** Attributi che elencano gli stati possibili dell'entità: select/input_select, climate, water_heater. */
+const STATE_LISTS = ['options', 'hvac_modes', 'operation_list'];
+
+function possibleStates(attributes: Record<string, unknown>): string[] {
+  const out = new Set<string>();
+  for (const key of STATE_LISTS) {
+    const list = attributes[key];
+    if (!Array.isArray(list)) continue;
+    for (const v of list) if (typeof v === 'string' && v.length <= 100) out.add(v);
+  }
+  return [...out].slice(0, 200);
 }
 
 export interface ServiceInfo {
@@ -28,7 +45,7 @@ export interface CheckResult {
 interface HaState {
   entity_id: string;
   state: string;
-  attributes?: { friendly_name?: unknown; unit_of_measurement?: unknown };
+  attributes?: Record<string, unknown> & { friendly_name?: unknown; unit_of_measurement?: unknown };
 }
 
 interface HaServiceDomain {
@@ -151,6 +168,8 @@ export class HaClient {
         name: typeof s.attributes?.friendly_name === 'string' ? s.attributes.friendly_name : '',
         state: s.state,
         unit: typeof s.attributes?.unit_of_measurement === 'string' ? s.attributes.unit_of_measurement : null,
+        attributes: Object.keys(s.attributes ?? {}).slice(0, 200),
+        states: possibleStates(s.attributes ?? {}),
       }))
       .sort((a, b) => a.entity_id.localeCompare(b.entity_id));
   }

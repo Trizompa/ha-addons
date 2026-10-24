@@ -33,6 +33,11 @@ async function startFakeHa(): Promise<FakeHa> {
       return json([
         { entity_id: 'sensor.temp', state: '21.5', attributes: { friendly_name: 'Temperatura', unit_of_measurement: '°C' } },
         { entity_id: 'light.cucina', state: 'off', attributes: { friendly_name: 'Luce cucina' } },
+        {
+          entity_id: 'climate.salotto',
+          state: 'heat',
+          attributes: { hvac_modes: ['off', 'heat', 7], current_temperature: 20, access_token: 'segreto-123' },
+        },
       ]);
     }
     if (req.method === 'GET' && req.url === '/api/services') {
@@ -133,11 +138,28 @@ describe('integrazione con Home Assistant', () => {
     const res = await call('GET', '/api/ha/entities?fresh=true');
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.json().entities, [
-      { entity_id: 'light.cucina', name: 'Luce cucina', state: 'off', unit: null },
-      { entity_id: 'sensor.temp', name: 'Temperatura', state: '21.5', unit: '°C' },
+      {
+        entity_id: 'climate.salotto',
+        name: '',
+        state: 'heat',
+        unit: null,
+        attributes: ['hvac_modes', 'current_temperature', 'access_token'],
+        states: ['off', 'heat'],
+      },
+      { entity_id: 'light.cucina', name: 'Luce cucina', state: 'off', unit: null, attributes: ['friendly_name'], states: [] },
+      {
+        entity_id: 'sensor.temp',
+        name: 'Temperatura',
+        state: '21.5',
+        unit: '°C',
+        attributes: ['friendly_name', 'unit_of_measurement'],
+        states: [],
+      },
     ]);
     assert.equal(ha.calls[0]?.auth, `Bearer ${TOKEN}`);
     assert.ok(!res.body.includes(TOKEN));
+    // Degli attributi passano solo i nomi: i valori (qui un token) restano nel server.
+    assert.ok(!res.body.includes('segreto-123'));
   });
 
   it('tiene le entità in cache per poco tempo', async () => {

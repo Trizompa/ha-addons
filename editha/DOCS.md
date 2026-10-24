@@ -47,8 +47,8 @@ through Home Assistant (Ingress), with your Home Assistant login.
 ![Main window](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-dark.png)
 
 - **Toolbar** (top): file explorer, save and save all, undo and redo, find and replace, file
-  history, word wrap, split view, outline, insert panel, template preview and the Home Assistant
-  menu. On the right: language (Automatic (browser), Italiano, English), theme (automatic, light,
+  history, word wrap, split view, outline, insert panel, template preview, Home Assistant hints and
+  the Home Assistant menu. On the right: language (Automatic (browser), Italiano, English), theme (automatic, light,
   dark) and About.
 - **File explorer** (left): the content of `/config`. Above it: search in all files, Git, new
   file, new folder, system folders, upload, refresh and collapse all.
@@ -161,7 +161,8 @@ colon.
 exists in your Home Assistant. A misspelled one (`light.livingroon`) gets a yellow underline;
 when a similar entity exists, the message suggests it and **Replace with…** fixes it in one click.
 It is a warning, not an error: an entity you have just created in the configuration only exists
-after a restart or a reload. Without a connection to Home Assistant there is no check.
+after a restart or a reload. Without a connection to Home Assistant, or with the Home Assistant
+hints turned off, there is no check.
 
 Very large files (over 1 MB) are not checked, and get no outline, so the editor stays responsive.
 
@@ -179,6 +180,18 @@ Press Ctrl+Space, or just type:
 - **`!secret` keys** from `secrets.yaml` (only the names: the values are never sent for
   suggestions);
 - **Material Design icons** after `mdi:`, with a preview.
+
+**Home Assistant hints** (the light bulb in the toolbar, on by default) add two more suggestions
+and the [unknown entity](#yaml-check-explained) warning:
+
+- **attributes** after `attribute:` and in templates (`state_attr('climate.living', '…')`,
+  `states.climate.living.attributes.…`), for the entity of the same block;
+- **states** after `state:`, `to:` and `from:`, and in `is_state('…', '…')`: the current state
+  first, then the ones Home Assistant declares (`hvac_modes`, the options of a select) and the
+  usual ones of the domain (`on`/`off`, `open`/`closed`, `home`/`not_home`…). `on` and `off` are
+  inserted with quotes, as Home Assistant needs.
+
+Turn the light bulb off when you want a plain editor: EDITHA remembers the choice.
 
 ![Entity suggestions](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/autocomplete-entities.png)
 
