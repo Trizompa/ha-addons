@@ -86,6 +86,8 @@ export const edithaTheme = EditorView.theme({
   },
   '.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: 'var(--accent-soft)', color: 'var(--text)' },
   '.cm-tooltip-lint': { padding: '0' },
+  // I messaggi lunghi (entità sconosciuta con la correzione) vanno a capo invece di coprire i pannelli.
+  '.cm-tooltip-hover': { maxWidth: 'min(560px, 90vw)' },
   '.cm-diagnostic': { padding: '6px 10px', borderLeftWidth: '4px', fontFamily: 'var(--font-ui)' },
   '.cm-diagnostic-error': { borderLeftColor: 'var(--danger)' },
   '.cm-diagnostic-warning': { borderLeftColor: 'var(--warning)' },
