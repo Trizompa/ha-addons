@@ -4,7 +4,6 @@ import { fileIcon, icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
 import { t } from '../i18n/index.js';
 import { shortcutLabel } from '../state/keys.js';
-import { previewKind } from '../state/preview.js';
 
 export interface TabView {
   path: string;
@@ -22,18 +21,22 @@ export class EdithaTabBar extends LitElement {
     tabs: { attribute: false },
     active: { type: String },
     preview: { type: String },
+    previewFolder: { type: Boolean },
   };
 
   declare tabs: TabView[];
   declare active: string | null;
   /** FS-10: immagine o PDF nella tab di anteprima (una sola, riusata). */
   declare preview: string | null;
+  /** L'anteprima è la galleria di una cartella (FS-11). */
+  declare previewFolder: boolean;
 
   constructor() {
     super();
     this.tabs = [];
     this.active = null;
     this.preview = null;
+    this.previewFolder = false;
   }
 
   static override styles = [
@@ -225,7 +228,7 @@ export class EdithaTabBar extends LitElement {
   private renderPreview(path: string) {
     const name = path.split('/').pop() ?? path;
     // Una cartella è la galleria delle sue immagini (FS-11).
-    const fi = previewKind(path) ? fileIcon(name) : { path: icons.folder, color: 'var(--folder, #e5b33a)' };
+    const fi = this.previewFolder ? { path: icons.folder, color: 'var(--folder, #e5b33a)' } : fileIcon(name);
     const active = path === this.active;
     return html`<div
       class="tab preview ${active ? 'active' : ''}"

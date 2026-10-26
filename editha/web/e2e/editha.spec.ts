@@ -224,6 +224,8 @@ test('FS-11 – galleria delle immagini di una cartella: filtro, immagine in gra
   await expect(gallery.locator('.card')).toHaveCount(3);
   await expect(gallery.locator('.card .name')).toHaveText(['luce_on_v2.svg', 'luce_on.svg', 'porta.svg']);
   await expect(page.locator('editha-tab-bar .tab.preview.active')).toContainText('galleria');
+  // Le miniature si caricano davvero (l'indirizzo con la data di modifica è accettato dal server).
+  await expect.poll(() => gallery.locator('.card img').first().evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 
   await gallery.locator('.search input').fill('luce');
   await expect(gallery.locator('.card')).toHaveCount(2);
@@ -238,9 +240,26 @@ test('FS-11 – galleria delle immagini di una cartella: filtro, immagine in gra
   await page.keyboard.press('ArrowRight');
   await expect(viewer.locator('h2')).toContainText('luce_on_v2.svg');
   await expect(viewer.locator('h2')).toContainText('1 di 2');
+  // Con il visore aperto, le frecce in un campo di testo restano al campo.
+  const treeFilter = page.locator('editha-file-tree input').first();
+  await treeFilter.fill('ab');
+  await treeFilter.press('ArrowLeft');
+  await expect(viewer.locator('h2')).toContainText('luce_on_v2.svg');
+  expect(await treeFilter.evaluate((i: HTMLInputElement) => i.selectionStart)).toBe(1);
+  await treeFilter.fill('');
+  await viewer.locator('.stage img').click();
   await page.keyboard.press('Escape');
   await expect(viewer).toHaveCount(0);
   await expect(gallery).toBeVisible();
+
+  // Rinominata l'immagine aperta: il visore si chiude invece di mostrarne un'altra.
+  await gallery.locator('.card', { hasText: 'luce_on.svg' }).click();
+  await gallery.locator('.viewer .stage').click({ button: 'right' });
+  await menuItem(page, 'Rinomina').click();
+  await page.locator('editha-dialog input').fill('luce_z.svg');
+  await dialogButton(page, 'Rinomina').click();
+  await expect(viewer).toHaveCount(0);
+  await expect(gallery.locator('.card .name')).toHaveText(['luce_on_v2.svg', 'luce_z.svg']);
 
   // Tasto destro su una miniatura: i comandi del file; la galleria segue la rinomina.
   await gallery.locator('.search input').fill('');
@@ -248,9 +267,9 @@ test('FS-11 – galleria delle immagini di una cartella: filtro, immagine in gra
   await menuItem(page, 'Rinomina').click();
   await page.locator('editha-dialog input').fill('portone.svg');
   await dialogButton(page, 'Rinomina').click();
-  await expect(gallery.locator('.card .name')).toHaveText(['luce_on_v2.svg', 'luce_on.svg', 'portone.svg']);
+  await expect(gallery.locator('.card .name')).toHaveText(['luce_on_v2.svg', 'luce_z.svg', 'portone.svg']);
 
-  await page.locator('body').click({ position: { x: 5, y: 5 } }).catch(() => undefined);
+  await gallery.locator('header h2').click();
   await page.keyboard.press('Escape');
   await expect(gallery).toHaveCount(0);
 });

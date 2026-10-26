@@ -118,6 +118,7 @@ export class EdithaApp extends LitElement {
     compare: { state: true },
     preview: { state: true },
     galleryRevision: { state: true },
+    previewGallery: { state: true },
     previewShown: { state: true },
     outline: { state: true },
     outlineActive: { state: true },
@@ -159,6 +160,8 @@ export class EdithaApp extends LitElement {
   declare preview: string | null;
   /** Cresce quando cambia il contenuto della cartella della galleria (FS-11). */
   declare galleryRevision: number;
+  /** La tab di anteprima mostra la galleria di una cartella, non un file (FS-11). */
+  declare previewGallery: boolean;
   /** La tab di anteprima è quella in primo piano (l'editor sotto non riceve comandi). */
   declare previewShown: boolean;
   /** ED-18: schema del file in uso (null se non è YAML) e voce in cui si trova il cursore. */
@@ -216,6 +219,7 @@ export class EdithaApp extends LitElement {
     this.preview = null;
     this.previewShown = false;
     this.galleryRevision = 0;
+    this.previewGallery = false;
     this.outline = null;
     this.outlineActive = -1;
     this.toolbar = this.computeToolbar();
@@ -784,11 +788,12 @@ export class EdithaApp extends LitElement {
   /** FS-11: le immagini di una cartella in griglia, nella stessa tab dell'anteprima. */
   openGallery(path: string): void {
     this.openSeq++;
-    this.openPreview(path);
+    this.openPreview(path, true);
   }
 
   /** Apre un'immagine o un PDF nella tab di anteprima, che è una sola e viene riusata. */
-  private openPreview(path: string): void {
+  private openPreview(path: string, gallery = false): void {
+    this.previewGallery = gallery;
     if (this.narrow) this.drawerOpen = false;
     this.preview = path;
     this.showPreview();
@@ -1031,7 +1036,7 @@ export class EdithaApp extends LitElement {
             @files-drop=${(e: CustomEvent<{ dir: string; files: File[] }>) =>
               void this.fileOps.uploadFiles(e.detail.dir, e.detail.files)}
             @dir-changed=${(e: CustomEvent<{ dir: string | null }>) => {
-              if (this.preview && !previewKind(this.preview) && (e.detail.dir === null || e.detail.dir === this.preview)) {
+              if (this.preview && this.previewGallery && (e.detail.dir === null || e.detail.dir === this.preview)) {
                 this.galleryRevision++;
               }
             }}
@@ -1067,6 +1072,7 @@ export class EdithaApp extends LitElement {
             .tabs=${this.tabViews}
             .active=${this.previewShown ? this.preview : this.activePath}
             .preview=${this.preview}
+            .previewFolder=${this.previewGallery}
             @tab-activate=${(e: CustomEvent<{ path: string }>) => {
               // La tab scelta va nella colonna sinistra: pulsanti e scorciatoie agiscono su di lei.
               this.sideFocused = false;
@@ -1104,7 +1110,7 @@ export class EdithaApp extends LitElement {
                 @outline-close=${() => void this.outlineView.toggleOutline()}
               ></editha-outline-panel>`
             : null}
-          ${this.preview && this.previewShown && !previewKind(this.preview)
+          ${this.preview && this.previewShown && this.previewGallery
             ? html`<editha-gallery-panel
                 .path=${this.preview}
                 .revision=${this.galleryRevision}

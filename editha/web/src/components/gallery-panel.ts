@@ -1,4 +1,5 @@
 import { LitElement, css, html, nothing } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { api, ApiError, errorText } from '../api/client.js';
 import type { Entry } from '../api/types.js';
 import { t } from '../i18n/index.js';
@@ -52,8 +53,8 @@ export class EdithaGalleryPanel extends LitElement {
   declare error: string | null;
   declare filter: string;
   declare size: ThumbSize;
-  /** Immagine aperta in grande (indice tra quelle filtrate), o null. */
-  declare open: number | null;
+  /** Immagine aperta in grande (il suo percorso), o null. */
+  declare open: string | null;
   declare dims: { w: number; h: number } | null;
   private loadSeq = 0;
 
@@ -214,6 +215,9 @@ export class EdithaGalleryPanel extends LitElement {
         font-size: 11px;
         color: var(--text-faint);
       }
+      .viewer:focus {
+        outline: none;
+      }
       .viewer {
         position: absolute;
         inset: 0;
@@ -263,15 +267,16 @@ export class EdithaGalleryPanel extends LitElement {
     if (changed.has('path') || changed.has('revision')) void this.load();
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    // In cattura: prima di Esc dell'app, che altrimenti chiuderebbe tutta la galleria.
-    window.addEventListener('keydown', this.onKey, true);
-  }
-
-  override disconnectedCallback(): void {
-    window.removeEventListener('keydown', this.onKey, true);
-    super.disconnectedCallback();
+  override updated(changed: Map<string, unknown>): void {
+    if (!changed.has('open')) return;
+    const before = changed.get('open') as string | null | undefined;
+    if (this.open !== null && before == null) {
+      // Il visore prende il focus: frecce ed Esc vanno a lui, non alle miniature dietro.
+      (this.renderRoot.querySelector('.viewer') as HTMLElement | null)?.focus();
+    } else if (this.open === null && before) {
+      // Chiuso: il focus torna sulla miniatura da cui si era partiti.
+      (this.renderRoot.querySelector(`.card[data-path="${CSS.escape(before)}"]`) as HTMLElement | null)?.focus();
+    }
   }
 
   private async load(): Promise<void> {
@@ -282,7 +287,7 @@ export class EdithaGalleryPanel extends LitElement {
       this.entries = res.entries.filter((e) => e.type === 'file' && previewKind(e.path) === 'image');
       this.error = null;
       // L'immagine aperta può essere sparita (eliminata, rinominata): si torna alla griglia.
-      if (this.open !== null && this.open >= this.visible().length) this.open = null;
+      if (this.open !== null && !this.visible().some((e) => e.path === this.open)) this.open = null;
     } catch (err) {
       if (seq !== this.loadSeq) return;
       this.entries = [];
@@ -305,23 +310,27 @@ export class EdithaGalleryPanel extends LitElement {
     }
   }
 
-  private readonly onKey = (e: KeyboardEvent) => {
-    if (this.open === null || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
-    // Con un menu o una finestra aperti i tasti sono loro.
-    const app = document.querySelector('editha-app') as (Element & { menu?: { items: unknown }; dialog?: { busy: boolean } }) | null;
-    if (app?.menu?.items || app?.dialog?.busy) return;
-    const list = this.visible();
-    if (e.key === 'Escape') this.open = null;
-    else if (e.key === 'ArrowRight') this.show((this.open + 1) % list.length);
-    else if (e.key === 'ArrowLeft') this.show((this.open - 1 + list.length) % list.length);
+  /** Tasti del visore: solo quando il focus è lì (non nei campi o negli altri pannelli). */
+  private onViewerKey(e: KeyboardEvent): void {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+    if (e.key === 'Escape') this.show(null);
+    else if (e.key === 'ArrowRight') this.step(1);
+    else if (e.key === 'ArrowLeft') this.step(-1);
     else return;
+    // Esc gestito qui: l'app (che ascolta sulla finestra) non chiude anche la galleria.
     e.preventDefault();
-    e.stopPropagation();
-  };
+  }
 
-  private show(index: number | null): void {
+  private step(delta: number): void {
+    const list = this.visible();
+    const i = list.findIndex((e) => e.path === this.open);
+    if (i < 0 || list.length === 0) return;
+    this.show(list[(i + delta + list.length) % list.length]!.path);
+  }
+
+  private show(path: string | null): void {
     this.dims = null;
-    this.open = index;
+    this.open = path;
   }
 
   private emit(name: string, detail: unknown): void {
@@ -333,16 +342,21 @@ export class EdithaGalleryPanel extends LitElement {
     this.emit('gallery-context', { entry, x: e.clientX, y: e.clientY });
   }
 
-  private renderCard(entry: Entry, index: number) {
+  /** Indirizzo dell'immagine: cambia con la data di modifica, così un file sostituito si ricarica. */
+  private src(entry: Entry): string {
+    return `${api.previewUrl(entry.path)}&v=${encodeURIComponent(entry.mtime)}`;
+  }
+
+  private renderCard(entry: Entry) {
     const thumb =
       entry.size > MAX_THUMB_BYTES
         ? html`${icon(icons.file, 28)}<span class="big">${t('gallery.tooBig')}</span>`
-        : html`<img src=${api.previewUrl(entry.path)} alt="" loading="lazy" decoding="async" />`;
+        : html`<img src=${this.src(entry)} alt="" loading="lazy" decoding="async" />`;
     return html`<button
       class="card"
       title=${entry.name}
       data-path=${entry.path}
-      @click=${() => this.show(index)}
+      @click=${() => this.show(entry.path)}
       @contextmenu=${(e: MouseEvent) => this.onContext(e, entry)}
     >
       <div class="thumb">${thumb}</div>
@@ -352,14 +366,15 @@ export class EdithaGalleryPanel extends LitElement {
   }
 
   private renderViewer(list: Entry[]) {
-    const entry = list[this.open!];
+    const index = list.findIndex((e) => e.path === this.open);
+    const entry = list[index];
     if (!entry) return nothing;
     const many = list.length > 1;
-    return html`<div class="viewer" role="dialog" aria-label=${entry.name}>
+    return html`<div class="viewer" role="dialog" aria-modal="true" aria-label=${entry.name} tabindex="-1" @keydown=${this.onViewerKey}>
       <header>
         <h2 title=${entry.path}>
           ${entry.name}<small>${this.dims ? `${this.dims.w} × ${this.dims.h} px · ` : ''}${kb(entry.size)} ·
-            ${t('gallery.position', { n: this.open! + 1, total: list.length })}</small>
+            ${t('gallery.position', { n: index + 1, total: list.length })}</small>
         </h2>
         <button class="icon-btn small" title=${t('tree.download')} @click=${() => this.emit('preview-download', { path: entry.path })}>
           ${icon(icons.download, 18)}
@@ -370,7 +385,7 @@ export class EdithaGalleryPanel extends LitElement {
       </header>
       <div class="stage" @contextmenu=${(e: MouseEvent) => this.onContext(e, entry)}>
         <img
-          src=${api.previewUrl(entry.path)}
+          src=${this.src(entry)}
           alt=${entry.name}
           @load=${(e: Event) => {
             const img = e.target as HTMLImageElement;
@@ -378,10 +393,10 @@ export class EdithaGalleryPanel extends LitElement {
           }}
         />
         ${many
-          ? html`<button class="icon-btn nav prev" title=${t('gallery.prev')} @click=${() => this.show((this.open! - 1 + list.length) % list.length)}>
+          ? html`<button class="icon-btn nav prev" title=${t('gallery.prev')} @click=${() => this.step(-1)}>
                 ${icon(icons.chevronLeft, 22)}
               </button>
-              <button class="icon-btn nav next" title=${t('gallery.next')} @click=${() => this.show((this.open! + 1) % list.length)}>
+              <button class="icon-btn nav next" title=${t('gallery.next')} @click=${() => this.step(1)}>
                 ${icon(icons.chevronRight, 22)}
               </button>`
           : nothing}
@@ -435,7 +450,7 @@ export class EdithaGalleryPanel extends LitElement {
               : html`<p class="note">
                     ${this.filter.trim() ? t('gallery.filtered', { n: list.length, total }) : t('gallery.hint')}
                   </p>
-                  <div class="grid">${list.map((e, i) => this.renderCard(e, i))}</div>`}
+                  <div class="grid">${repeat(list, (e) => e.path, (e) => this.renderCard(e))}</div>`}
       </div>
       ${this.open !== null ? this.renderViewer(list) : nothing}
     `;
