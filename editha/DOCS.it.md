@@ -70,6 +70,7 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 
 | Azione | Note |
 | --- | --- |
+| Mostra come galleria | Solo cartelle: le miniature delle immagini della cartella (vedi sotto). |
 | Nuovo file / Nuova cartella | Creati dentro la cartella selezionata. |
 | Apri a destra | Mostra il file nella colonna destra della vista divisa. Non per immagini e PDF (un SVG lì si apre come testo), e non sul telefono. |
 | Apri come testo | Solo file SVG: si aprono in anteprima, questa voce apre il loro codice nell'editor. |
@@ -95,6 +96,15 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
   menu.
 
   ![Anteprima di un'immagine](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/preview.png)
+- **Galleria**: tasto destro su una cartella → **Mostra come galleria** mostra le miniature di
+  tutte le immagini della cartella (non delle sottocartelle), con nome e dimensione, nella stessa
+  tab dell'anteprima. Le GIF e gli SVG animati si muovono anche nelle miniature. **Filtra per
+  nome** lascia solo le immagini che corrispondono, comodo per le icone con nomi simili; le
+  miniature possono essere piccole, medie o grandi. Un clic mostra l'immagine in grande, con ← e →
+  per passare alla precedente o alla successiva; Esc torna alla galleria, un secondo Esc la chiude.
+  Il tasto destro su un'immagine dà i soliti comandi del file (rinomina, duplica, scarica,
+  elimina…): la galleria si aggiorna da sola. Le immagini oltre 5 MB non hanno la miniatura ma si
+  aprono lo stesso con un clic.
 - **Cartelle di sistema** (`.storage`, `.cloud`, `deps`, `tts`, `.git`): sono nascoste. Il
   pulsante con l'occhio le mostra, **in sola lettura**: le gestisce Home Assistant e una modifica a
   mano può romperlo.

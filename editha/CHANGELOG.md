@@ -2,6 +2,11 @@
 
 Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
+## 0.42.0
+
+- **Image gallery**: right-click a folder → **Show as gallery** shows thumbnails of its images, with name and size. Filter by name, three thumbnail sizes, click for a large view with ← and → to browse, right-click for the usual file commands. Animated GIFs and SVGs move. (Thanks for the idea!)
+- The message over an underlined word (for example an unknown entity) now wraps instead of covering the side panels.
+
 ## 0.41.0
 
 - **States and attributes of the entity you are working on**: in the Insert panel a box shows the entity of the block where the cursor is, with its states (current one first, then `hvac_modes`, select options, `on`/`off`…) and attributes (`current_temperature`, `hvac_action`…). A click inserts the value at the cursor, with quotes when Home Assistant needs them. Ctrl+Space shows the same values in the editor after `attribute:`, `state:`, `to:`, `from:` and in `state_attr(…)`, `is_state(…)`; they never pop up by themselves.

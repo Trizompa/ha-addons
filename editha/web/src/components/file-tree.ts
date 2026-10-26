@@ -196,11 +196,18 @@ export class EdithaFileTree extends LitElement {
   /** Ricarica una cartella se è già stata caricata (dopo crea, rinomina, elimina). */
   async refresh(dir: string): Promise<void> {
     if (dir === '' || this.dirs.has(dir)) await this.load(dir);
+    this.changed(dir);
   }
 
   async refreshAll(): Promise<void> {
     const dirs = ['', ...[...this.expanded].filter((d) => this.dirs.has(d))];
     await Promise.all(dirs.map((d) => this.load(d)));
+    this.changed(null);
+  }
+
+  /** Il contenuto di `dir` (null: di tutte) può essere cambiato: la galleria si ricarica (FS-11). */
+  private changed(dir: string | null): void {
+    this.dispatchEvent(new CustomEvent('dir-changed', { detail: { dir }, bubbles: true, composed: true }));
   }
 
   collapseAll(): void {

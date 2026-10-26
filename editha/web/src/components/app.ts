@@ -49,6 +49,7 @@ import './folder-picker.js';
 import './search-panel.js';
 import './compare-panel.js';
 import './preview-panel.js';
+import './gallery-panel.js';
 import './outline-panel.js';
 import type { OutlineItem } from '../editor/outline.js';
 import './snippet-editor.js';
@@ -116,6 +117,7 @@ export class EdithaApp extends LitElement {
     gitOpen: { state: true },
     compare: { state: true },
     preview: { state: true },
+    galleryRevision: { state: true },
     previewShown: { state: true },
     outline: { state: true },
     outlineActive: { state: true },
@@ -155,6 +157,8 @@ export class EdithaApp extends LitElement {
   declare compare: { left: CompareSide; right: CompareSide } | null;
   /** FS-10: immagine o PDF mostrato al posto dell'editor. */
   declare preview: string | null;
+  /** Cresce quando cambia il contenuto della cartella della galleria (FS-11). */
+  declare galleryRevision: number;
   /** La tab di anteprima è quella in primo piano (l'editor sotto non riceve comandi). */
   declare previewShown: boolean;
   /** ED-18: schema del file in uso (null se non è YAML) e voce in cui si trova il cursore. */
@@ -211,6 +215,7 @@ export class EdithaApp extends LitElement {
     this.compare = null;
     this.preview = null;
     this.previewShown = false;
+    this.galleryRevision = 0;
     this.outline = null;
     this.outlineActive = -1;
     this.toolbar = this.computeToolbar();
@@ -776,6 +781,12 @@ export class EdithaApp extends LitElement {
 
   // ——— anteprima di immagini e PDF (FS-10) ———
 
+  /** FS-11: le immagini di una cartella in griglia, nella stessa tab dell'anteprima. */
+  openGallery(path: string): void {
+    this.openSeq++;
+    this.openPreview(path);
+  }
+
   /** Apre un'immagine o un PDF nella tab di anteprima, che è una sola e viene riusata. */
   private openPreview(path: string): void {
     if (this.narrow) this.drawerOpen = false;
@@ -1019,6 +1030,11 @@ export class EdithaApp extends LitElement {
             @tree-action=${(e: CustomEvent<{ action: string }>) => this.fileOps.onTreeAction(e)}
             @files-drop=${(e: CustomEvent<{ dir: string; files: File[] }>) =>
               void this.fileOps.uploadFiles(e.detail.dir, e.detail.files)}
+            @dir-changed=${(e: CustomEvent<{ dir: string | null }>) => {
+              if (this.preview && !previewKind(this.preview) && (e.detail.dir === null || e.detail.dir === this.preview)) {
+                this.galleryRevision++;
+              }
+            }}
           ></editha-file-tree>
         </aside>
         ${showSidebar && !this.narrow
@@ -1088,7 +1104,15 @@ export class EdithaApp extends LitElement {
                 @outline-close=${() => void this.outlineView.toggleOutline()}
               ></editha-outline-panel>`
             : null}
-          ${this.preview && this.previewShown
+          ${this.preview && this.previewShown && !previewKind(this.preview)
+            ? html`<editha-gallery-panel
+                .path=${this.preview}
+                .revision=${this.galleryRevision}
+                @preview-download=${(e: CustomEvent<{ path: string }>) => this.fileOps.download(e.detail.path)}
+                @preview-close=${() => this.closePreview()}
+                @gallery-context=${(e: CustomEvent<{ entry: Entry; x: number; y: number }>) => void this.fileOps.onTreeContext(e)}
+              ></editha-gallery-panel>`
+            : this.preview && this.previewShown
             ? html`<editha-preview-panel
                 .path=${this.preview}
                 @preview-download=${(e: CustomEvent<{ path: string }>) => this.fileOps.download(e.detail.path)}

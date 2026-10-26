@@ -66,6 +66,7 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 
 | Action | Notes |
 | --- | --- |
+| Show as gallery | Folders only: thumbnails of the images in the folder (see below). |
 | New file / New folder | Created inside the selected folder. |
 | Open on the right | Shows the file in the right column of the split view. Not for images and PDFs (an SVG opens there as text), and not on phones. |
 | Open as text | SVG files only: they open in the preview, this opens their code in the editor. |
@@ -90,6 +91,14 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
   **Open as text** in its menu.
 
   ![Image preview](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/preview.png)
+- **Gallery**: right-click a folder → **Show as gallery** shows thumbnails of all the images in
+  that folder (not in its subfolders), with name and size, in the same tab as the preview.
+  Animated GIFs and SVGs move in the thumbnails too. **Filter by name** keeps only the matching
+  images, handy for icons with similar names; the thumbnails can be small, medium or large.
+  Click an image to see it large, with ← and → to go to the previous or next one; Esc goes back to
+  the gallery, a second Esc closes it. Right-click an image for the usual file commands (rename,
+  duplicate, download, delete…): the gallery updates by itself. Images over 5 MB get no thumbnail
+  but still open with a click.
 - **System folders** (`.storage`, `.cloud`, `deps`, `tts`, `.git`) are hidden. The eye button shows
   them, **read-only**: Home Assistant manages them and a manual change can break it.
 

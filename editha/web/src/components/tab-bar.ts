@@ -4,6 +4,7 @@ import { fileIcon, icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
 import { t } from '../i18n/index.js';
 import { shortcutLabel } from '../state/keys.js';
+import { previewKind } from '../state/preview.js';
 
 export interface TabView {
   path: string;
@@ -223,7 +224,8 @@ export class EdithaTabBar extends LitElement {
 
   private renderPreview(path: string) {
     const name = path.split('/').pop() ?? path;
-    const fi = fileIcon(name);
+    // Una cartella è la galleria delle sue immagini (FS-11).
+    const fi = previewKind(path) ? fileIcon(name) : { path: icons.folder, color: 'var(--folder, #e5b33a)' };
     const active = path === this.active;
     return html`<div
       class="tab preview ${active ? 'active' : ''}"

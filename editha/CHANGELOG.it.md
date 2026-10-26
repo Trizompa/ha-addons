@@ -2,6 +2,11 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.42.0
+
+- **Galleria di immagini**: tasto destro su una cartella → **Mostra come galleria** mostra le miniature delle sue immagini, con nome e dimensione. Filtro per nome, tre grandezze delle miniature, clic per vederle in grande con ← e → per scorrerle, tasto destro per i soliti comandi del file. Le GIF e gli SVG animati si muovono. (Grazie per l'idea!)
+- Il messaggio sopra una parola sottolineata (per esempio un'entità sconosciuta) ora va a capo invece di coprire i pannelli laterali.
+
 ## 0.41.0
 
 - **Stati e attributi dell'entità su cui lavori**: nel pannello Inserisci un riquadro mostra l'entità del blocco dove si trova il cursore, con i suoi stati (prima quello attuale, poi `hvac_modes`, opzioni di un select, `on`/`off`…) e attributi (`current_temperature`, `hvac_action`…). Un clic inserisce il valore al cursore, tra virgolette quando servono a Home Assistant. Ctrl+Spazio mostra gli stessi valori nell'editor dopo `attribute:`, `state:`, `to:`, `from:` e in `state_attr(…)`, `is_state(…)`; non compaiono mai da soli.

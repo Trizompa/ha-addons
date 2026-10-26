@@ -394,6 +394,8 @@ export class FileOpsController {
       ];
     } else if (entry.type === 'directory') {
       items = [
+        { id: 'gallery', label: t('gallery.open'), icon: icons.gallery },
+        'separator',
         { id: 'new-file', label: t('tree.newFile'), icon: icons.fileNew, disabled: dirRo },
         { id: 'new-folder', label: t('tree.newFolder'), icon: icons.folderNew, disabled: dirRo },
         { id: 'upload', label: t('tree.uploadHere'), icon: icons.upload, disabled: dirRo },
@@ -441,6 +443,8 @@ export class FileOpsController {
         return this.app.tree.refreshAll();
       case 'open':
         return entry ? this.app.openFile(entry.path) : undefined;
+      case 'gallery':
+        return entry ? this.app.openGallery(entry.path) : undefined;
       case 'open-text':
         return entry ? this.app.openFile(entry.path, true) : undefined;
       case 'open-side':

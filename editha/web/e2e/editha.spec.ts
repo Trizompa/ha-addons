@@ -215,6 +215,46 @@ test('SEC-8 – le cartelle di sistema sono nascoste, si mostrano a richiesta e 
   await expect(row(page, '.storage')).toHaveCount(0);
 });
 
+test('FS-11 – galleria delle immagini di una cartella: filtro, immagine in grande, rinomina', async ({ page }) => {
+  await row(page, 'galleria').click({ button: 'right' });
+  await menuItem(page, 'Mostra come galleria').click();
+  const gallery = page.locator('editha-gallery-panel');
+  await expect(gallery.locator('header h2')).toContainText('3 immagini');
+  // Solo le immagini della cartella: niente testo, niente sottocartelle.
+  await expect(gallery.locator('.card')).toHaveCount(3);
+  await expect(gallery.locator('.card .name')).toHaveText(['luce_on_v2.svg', 'luce_on.svg', 'porta.svg']);
+  await expect(page.locator('editha-tab-bar .tab.preview.active')).toContainText('galleria');
+
+  await gallery.locator('.search input').fill('luce');
+  await expect(gallery.locator('.card')).toHaveCount(2);
+  await expect(gallery.locator('.note')).toContainText('Filtro: 2 di 3');
+
+  // In grande, con le frecce; Esc torna alla griglia, un altro Esc chiude la galleria.
+  await gallery.locator('.card', { hasText: 'luce_on.svg' }).click();
+  const viewer = gallery.locator('.viewer');
+  await expect(viewer.locator('h2')).toContainText('luce_on.svg');
+  await expect(viewer.locator('h2')).toContainText('2 di 2');
+  // Dopo l'ultima si ricomincia dalla prima.
+  await page.keyboard.press('ArrowRight');
+  await expect(viewer.locator('h2')).toContainText('luce_on_v2.svg');
+  await expect(viewer.locator('h2')).toContainText('1 di 2');
+  await page.keyboard.press('Escape');
+  await expect(viewer).toHaveCount(0);
+  await expect(gallery).toBeVisible();
+
+  // Tasto destro su una miniatura: i comandi del file; la galleria segue la rinomina.
+  await gallery.locator('.search input').fill('');
+  await gallery.locator('.card', { hasText: 'porta.svg' }).click({ button: 'right' });
+  await menuItem(page, 'Rinomina').click();
+  await page.locator('editha-dialog input').fill('portone.svg');
+  await dialogButton(page, 'Rinomina').click();
+  await expect(gallery.locator('.card .name')).toHaveText(['luce_on_v2.svg', 'luce_on.svg', 'portone.svg']);
+
+  await page.locator('body').click({ position: { x: 5, y: 5 } }).catch(() => undefined);
+  await page.keyboard.press('Escape');
+  await expect(gallery).toHaveCount(0);
+});
+
 test('SEC-8 – le cartelle protette si leggono ma non si modificano', async ({ page }) => {
   await page.locator('editha-file-tree button[data-action="toggle-system"]').click();
   await openFile(page, '.storage/core.config');

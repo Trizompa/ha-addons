@@ -56,6 +56,7 @@ The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits
 | FS-8 | Duplicate a file (files only) from the context menu, with a proposed name to confirm (`name_copy.ext`, `_copia` in Italian). YAML copies end in `.bak`, so HA does not load them; a `.yaml` name must be confirmed. | P1 |
 | FS-9 | Configurable exclusion list (glob patterns). | P2 |
 | FS-10 | Preview of images (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG) and PDFs instead of the editor, with dimensions and actual size; SVGs cannot run scripts. | P1 |
+| FS-11 | Gallery of the images of a folder (not subfolders) in the preview tab: lazy thumbnails (none over 5 MB), filter by name, three sizes, large view with previous/next and Esc, file context menu on each image, reloaded when the folder changes. | P2 |
 
 ## 3. Editor
 
@@ -237,6 +238,7 @@ editha/
 
 | Version | Requirements covered |
 | --- | --- |
+| 0.42.0 | FS-11: image gallery of a folder; hover messages wrap at 560 px. |
 | 0.41.0 | HA-12: states and attributes box in the Insert panel and on Ctrl+Space; Home Assistant hints toggle; HA-11 warning also right after opening a file. |
 | 0.40.0 | HA-11: unknown entity warning with suggested fix. |
 | 0.39.1 | "App" instead of "add-on" everywhere (Home Assistant 2026.2 wording); old menu path kept in the installation steps. |
