@@ -477,7 +477,7 @@ export class EdithaInsertPanel extends LitElement {
         </button>
       </header>
       <div class="search">
-        ${icon(icons.search, 16)}
+        ${icon(icons.filter, 16)}
         ${clearable(
           html`<input
             class="input"

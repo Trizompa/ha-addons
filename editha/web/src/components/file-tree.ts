@@ -520,7 +520,7 @@ export class EdithaFileTree extends LitElement {
         </button>
       </header>
       <div class="filter">
-        ${icon(icons.search, 16)}
+        ${icon(icons.filter, 16)}
         ${clearable(
           html`<input
             class="input"

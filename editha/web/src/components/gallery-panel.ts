@@ -420,7 +420,7 @@ export class EdithaGalleryPanel extends LitElement {
         <span style="color:var(--folder, #e5b33a)">${icon(icons.folder, 18)}</span>
         <h2 title=${this.path}>/config/${this.path}<small>${total === 1 ? t('gallery.countOne') : t('gallery.count', { n: total })}</small></h2>
         <div class="search">
-          ${icon(icons.search, 16)}
+          ${icon(icons.filter, 16)}
           ${clearable(
             html`<input
               class="input"

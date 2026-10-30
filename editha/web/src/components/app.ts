@@ -9,6 +9,7 @@ import { connection } from '../api/connection.js';
 import type { Entry, Settings, ThemeMode } from '../api/types.js';
 import { createEditorState, docText, reconfigureEffects } from '../editor/setup.js';
 import { languageOf } from '../editor/languages.js';
+import { searchPanelOpen } from '@codemirror/search';
 import { LINT_MAX_CHARS } from '../editor/yaml-lint.js';
 import { basename } from '../state/paths.js';
 import { previewKind } from '../state/preview.js';
@@ -939,6 +940,7 @@ export class EdithaApp extends LitElement {
       outline: this.settings.outlineVisible,
       historyOpen: !!this.history,
       haHints: this.settings.haHints,
+      findOpen: !!s && searchPanelOpen(s),
     };
   }
 

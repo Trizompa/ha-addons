@@ -2,7 +2,7 @@ import { LitElement, css, html } from 'lit';
 import { Annotation, EditorState, Transaction, type ChangeSet, type StateEffect } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { redo, undo } from '@codemirror/commands';
-import { openSearchPanel } from '@codemirror/search';
+import { closeSearchPanel, openSearchPanel, searchPanelOpen } from '@codemirror/search';
 import { openLintPanel } from '@codemirror/lint';
 import { snippet } from '@codemirror/autocomplete';
 import type { Tab } from '../state/tabs.js';
@@ -207,6 +207,8 @@ export class EdithaEditorPane extends LitElement {
     if (!view || !this.current) return;
     if (name === 'undo') undo(view);
     else if (name === 'redo') redo(view);
+    // Secondo clic sul pulsante: la ricerca aperta si chiude.
+    else if (searchPanelOpen(view.state)) closeSearchPanel(view);
     else openSearchPanel(view);
     view.focus();
   }

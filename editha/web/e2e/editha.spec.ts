@@ -294,6 +294,18 @@ test('UI – la × svuota i campi di filtro e ricerca', async ({ page }) => {
   await expect(query).toHaveValue('');
 });
 
+test('UI – cerca e sostituisci: il pulsante resta acceso e un secondo clic chiude', async ({ page }) => {
+  await openFile(page, 'tabs/a.yaml');
+  const button = page.locator('editha-toolbar button[title^="Cerca e sostituisci"]');
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+  await button.click();
+  await expect(page.locator('.cm-search')).toBeVisible();
+  await expect(button).toHaveAttribute('aria-pressed', 'true');
+  await button.click();
+  await expect(page.locator('.cm-search')).toHaveCount(0);
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+});
+
 test('SEC-8 – le cartelle protette si leggono ma non si modificano', async ({ page }) => {
   await page.locator('editha-file-tree button[data-action="toggle-system"]').click();
   await openFile(page, '.storage/core.config');

@@ -6,6 +6,7 @@ import {
   mdiCheckCircleOutline,
   mdiChevronDown,
   mdiChevronLeft,
+  mdiFilterOutline,
   mdiViewGridOutline,
   mdiChevronRight,
   mdiClose,
@@ -81,6 +82,8 @@ export const icons = {
   chevronDown: mdiChevronDown,
   chevronLeft: mdiChevronLeft,
   gallery: mdiViewGridOutline,
+  /** Filtro per nome: diverso dalla lente, che cerca dentro i file. */
+  filter: mdiFilterOutline,
   close: mdiClose,
   collapse: mdiCollapseAllOutline,
   copy: mdiContentCopy,
