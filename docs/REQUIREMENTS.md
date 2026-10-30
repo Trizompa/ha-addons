@@ -238,6 +238,7 @@ editha/
 
 | Version | Requirements covered |
 | --- | --- |
+| 0.43.0 | Clear (×) in filter and search fields; funnel for name filters, find-replace icon, crossed-out circle for Git exclude; toggle buttons (find, template preview, problems) pressed while open and closed on a second click. |
 | 0.42.0 | FS-11: image gallery of a folder; hover messages wrap at 560 px. |
 | 0.41.0 | HA-12: states and attributes box in the Insert panel and on Ctrl+Space; Home Assistant hints toggle; HA-11 warning also right after opening a file. |
 | 0.40.0 | HA-11: unknown entity warning with suggested fix. |

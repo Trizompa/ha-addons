@@ -2,6 +2,12 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.43.0
+
+- **× per svuotare** ogni campo di filtro e di ricerca (albero dei file, pannello Inserisci, schema, scelta della cartella, galleria, ricerca in tutti i file).
+- **Icone più chiare**: i filtri per nome hanno l'imbuto, la lente indica solo la ricerca dentro tutti i file, cerca e sostituisci ha la sua icona, ed escludere un file da Git usa un cerchio barrato (l'occhio serve solo a mostrare o nascondere le cartelle di sistema).
+- **I pulsanti che accendono e spengono qualcosa** restano evidenziati mentre sono attivi e lo spengono con un secondo clic: cerca e sostituisci, anteprima template e il conteggio dei problemi nella barra di stato.
+
 ## 0.42.0
 
 - **Galleria di immagini**: tasto destro su una cartella → **Mostra come galleria** mostra le miniature delle sue immagini, con nome e dimensione. Filtro per nome, tre grandezze delle miniature, clic per vederle in grande con ← e → per scorrerle, tasto destro per i soliti comandi del file. Le GIF e gli SVG animati si muovono. (Grazie per l'idea!)

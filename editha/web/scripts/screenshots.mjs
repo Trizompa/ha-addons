@@ -446,7 +446,7 @@ try {
   // 10. Home Assistant menu: check, reload, restart.
   {
     const page = await session('light', { tabs: ['configuration.yaml'], active: 'configuration.yaml' });
-    await tool(page, 'Home Assistant').click();
+    await tool(page, 'Home Assistant:').click();
     await wait(300);
     await shot(page, 'ha-menu', { x: 0, y: 0, width: 1440, height: 420 });
     await page.keyboard.press('Escape');

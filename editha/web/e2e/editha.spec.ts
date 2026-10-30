@@ -277,6 +277,8 @@ test('FS-11 – galleria delle immagini di una cartella: filtro, immagine in gra
 test('UI – la × svuota i campi di filtro e ricerca', async ({ page }) => {
   const filter = page.locator('editha-file-tree .filter input');
   const clear = page.locator('editha-file-tree .filter .clear-btn');
+  // L'imbuto sta sopra il campo (il contenitore con la × lo coprirebbe).
+  await expect(page.locator('editha-file-tree .filter > svg')).toHaveCSS('z-index', '1');
   await expect(clear).toHaveCount(0);
   await filter.fill('nessun-file-si-chiama-cosi');
   await expect(page.locator('editha-file-tree')).toContainText('Nessun file corrisponde al filtro');

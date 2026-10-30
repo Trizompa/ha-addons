@@ -90,6 +90,8 @@ export class EdithaFileTree extends LitElement {
       }
       .filter > svg {
         position: absolute;
+        /* Sopra il campo: il contenitore con la × verrebbe disegnato dopo e lo coprirebbe. */
+        z-index: 1;
         left: 20px;
         top: 8px;
         color: var(--text-faint);

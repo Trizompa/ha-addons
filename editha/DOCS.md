@@ -82,7 +82,7 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 - **Upload**: use the upload button, or drag files from your PC onto a folder. Up to 50 MB per
   file; replacing an existing file asks first, and its previous version goes to the history (if
   the existing file is over 50 MB, EDITHA warns that no copy can be kept).
-- **Filter by name**: the field above the tree.
+- **Filter by name**: the field with the funnel above the tree. It only looks at file names; to search inside the files use the magnifier (see [Search and replace in all files](#search-and-replace-in-all-files)). The × at the end of every filter or search field clears it.
 - **Images and PDFs** open in a preview tab instead of the editor: PNG, JPEG, GIF, WebP, AVIF,
   BMP, ICO, SVG and PDF. There is one preview tab, reused by the next image you open. The header
   shows the size in pixels and the current zoom; click an image to see it at actual size (100%),

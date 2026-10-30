@@ -2,6 +2,12 @@
 
 Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
+## 0.43.0
+
+- **× to clear** every filter and search field (file tree, Insert panel, outline, folder picker, gallery, search in all files).
+- **Clearer icons**: name filters show a funnel, the magnifier only means search inside all files, find and replace has its own icon, and excluding a file from Git uses a crossed-out circle (the eye only shows or hides system folders).
+- **Buttons that switch something on and off** stay highlighted while active and switch it off with a second click: find and replace, template preview, and the problems count in the status bar.
+
 ## 0.42.0
 
 - **Image gallery**: right-click a folder → **Show as gallery** shows thumbnails of its images, with name and size. Filter by name, three thumbnail sizes, click for a large view with ← and → to browse, right-click for the usual file commands. Animated GIFs and SVGs move. (Thanks for the idea!)

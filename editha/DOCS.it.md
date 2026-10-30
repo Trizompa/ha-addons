@@ -86,7 +86,7 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 - **Caricare file**: pulsante di caricamento, oppure trascina i file dal PC su una cartella. Fino a
   50 MB per file; sostituire un file esistente chiede conferma, e la versione precedente va nella
   cronologia (se il file esistente supera i 50 MB, EDITHA avvisa che non se ne può tenere copia).
-- **Filtra per nome**: il campo sopra l'albero.
+- **Filtra per nome**: il campo con l'imbuto sopra l'albero. Guarda solo i nomi dei file; per cercare dentro i file usa la lente (vedi [Cerca e sostituisci in tutti i file](#cerca-e-sostituisci-in-tutti-i-file)). La × in fondo a ogni campo di filtro o di ricerca lo svuota.
 - **Immagini e PDF** si aprono in una tab di anteprima invece che nell'editor: PNG, JPEG, GIF,
   WebP, AVIF, BMP, ICO, SVG e PDF. La tab di anteprima è una sola e viene riusata dalla prossima
   immagine che apri. In alto compaiono le dimensioni in pixel e lo zoom attuale; un clic
