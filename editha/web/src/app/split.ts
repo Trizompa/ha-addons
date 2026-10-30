@@ -16,7 +16,7 @@ export class SplitController {
       doc: docText(canonical),
       path: tab.path,
       readOnly: tab.readOnly,
-      prefs: { wordWrap: this.app.settings.wordWrap, fontSize: this.app.settings.fontSize },
+      prefs: this.app.editorPrefs(),
       selection: { anchor: sel.anchor, head: sel.head },
       onUpdate: (update) => this.onSideUpdate(update),
     });

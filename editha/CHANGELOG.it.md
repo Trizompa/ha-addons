@@ -2,6 +2,11 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.44.0
+
+- **Grandezza del testo**: il nuovo pulsante **Aa** (accanto alla lingua) ingrandisce o rimpicciolisce il testo dell'editor: automatica come prima, oppure fissa da 12 a 20 px. Sul telefono è nel menu della lingua. (Grazie per la richiesta!)
+- **Filtra per nome** ora trova file e cartelle in tutta la configurazione, anche nelle cartelle mai aperte, e apre le cartelle che li contengono. Prima guardava solo nelle cartelle già aperte.
+
 ## 0.43.0
 
 - **× per svuotare** ogni campo di filtro e di ricerca (albero dei file, pannello Inserisci, schema, scelta della cartella, galleria, ricerca in tutti i file).

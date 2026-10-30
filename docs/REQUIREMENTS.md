@@ -57,6 +57,7 @@ The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits
 | FS-9 | Configurable exclusion list (glob patterns). | P2 |
 | FS-10 | Preview of images (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG) and PDFs instead of the editor, with dimensions and actual size; SVGs cannot run scripts. | P1 |
 | FS-11 | Gallery of the images of a folder (not subfolders) in the preview tab: lazy thumbnails (none over 5 MB), filter by name, three sizes, large view with previous/next and Esc, file context menu on each image, reloaded when the folder changes. | P2 |
+| FS-12 | The tree filter searches file and folder names in the whole of /config (system folders and links excluded, at most 300 matches or 50,000 entries read) and loads the folders that contain them. | P1 |
 
 ## 3. Editor
 
@@ -238,6 +239,7 @@ editha/
 
 | Version | Requirements covered |
 | --- | --- |
+| 0.44.0 | FS-12: name filter across all folders; Aa menu for the editor text size (setting `fontSizeAuto`, 12–20 px), in the language menu on phones. |
 | 0.43.0 | Clear (×) in filter and search fields; funnel for name filters, find-replace icon, crossed-out circle for Git exclude; toggle buttons (find, template preview, problems) pressed while open and closed on a second click. |
 | 0.42.0 | FS-11: image gallery of a folder; hover messages wrap at 560 px. |
 | 0.41.0 | HA-12: states and attributes box in the Insert panel and on Ctrl+Space; Home Assistant hints toggle; HA-11 warning also right after opening a file. |

@@ -389,6 +389,29 @@ describe('FileService', () => {
     });
   });
 
+  describe('findNames (FS-12)', () => {
+    it('trova i nomi in tutte le cartelle, anche mai aperte, senza sistema né link', async () => {
+      await writeTree(sb.configDir, {
+        'packages/heating.yaml': '',
+        'packages/sub/Heater_bagno.yaml': '',
+        'heat/x.yaml': '',
+        '.storage/heating_secret': '',
+        'altro.yaml': '',
+      });
+      await symlink(sb.outsideDir, abs('heat_link'));
+      const res = await files.findNames('HEAT');
+      assert.deepEqual(res, { paths: ['heat', 'packages/heating.yaml', 'packages/sub/Heater_bagno.yaml'], truncated: false });
+      assert.deepEqual((await files.findNames('   ')).paths, []);
+    });
+
+    it('si ferma al limite e lo dice', async () => {
+      await writeTree(sb.configDir, { 'a/uno.yaml': '', 'a/due.yaml': '', 'a/tre.yaml': '' });
+      const res = await files.findNames('.yaml', 2);
+      assert.equal(res.paths.length, 2);
+      assert.equal(res.truncated, true);
+    });
+  });
+
   describe('rename come spostamento (FS-5)', () => {
     it('sposta un file in un\'altra cartella portando la cronologia', async () => {
       const f = await files.read('automations.yaml');

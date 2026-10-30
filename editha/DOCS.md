@@ -48,8 +48,8 @@ through Home Assistant (Ingress), with your Home Assistant login.
 
 - **Toolbar** (top): file explorer, save and save all, undo and redo, find and replace, file
   history, word wrap, split view, outline, insert panel, template preview, Home Assistant hints and
-  the Home Assistant menu. On the right: language (Automatic (browser), Italiano, English), theme (automatic, light,
-  dark) and About.
+  the Home Assistant menu. On the right: language (Automatic (browser), Italiano, English), **Aa** for the text size of
+  the editor (automatic, or a fixed size from 12 to 20 px), theme (automatic, light, dark) and About.
 - **File explorer** (left): the content of `/config`. Above it: search in all files, Git, new
   file, new folder, system folders, upload, refresh and collapse all.
 - **Tabs and editor** (centre): one tab per open file. A dot on a tab means unsaved changes.
@@ -82,7 +82,7 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 - **Upload**: use the upload button, or drag files from your PC onto a folder. Up to 50 MB per
   file; replacing an existing file asks first, and its previous version goes to the history (if
   the existing file is over 50 MB, EDITHA warns that no copy can be kept).
-- **Filter by name**: the field with the funnel above the tree. It only looks at file names; to search inside the files use the magnifier (see [Search and replace in all files](#search-and-replace-in-all-files)). The × at the end of every filter or search field clears it.
+- **Filter by name**: the field with the funnel above the tree. It looks at file and folder names in the whole configuration, also in folders you have not opened (system folders excluded), and opens the folders that contain them; with very many matches only the first ones are shown. It only looks at names; to search inside the files use the magnifier (see [Search and replace in all files](#search-and-replace-in-all-files)). The × at the end of every filter or search field clears it.
 - **Images and PDFs** open in a preview tab instead of the editor: PNG, JPEG, GIF, WebP, AVIF,
   BMP, ICO, SVG and PDF. There is one preview tab, reused by the next image you open. The header
   shows the size in pixels and the current zoom; click an image to see it at actual size (100%),
@@ -395,7 +395,7 @@ Git.
 
 EDITHA works in the Home Assistant app. On a narrow screen the file explorer becomes a panel that
 slides in from the toolbar button, and the toolbar keeps only the main buttons: **History…** is in
-the file's menu (long press on the file) and **About** is in the menu of the language button.
+the file's menu (long press on the file), and **Text size** and **About** are in the menu of the language button.
 **Word wrap** and **Save all** are not in the toolbar (with a keyboard, Ctrl+Alt+S still saves
 all). Split view, **Open on the right** and the file outline are not available on phones. On
 phones and tablets a small button next to the cursor hides the keyboard.

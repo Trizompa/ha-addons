@@ -31,6 +31,8 @@ export interface ToolbarState {
   findOpen: boolean;
   /** Pannello dell'anteprima dei template aperto. */
   templateOpen: boolean;
+  /** Grandezza del testo: 0 = automatica. */
+  fontSize: number;
 }
 
 const THEME_ICON: Record<ThemeMode, string> = { auto: icons.themeAuto, light: icons.themeLight, dark: icons.themeDark };
@@ -192,6 +194,15 @@ export class EdithaToolbar extends LitElement {
         @click=${(e: Event) => this.action('language', e)}
       >
         ${s.lang.toUpperCase()}
+      </button>
+      <button
+        class="icon-btn lang text-size hide-narrow"
+        title=${t('toolbar.fontSize', { name: s.fontSize ? t('fontSize.px', { n: s.fontSize }) : t('fontSize.auto') })}
+        aria-label=${t('toolbar.fontSize', { name: s.fontSize ? t('fontSize.px', { n: s.fontSize }) : t('fontSize.auto') })}
+        data-action="font-size"
+        @click=${(e: Event) => this.action('font-size', e)}
+      >
+        Aa
       </button>
       ${this.button('theme', t('toolbar.theme', { name: t(`theme.${s.theme}`) }), THEME_ICON[s.theme])}
       ${this.button('about', t('toolbar.about'), icons.about, { cls: 'hide-narrow' })}

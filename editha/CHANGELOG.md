@@ -2,6 +2,11 @@
 
 Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
+## 0.44.0
+
+- **Text size**: the new **Aa** button (next to the language) makes the editor text bigger or smaller: automatic as before, or a fixed size from 12 to 20 px. On phones it is in the language menu. (Thanks for asking!)
+- **Filter by name** now finds files and folders in the whole configuration, also in folders you have never opened, and opens the folders that contain them. Before, it only looked in folders already opened.
+
 ## 0.43.0
 
 - **× to clear** every filter and search field (file tree, Insert panel, outline, folder picker, gallery, search in all files).

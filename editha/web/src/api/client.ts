@@ -263,6 +263,7 @@ export const api = {
       { paths, replacement, ...req },
     ),
   folders: () => request<{ folders: string[] }>('GET', 'api/folders'),
+  find: (q: string) => request<{ paths: string[]; truncated: boolean }>('GET', `api/find?q=${encodeURIComponent(q)}`),
   secrets: (path: string) => request<{ secrets: SecretKey[] }>('GET', `api/secrets${q(path)}`),
   drafts: () => request<{ drafts: ListedDraft[] }>('GET', 'api/drafts'),
   /** Bozza di questa finestra. */

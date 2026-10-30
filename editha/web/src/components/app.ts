@@ -7,7 +7,7 @@ import { api, ApiError, errorText } from '../api/client.js';
 import { getLang, onLangChange, resolveLang, setLang, t, type LanguageSetting, type MessageKey } from '../i18n/index.js';
 import { connection } from '../api/connection.js';
 import type { Entry, Settings, ThemeMode } from '../api/types.js';
-import { createEditorState, docText, reconfigureEffects } from '../editor/setup.js';
+import { createEditorState, docText, reconfigureEffects, type EditorPrefs } from '../editor/setup.js';
 import { languageOf } from '../editor/languages.js';
 import { searchPanelOpen } from '@codemirror/search';
 import { LINT_MAX_CHARS } from '../editor/yaml-lint.js';
@@ -85,9 +85,13 @@ const DEFAULT_SETTINGS: Settings = {
   language: 'auto',
   outlineVisible: false,
   haHints: true,
+  fontSizeAuto: true,
 };
 
 const NARROW = '(max-width: 760px)';
+
+/** Grandezze fisse del menu «Aa» (le impostazioni accettano da 10 a 24). */
+const FONT_SIZES = [12, 13, 14, 16, 18, 20];
 
 /**
  * Componente principale: tiene insieme albero, tab, editor e barre. Le singole funzioni stanno
@@ -515,13 +519,21 @@ export class EdithaApp extends LitElement {
       label: t(`language.${id}`),
       ...(id === current ? { icon: icons.ok } : {}),
     }));
-    // Su telefono il pulsante "Informazioni" non sta nella barra: si raggiunge da qui.
-    if (this.narrow) items.push('separator', { id: 'about', label: t('toolbar.about'), icon: icons.about });
+    // Su telefono «Aa» e «Informazioni» non stanno nella barra: si raggiungono da qui.
+    if (this.narrow) {
+      items.push(
+        'separator',
+        { id: 'font-size', label: t('fontSize.menu') },
+        { id: 'about', label: t('toolbar.about'), icon: icons.about },
+      );
+    }
     const choice = (await this.menu.show(items, rect ? rect.left - 120 : 16, rect ? rect.bottom + 4 : 56)) as
       | LanguageSetting
       | 'about'
+      | 'font-size'
       | null;
     if (choice === 'about') return (this.renderRoot.querySelector('editha-about-dialog') as EdithaAboutDialog).show();
+    if (choice === 'font-size') return this.fontSizeMenu(rect);
     if (!choice || choice === current) return;
     setLang(resolveLang(choice));
     await this.updateSettings({ language: choice });
@@ -591,9 +603,33 @@ export class EdithaApp extends LitElement {
     this.toasts.show(t('theme.toast', { name: t(`theme.${next}`) }), 'info');
   }
 
+  /** Preferenze dell'editor dalle impostazioni (carattere 0 = automatico). */
+  editorPrefs(): EditorPrefs {
+    return { wordWrap: this.settings.wordWrap, fontSize: this.settings.fontSizeAuto ? 0 : this.settings.fontSize };
+  }
+
+  /** Menu «Aa»: grandezza del testo dell'editor, automatica o fissa. */
+  async fontSizeMenu(rect?: DOMRect): Promise<void> {
+    const auto = this.settings.fontSizeAuto;
+    const items: MenuEntry[] = [
+      { id: 'auto', label: t('fontSize.auto'), ...(auto ? { icon: icons.ok } : {}) },
+      'separator',
+      ...FONT_SIZES.map((n) => ({
+        id: String(n),
+        label: t('fontSize.px', { n }),
+        ...(!auto && this.settings.fontSize === n ? { icon: icons.ok } : {}),
+      })),
+    ];
+    const choice = await this.menu.show(items, rect ? rect.left - 120 : 16, rect ? rect.bottom + 4 : 56);
+    if (!choice) return;
+    await this.updateSettings(choice === 'auto' ? { fontSizeAuto: true } : { fontSizeAuto: false, fontSize: Number(choice) });
+    const prefs = this.editorPrefs();
+    for (const tab of this.tabs.tabs) this.applyEffects(tab, reconfigureEffects({ prefs }));
+  }
+
   async toggleWordWrap(): Promise<void> {
     await this.updateSettings({ wordWrap: !this.settings.wordWrap });
-    const prefs = { wordWrap: this.settings.wordWrap, fontSize: this.settings.fontSize };
+    const prefs = this.editorPrefs();
     for (const tab of this.tabs.tabs) this.applyEffects(tab, reconfigureEffects({ prefs }));
   }
 
@@ -644,7 +680,7 @@ export class EdithaApp extends LitElement {
       doc: file.content,
       path: file.path,
       readOnly: file.readOnly,
-      prefs: { wordWrap: this.settings.wordWrap, fontSize: this.settings.fontSize },
+      prefs: this.editorPrefs(),
       ...(selection ? { selection } : {}),
       onUpdate: (update) => this.onEditorUpdate(tab, update),
     });
@@ -945,6 +981,7 @@ export class EdithaApp extends LitElement {
       haHints: this.settings.haHints,
       findOpen: !!s && searchPanelOpen(s),
       templateOpen: !!this.template,
+      fontSize: this.editorPrefs().fontSize,
     };
   }
 
@@ -1058,7 +1095,7 @@ export class EdithaApp extends LitElement {
           ? html`<editha-compare-panel
               .left=${this.compare.left}
               .right=${this.compare.right}
-              .prefs=${{ wordWrap: this.settings.wordWrap, fontSize: this.settings.fontSize }}
+              .prefs=${this.editorPrefs()}
               @compare-close=${() => this.closeCompare()}
             ></editha-compare-panel>`
           : null}
@@ -1066,7 +1103,7 @@ export class EdithaApp extends LitElement {
           ? html`<editha-history-panel
               .path=${this.history.path}
               .current=${this.history.current}
-              .prefs=${{ wordWrap: this.settings.wordWrap, fontSize: this.settings.fontSize }}
+              .prefs=${this.editorPrefs()}
               .canRestore=${!this.history.readOnly}
               @history-close=${() => this.versions.closeHistory()}
               @history-space=${() => void this.versions.openHistorySpace()}

@@ -51,7 +51,8 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
 - **Barra degli strumenti** (in alto): esplora file, salva e salva tutto, annulla e ripeti, cerca
   e sostituisci, cronologia del file, a capo automatico, vista divisa, schema, pannello Inserisci,
   anteprima template, aiuti di Home Assistant e menu di Home Assistant. A destra: lingua (Automatica (browser), Italiano,
-  English), tema (automatico, chiaro, scuro) e Informazioni.
+  English), **Aa** per la grandezza del testo dell'editor (automatica, oppure fissa da 12 a 20 px),
+  tema (automatico, chiaro, scuro) e Informazioni.
 - **Esplora file** (a sinistra): il contenuto di `/config`. Sopra: cerca in tutti i file, Git,
   nuovo file, nuova cartella, cartelle di sistema, carica, aggiorna e comprimi tutto.
 - **Tab ed editor** (al centro): una tab per ogni file aperto. Il pallino su una tab indica
@@ -86,7 +87,7 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 - **Caricare file**: pulsante di caricamento, oppure trascina i file dal PC su una cartella. Fino a
   50 MB per file; sostituire un file esistente chiede conferma, e la versione precedente va nella
   cronologia (se il file esistente supera i 50 MB, EDITHA avvisa che non se ne può tenere copia).
-- **Filtra per nome**: il campo con l'imbuto sopra l'albero. Guarda solo i nomi dei file; per cercare dentro i file usa la lente (vedi [Cerca e sostituisci in tutti i file](#cerca-e-sostituisci-in-tutti-i-file)). La × in fondo a ogni campo di filtro o di ricerca lo svuota.
+- **Filtra per nome**: il campo con l'imbuto sopra l'albero. Cerca tra i nomi di file e cartelle in tutta la configurazione, anche nelle cartelle che non hai aperto (tranne quelle di sistema), e apre le cartelle che li contengono; con moltissimi risultati compaiono solo i primi. Guarda solo i nomi; per cercare dentro i file usa la lente (vedi [Cerca e sostituisci in tutti i file](#cerca-e-sostituisci-in-tutti-i-file)). La × in fondo a ogni campo di filtro o di ricerca lo svuota.
 - **Immagini e PDF** si aprono in una tab di anteprima invece che nell'editor: PNG, JPEG, GIF,
   WebP, AVIF, BMP, ICO, SVG e PDF. La tab di anteprima è una sola e viene riusata dalla prossima
   immagine che apri. In alto compaiono le dimensioni in pixel e lo zoom attuale; un clic
@@ -407,8 +408,8 @@ indipendentemente da Git.
 
 EDITHA funziona nell'app di Home Assistant. Su uno schermo stretto l'esplora file diventa un
 pannello che si apre dal pulsante nella barra, e la barra mostra solo i pulsanti principali:
-**Cronologia…** sta nel menu del file (pressione prolungata sul file) e **Informazioni** nel menu
-del pulsante della lingua. **A capo automatico** e **Salva tutto** non sono nella barra (con una
+**Cronologia…** sta nel menu del file (pressione prolungata sul file) e **Grandezza del testo** e **Informazioni**
+nel menu del pulsante della lingua. **A capo automatico** e **Salva tutto** non sono nella barra (con una
 tastiera, Ctrl+Alt+S salva comunque tutto). Vista divisa, **Apri a destra** e schema del file non
 sono disponibili sul telefono. Su telefono e tablet un piccolo pulsante accanto al cursore chiude
 la tastiera.

@@ -22,7 +22,7 @@ body:
     attributes:
       label: EDITHA version
       description: App page in Home Assistant, or the About button in EDITHA.
-      placeholder: "0.43.0"
+      placeholder: "0.44.0"
     validations:
       required: true
   - type: dropdown

@@ -19,6 +19,8 @@ export interface Settings {
   outlineVisible: boolean;
   /** Aiuti di Home Assistant: attributi e stati nei suggerimenti, avviso per le entità sconosciute. */
   haHints: boolean;
+  /** Carattere dell'editor automatico (13 px su PC, 14 su telefono); se false vale fontSize. */
+  fontSizeAuto: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -31,6 +33,7 @@ export const DEFAULT_SETTINGS: Settings = {
   language: 'auto',
   outlineVisible: false,
   haHints: true,
+  fontSizeAuto: true,
 };
 
 /** Schema JSON condiviso da validazione delle richieste e lettura da disco. */
@@ -46,6 +49,7 @@ export const settingsSchema = {
     language: { type: 'string', enum: ['auto', 'it', 'en'] },
     outlineVisible: { type: 'boolean' },
     haHints: { type: 'boolean' },
+    fontSizeAuto: { type: 'boolean' },
   },
   additionalProperties: false,
 } as const;
@@ -67,6 +71,7 @@ function sanitize(raw: unknown): Partial<Settings> {
   if (r.language === 'auto' || r.language === 'it' || r.language === 'en') out.language = r.language;
   if (typeof r.outlineVisible === 'boolean') out.outlineVisible = r.outlineVisible;
   if (typeof r.haHints === 'boolean') out.haHints = r.haHints;
+  if (typeof r.fontSizeAuto === 'boolean') out.fontSizeAuto = r.fontSizeAuto;
   return out;
 }
 

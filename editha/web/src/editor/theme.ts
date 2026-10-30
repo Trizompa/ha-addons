@@ -155,9 +155,9 @@ const highlight = HighlightStyle.define([
 export const edithaHighlighting = syntaxHighlighting(highlight);
 
 /**
- * Dimensione del carattere: con il valore predefinito segue --editor-font-size
- * (13 px su PC, 14 px su telefono); un valore scelto dall'utente vale ovunque.
+ * Dimensione del carattere: 0 (automatica) segue --editor-font-size (13 px su PC, 14 px su
+ * telefono); un valore scelto dall'utente vale ovunque.
  */
-export function fontSizeTheme(size: number, followDevice = true) {
-  return EditorView.theme({ '&': { fontSize: followDevice ? 'var(--editor-font-size)' : `${size}px` } });
+export function fontSizeTheme(size: number) {
+  return EditorView.theme({ '&': { fontSize: size > 0 ? `${size}px` : 'var(--editor-font-size)' } });
 }

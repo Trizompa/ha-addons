@@ -680,6 +680,48 @@ export class FileService {
   }
 
   /**
+   * FS-12: file e cartelle il cui nome contiene `query` (senza distinguere maiuscole), in tutta
+   * /config, per il filtro dell'albero. Come `folders`, salta cartelle di sistema (SEC-8), link e
+   * file temporanei; si ferma a `limit` risultati o dopo `maxVisited` voci lette (/config enormi).
+   */
+  async findNames(query: string, limit = 300, maxVisited = 50_000): Promise<{ paths: string[]; truncated: boolean }> {
+    const needle = query.trim().toLowerCase();
+    const paths: string[] = [];
+    let visited = 0;
+    let truncated = false;
+    const walk = async (abs: string, rel: string): Promise<void> => {
+      let dirents;
+      try {
+        dirents = await readdir(abs, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      dirents.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
+      for (const d of dirents) {
+        if (truncated) return;
+        if (isTempName(d.name) || d.isSymbolicLink()) continue;
+        if (++visited > maxVisited) {
+          truncated = true;
+          return;
+        }
+        const childAbs = path.join(abs, d.name);
+        const childRel = joinRel(rel, d.name);
+        if (d.isDirectory() && this.guard.isReadOnly(childAbs)) continue;
+        if (d.name.toLowerCase().includes(needle)) {
+          if (paths.length >= limit) {
+            truncated = true;
+            return;
+          }
+          paths.push(childRel);
+        }
+        if (d.isDirectory()) await walk(childAbs, childRel);
+      }
+    };
+    if (needle) await walk(this.guard.root, '');
+    return { paths, truncated };
+  }
+
+  /**
    * FS-5: tutte le cartelle scrivibili, come destinazioni di "Sposta in…".
    * Esclude le cartelle di sistema (SEC-8) e i link; limitato per non bloccarsi su /config enormi.
    */

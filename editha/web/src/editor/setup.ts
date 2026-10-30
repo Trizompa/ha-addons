@@ -41,6 +41,7 @@ export function phrasesExtension(): Extension {
 
 export interface EditorPrefs {
   wordWrap: boolean;
+  /** Pixel del carattere; 0 = automatica (segue il dispositivo). */
   fontSize: number;
 }
 

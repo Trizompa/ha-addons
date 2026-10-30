@@ -331,6 +331,40 @@ test('UI – anteprima template ed elenco dei problemi: un secondo clic chiude',
   await expect(problems).toHaveAttribute('aria-pressed', 'false');
 });
 
+test('FS-12 – il filtro per nome trova anche i file nelle cartelle mai aperte', async ({ page }) => {
+  const filter = page.locator('editha-file-tree .filter input');
+  await filter.fill('dentro');
+  await expect(row(page, 'galleria/sotto/dentro.svg')).toBeVisible();
+  await expect(row(page, 'galleria')).toBeVisible();
+  await expect(row(page, 'galleria/sotto')).toBeVisible();
+  await filter.fill('');
+  // Tolto il filtro, le cartelle tornano chiuse com'erano.
+  await expect(row(page, 'galleria/sotto/dentro.svg')).toHaveCount(0);
+});
+
+test('UI – «Aa» cambia la grandezza del testo dell\'editor e la ricorda', async ({ page }) => {
+  await openFile(page, 'tabs/a.yaml');
+  const size = () => page.locator('.cm-editor').first().evaluate((el) => getComputedStyle(el).fontSize);
+  const before = await size();
+  await page.locator('editha-toolbar button[data-action="font-size"]').click();
+  await menuItem(page, '20 px').click();
+  await expect.poll(size).toBe('20px');
+  await page.reload();
+  await expect(page.locator('.cm-editor').first()).toBeVisible();
+  await expect.poll(size).toBe('20px');
+  await page.locator('editha-toolbar button[data-action="font-size"]').click();
+  await menuItem(page, 'Automatica').click();
+  await expect.poll(size).toBe(before);
+
+  // Su telefono «Aa» non sta nella barra: è nel menu della lingua.
+  await page.setViewportSize({ width: 390, height: 800 });
+  await expect(page.locator('editha-toolbar button[data-action="font-size"]')).toBeHidden();
+  await page.locator('editha-toolbar button.lang:not(.text-size)').click();
+  await menuItem(page, 'Grandezza del testo…').click();
+  await expect(menuItem(page, '16 px')).toBeVisible();
+  await page.keyboard.press('Escape');
+});
+
 test('SEC-8 – le cartelle protette si leggono ma non si modificano', async ({ page }) => {
   await page.locator('editha-file-tree button[data-action="toggle-system"]').click();
   await openFile(page, '.storage/core.config');
@@ -579,9 +613,9 @@ test.describe('Upload e download (FS-6)', () => {
 });
 
 test('Lingua: passa all\'inglese dal menu e la scelta resta dopo il rientro', async ({ page, request }) => {
-  await page.locator('editha-toolbar button.lang').click();
+  await page.locator('editha-toolbar button.lang:not(.text-size)').click();
   await menuItem(page, 'English').click();
-  await expect(page.locator('editha-toolbar button.lang')).toHaveText('EN');
+  await expect(page.locator('editha-toolbar button.lang:not(.text-size)')).toHaveText('EN');
   await expect(page.locator('editha-file-tree header')).toHaveAttribute('aria-label', 'File explorer');
   await expect(page.locator('editha-status-bar')).toContainText('No file open');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');

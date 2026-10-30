@@ -219,6 +219,13 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
   // FS-5: cartelle di destinazione per "Sposta in…".
   app.get('/api/folders', async () => ({ folders: await files.folders() }));
 
+  // FS-12: nomi di file e cartelle in tutta /config, per il filtro dell'albero.
+  app.get<{ Querystring: { q: string } }>(
+    '/api/find',
+    { schema: { querystring: { type: 'object', required: ['q'], properties: { q: { type: 'string', minLength: 1, maxLength: 200 } } } } },
+    async (req) => files.findNames(req.query.q),
+  );
+
   // HA-4: chiavi di secrets.yaml per l'autocompletamento di !secret (mai i valori).
   app.get<{ Querystring: PathQuery }>('/api/secrets', { schema: { querystring: pathQuery } }, async (req) => ({
     secrets: await files.secrets(req.query.path),

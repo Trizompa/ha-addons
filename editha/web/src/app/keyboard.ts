@@ -50,6 +50,8 @@ export class KeyboardController {
         return void this.app.ha.haMenu(e.detail.rect);
       case 'language':
         return void this.app.languageMenu(e.detail.rect);
+      case 'font-size':
+        return void this.app.fontSizeMenu(e.detail.rect);
     }
   }
 
