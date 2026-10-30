@@ -6,6 +6,7 @@ import { t } from '../i18n/index.js';
 import { haData } from '../state/ha-data.js';
 import { icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
+import { clearable } from '../ui/clearable.js';
 
 export type InsertTab = 'entities' | 'snippets';
 
@@ -97,7 +98,7 @@ export class EdithaInsertPanel extends LitElement {
         position: relative;
         padding: 10px 12px 8px;
       }
-      .search svg {
+      .search > svg {
         position: absolute;
         left: 22px;
         top: 19px;
@@ -477,16 +478,20 @@ export class EdithaInsertPanel extends LitElement {
       </header>
       <div class="search">
         ${icon(icons.search, 16)}
-        <input
-          class="input"
-          spellcheck="false"
-          placeholder=${entities ? t('insert.searchEntities') : t('insert.searchSnippets')}
-          .value=${this.query}
-          @input=${(e: Event) => (this.query = (e.target as HTMLInputElement).value)}
-          @keydown=${(e: KeyboardEvent) => {
-            if (e.key === 'Escape') this.emit('panel-close');
-          }}
-        />
+        ${clearable(
+          html`<input
+            class="input"
+            spellcheck="false"
+            placeholder=${entities ? t('insert.searchEntities') : t('insert.searchSnippets')}
+            .value=${this.query}
+            @input=${(e: Event) => (this.query = (e.target as HTMLInputElement).value)}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === 'Escape') this.emit('panel-close');
+            }}
+          />`,
+          this.query,
+          () => (this.query = ''),
+        )}
       </div>
       ${!this.canInsert ? html`<div class="hint">${t('insert.openFileHint')}</div>` : nothing}
       ${entities ? this.renderDetail() : nothing}

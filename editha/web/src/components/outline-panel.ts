@@ -3,6 +3,7 @@ import type { Outline, OutlineItem } from '../editor/outline.js';
 import { t } from '../i18n/index.js';
 import { icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
+import { clearable } from '../ui/clearable.js';
 
 /**
  * ED-18: schema del file aperto, a fianco dell'editor. Un clic porta alla voce;
@@ -181,13 +182,17 @@ export class EdithaOutlinePanel extends LitElement {
       </header>
       ${(this.items && this.items.length > 8) || this.filter
         ? html`<div class="filter">
-            <input
-              class="input"
-              placeholder=${t('outline.filter')}
-              spellcheck="false"
-              .value=${this.filter}
-              @input=${(e: Event) => (this.filter = (e.target as HTMLInputElement).value)}
-            />
+            ${clearable(
+              html`<input
+                class="input"
+                placeholder=${t('outline.filter')}
+                spellcheck="false"
+                .value=${this.filter}
+                @input=${(e: Event) => (this.filter = (e.target as HTMLInputElement).value)}
+              />`,
+              this.filter,
+              () => (this.filter = ''),
+            )}
           </div>`
         : nothing}
       ${this.renderList()}

@@ -274,6 +274,26 @@ test('FS-11 – galleria delle immagini di una cartella: filtro, immagine in gra
   await expect(gallery).toHaveCount(0);
 });
 
+test('UI – la × svuota i campi di filtro e ricerca', async ({ page }) => {
+  const filter = page.locator('editha-file-tree .filter input');
+  const clear = page.locator('editha-file-tree .filter .clear-btn');
+  await expect(clear).toHaveCount(0);
+  await filter.fill('nessun-file-si-chiama-cosi');
+  await expect(page.locator('editha-file-tree')).toContainText('Nessun file corrisponde al filtro');
+  await clear.click();
+  await expect(filter).toHaveValue('');
+  await expect(filter).toBeFocused();
+  await expect(clear).toHaveCount(0);
+  await expect(row(page, 'configuration.yaml')).toBeVisible();
+
+  // Anche nella ricerca in tutti i file.
+  await page.keyboard.press('Control+Shift+F');
+  const query = page.locator('editha-search-panel .box .input');
+  await query.fill('qualcosa');
+  await page.locator('editha-search-panel .toggle.clear').click();
+  await expect(query).toHaveValue('');
+});
+
 test('SEC-8 – le cartelle protette si leggono ma non si modificano', async ({ page }) => {
   await page.locator('editha-file-tree button[data-action="toggle-system"]').click();
   await openFile(page, '.storage/core.config');

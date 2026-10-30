@@ -69,6 +69,7 @@ export const en: Record<keyof Dictionary, string> = {
 
   'common.cancel': 'Cancel',
   'common.close': 'Close',
+  'common.clear': 'Clear',
   'common.save': 'Save',
   'common.create': 'Create',
   'common.delete': 'Delete',

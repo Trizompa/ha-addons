@@ -2,6 +2,7 @@ import { LitElement, css, html, nothing } from 'lit';
 import { t } from '../i18n/index.js';
 import { icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
+import { clearable } from '../ui/clearable.js';
 
 interface Pending {
   title: string;
@@ -149,13 +150,17 @@ export class EdithaFolderPicker extends LitElement {
     return html`<dialog @cancel=${(e: Event) => (e.preventDefault(), this.finish(null))}>
       <h2>${p.title}</h2>
       <div class="search">
-        <input
-          class="input"
-          spellcheck="false"
-          placeholder=${t('move.filter')}
-          .value=${this.filter}
-          @input=${(e: Event) => (this.filter = (e.target as HTMLInputElement).value)}
-        />
+        ${clearable(
+          html`<input
+            class="input"
+            spellcheck="false"
+            placeholder=${t('move.filter')}
+            .value=${this.filter}
+            @input=${(e: Event) => (this.filter = (e.target as HTMLInputElement).value)}
+          />`,
+          this.filter,
+          () => (this.filter = ''),
+        )}
       </div>
       <div class="list" role="listbox">
         ${list.length === 0 ? html`<div class="empty">${t('move.noMatch')}</div>` : nothing}

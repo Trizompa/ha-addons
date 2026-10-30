@@ -71,6 +71,7 @@ export const it = {
   // Pulsanti e dialoghi comuni
   'common.cancel': 'Annulla',
   'common.close': 'Chiudi',
+  'common.clear': 'Svuota',
   'common.save': 'Salva',
   'common.create': 'Crea',
   'common.delete': 'Elimina',

@@ -86,6 +86,35 @@ export const sharedStyles = css`
   .btn.danger:hover {
     filter: brightness(1.08);
   }
+  .clearable {
+    position: relative;
+    display: block;
+  }
+  .clearable .input {
+    padding-right: 30px;
+  }
+  .clear-btn {
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-faint);
+    cursor: pointer;
+  }
+  .clear-btn:hover,
+  .clear-btn:focus-visible {
+    background: var(--hover);
+    color: var(--text);
+  }
   .input {
     width: 100%;
     height: 36px;

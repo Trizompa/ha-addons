@@ -4,6 +4,7 @@ import type { Entry } from '../api/types.js';
 import { dirname, isWithin } from '../state/paths.js';
 import { fileIcon, icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
+import { clearable } from '../ui/clearable.js';
 import { t } from '../i18n/index.js';
 import { MAC, shortcutLabel } from '../state/keys.js';
 
@@ -87,7 +88,7 @@ export class EdithaFileTree extends LitElement {
         padding: 0 10px 8px;
         flex: none;
       }
-      .filter svg {
+      .filter > svg {
         position: absolute;
         left: 20px;
         top: 8px;
@@ -520,16 +521,20 @@ export class EdithaFileTree extends LitElement {
       </header>
       <div class="filter">
         ${icon(icons.search, 16)}
-        <input
-          class="input"
-          placeholder=${t('tree.filter')}
-          spellcheck="false"
-          .value=${this.filter}
-          @input=${(e: Event) => (this.filter = (e.target as HTMLInputElement).value)}
-          @keydown=${(e: KeyboardEvent) => {
-            if (e.key === 'Escape') this.filter = '';
-          }}
-        />
+        ${clearable(
+          html`<input
+            class="input"
+            placeholder=${t('tree.filter')}
+            spellcheck="false"
+            .value=${this.filter}
+            @input=${(e: Event) => (this.filter = (e.target as HTMLInputElement).value)}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === 'Escape') this.filter = '';
+            }}
+          />`,
+          this.filter,
+          () => (this.filter = ''),
+        )}
       </div>
       <div
         class="list ${this.dropTarget === '' ? 'drop-root' : ''}"

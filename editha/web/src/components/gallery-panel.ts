@@ -6,6 +6,7 @@ import { t } from '../i18n/index.js';
 import { previewKind } from '../state/preview.js';
 import { icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
+import { clearable } from '../ui/clearable.js';
 
 export type ThumbSize = 's' | 'm' | 'l';
 
@@ -108,7 +109,7 @@ export class EdithaGalleryPanel extends LitElement {
       .search {
         position: relative;
       }
-      .search svg {
+      .search > svg {
         position: absolute;
         left: 9px;
         top: 8px;
@@ -420,16 +421,20 @@ export class EdithaGalleryPanel extends LitElement {
         <h2 title=${this.path}>/config/${this.path}<small>${total === 1 ? t('gallery.countOne') : t('gallery.count', { n: total })}</small></h2>
         <div class="search">
           ${icon(icons.search, 16)}
-          <input
-            class="input"
-            .value=${this.filter}
-            placeholder=${t('gallery.filter')}
-            aria-label=${t('gallery.filter')}
-            @input=${(e: Event) => {
-              this.filter = (e.target as HTMLInputElement).value;
-              this.open = null;
-            }}
-          />
+          ${clearable(
+            html`<input
+              class="input"
+              .value=${this.filter}
+              placeholder=${t('gallery.filter')}
+              aria-label=${t('gallery.filter')}
+              @input=${(e: Event) => {
+                this.filter = (e.target as HTMLInputElement).value;
+                this.open = null;
+              }}
+            />`,
+            this.filter,
+            () => (this.filter = ''),
+          )}
         </div>
         <div class="sizes" role="group" aria-label=${t('gallery.size')}>
           ${sizes.map(

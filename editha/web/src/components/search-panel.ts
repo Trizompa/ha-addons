@@ -155,7 +155,7 @@ export class EdithaSearchPanel extends LitElement {
       }
       .box .input {
         height: 32px;
-        padding-right: 92px;
+        padding-right: 120px;
         font-size: 13px;
       }
       .toggles {
@@ -164,6 +164,12 @@ export class EdithaSearchPanel extends LitElement {
         right: 4px;
         display: flex;
         gap: 2px;
+      }
+      .toggle.clear {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
       }
       .toggle {
         width: 26px;
@@ -531,6 +537,21 @@ export class EdithaSearchPanel extends LitElement {
           }}
         />
         <div class="toggles">
+          ${this.query
+            ? html`<button
+                class="toggle clear"
+                title=${t('common.clear')}
+                aria-label=${t('common.clear')}
+                @mousedown=${(e: Event) => e.preventDefault()}
+                @click=${() => {
+                  this.query = '';
+                  this.schedule();
+                  (this.renderRoot.querySelector('.box .input') as HTMLInputElement | null)?.focus();
+                }}
+              >
+                ${icon(icons.close, 15)}
+              </button>`
+            : nothing}
           <button class="toggle" title=${t('search.caseSensitive')} aria-pressed=${this.caseSensitive} @click=${() => this.toggle('caseSensitive')}>Aa</button>
           <button class="toggle" title=${t('search.wholeWord')} aria-pressed=${this.wholeWord} @click=${() => this.toggle('wholeWord')}>ab</button>
           <button class="toggle" title=${t('search.regex')} aria-pressed=${this.regex} @click=${() => this.toggle('regex')}>.*</button>
