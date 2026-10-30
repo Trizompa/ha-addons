@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { chmod, mkdir, readdir, readFile, stat, symlink, writeFile } from 'node:fs/promises';
 import { BackupStore } from '../src/backups/store.js';
 import { EdithaError } from '../src/errors.js';
@@ -625,15 +626,24 @@ describe('FileService', () => {
   });
 
   describe('operazioni su cartelle e file insieme', () => {
-    it('un salvataggio dentro una cartella che si sta eliminando non risulta riuscito', async () => {
-      const f = await files.read('packages/lights.yaml');
-      const [removed, saved] = await Promise.allSettled([
-        files.remove('packages'),
-        files.write('packages/lights.yaml', 'light: [1]\n', f.etag),
-      ]);
-      assert.equal(removed.status, 'fulfilled');
-      // Il salvataggio aspetta l'eliminazione e poi fallisce: niente "salvato" su un file sparito.
-      assert.equal(saved.status, 'rejected');
+    it('un salvataggio e l\'eliminazione della sua cartella non perdono il testo salvato', async () => {
+      // Arrivano insieme: vince chi prende il lock per primo, e l'ordine dipende dal disco. Se il
+      // salvataggio arriva prima riesce e la copia della cartella eliminata contiene il testo nuovo;
+      // se arriva dopo fallisce (niente "salvato" su un file sparito). Mai salvato e perso.
+      for (let round = 0; round < 5; round++) {
+        await writeTree(sb.configDir, { 'packages/lights.yaml': 'light: []\n' });
+        const f = await files.read('packages/lights.yaml');
+        const [removed, saved] = await Promise.allSettled([
+          files.remove('packages'),
+          files.write('packages/lights.yaml', 'light: [1]\n', f.etag),
+        ]);
+        assert.equal(removed.status, 'fulfilled');
+        if (saved.status === 'fulfilled' && removed.status === 'fulfilled') {
+          const id = removed.value.backup!;
+          const copy = path.join(backups.dir, createHash('sha256').update('packages').digest('hex'), id, 'lights.yaml');
+          assert.equal(await readFile(copy, 'utf8'), 'light: [1]\n');
+        }
+      }
     });
   });
 
