@@ -20,7 +20,7 @@ import {
   type SearchResult,
 } from './search.js';
 import { Worker } from 'node:worker_threads';
-import { READ_ONLY_DIRS, type PathGuard, type ResolvedPath } from './paths.js';
+import { NESTED_SKIP_DIRS, READ_ONLY_DIRS, type PathGuard, type ResolvedPath } from './paths.js';
 
 export type EntryType = 'file' | 'directory' | 'other';
 
@@ -684,11 +684,17 @@ export class FileService {
    * /config, per il filtro dell'albero. Come `folders`, salta cartelle di sistema (SEC-8), link e
    * file temporanei; si ferma a `limit` risultati o dopo `maxVisited` voci lette (/config enormi).
    */
-  async findNames(query: string, limit = 300, maxVisited = 50_000): Promise<{ paths: string[]; truncated: boolean }> {
+  async findNames(
+    query: string,
+    limit = 300,
+    maxVisited = 50_000,
+  ): Promise<{ paths: string[]; truncated: boolean; incomplete: boolean }> {
     const needle = query.trim().toLowerCase();
     const paths: string[] = [];
     let visited = 0;
+    // truncated: troppi risultati (un nome più lungo aiuta); incomplete: /config troppo grande da girare tutta.
     let truncated = false;
+    let incomplete = false;
     const walk = async (abs: string, rel: string): Promise<void> => {
       let dirents;
       try {
@@ -698,15 +704,16 @@ export class FileService {
       }
       dirents.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
       for (const d of dirents) {
-        if (truncated) return;
+        if (truncated || incomplete) return;
         if (isTempName(d.name) || d.isSymbolicLink()) continue;
         if (++visited > maxVisited) {
-          truncated = true;
+          incomplete = true;
           return;
         }
         const childAbs = path.join(abs, d.name);
         const childRel = joinRel(rel, d.name);
-        if (d.isDirectory() && this.guard.isReadOnly(childAbs)) continue;
+        // Sistema (SEC-8) in cima; .storage, .cloud e .git anche più in basso, come la ricerca nei file.
+        if (d.isDirectory() && (this.guard.isReadOnly(childAbs) || NESTED_SKIP_DIRS.includes(d.name))) continue;
         if (d.name.toLowerCase().includes(needle)) {
           if (paths.length >= limit) {
             truncated = true;
@@ -718,7 +725,7 @@ export class FileService {
       }
     };
     if (needle) await walk(this.guard.root, '');
-    return { paths, truncated };
+    return { paths, truncated, incomplete };
   }
 
   /**

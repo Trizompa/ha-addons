@@ -5,7 +5,7 @@ import { dirname, isWithin } from '../state/paths.js';
 import { fileIcon, icon, icons } from '../ui/icons.js';
 import { sharedStyles } from '../ui/shared-styles.js';
 import { clearable } from '../ui/clearable.js';
-import { t } from '../i18n/index.js';
+import { t, type MessageKey } from '../i18n/index.js';
 import { MAC, shortcutLabel } from '../state/keys.js';
 
 export interface TreeSelection {
@@ -13,6 +13,12 @@ export interface TreeSelection {
   type: 'file' | 'directory' | 'other';
   readOnly: boolean;
 }
+
+const FIND_NOTES: Record<'truncated' | 'incomplete' | 'failed', MessageKey> = {
+  truncated: 'tree.findTruncated',
+  incomplete: 'tree.findIncomplete',
+  failed: 'tree.findFailed',
+};
 
 interface Row {
   entry: Entry;
@@ -33,7 +39,7 @@ export class EdithaFileTree extends LitElement {
     selected: { state: true },
     filter: { state: true },
     finding: { state: true },
-    findTruncated: { state: true },
+    findNote: { state: true },
     rootError: { state: true },
     dropTarget: { state: true },
   };
@@ -48,7 +54,8 @@ export class EdithaFileTree extends LitElement {
   /** Ricerca dei nomi in tutta /config in corso (FS-12): niente «nessun file» prima della risposta. */
   declare finding: boolean;
   /** Il server ha trovato più nomi di quanti ne mostra. */
-  declare findTruncated: boolean;
+  /** FS-12: avviso sotto l'albero filtrato (risultati tagliati, ricerca incompleta o fallita). */
+  declare findNote: '' | 'truncated' | 'incomplete' | 'failed';
   private findSeq = 0;
   private findTimer: ReturnType<typeof setTimeout> | undefined;
   declare rootError: string | null;
@@ -64,7 +71,7 @@ export class EdithaFileTree extends LitElement {
     this.selected = null;
     this.filter = '';
     this.finding = false;
-    this.findTruncated = false;
+    this.findNote = '';
     this.rootError = null;
     this.dropTarget = null;
   }
@@ -223,7 +230,7 @@ export class EdithaFileTree extends LitElement {
     clearTimeout(this.findTimer);
     const q = this.filter.trim();
     const seq = ++this.findSeq;
-    this.findTruncated = false;
+    this.findNote = '';
     this.finding = q !== '';
     if (!q) return;
     this.findTimer = setTimeout(() => void this.findAll(q, seq), 250);
@@ -233,18 +240,25 @@ export class EdithaFileTree extends LitElement {
     try {
       const res = await api.find(q);
       if (seq !== this.findSeq) return;
-      const missing = new Set<string>();
+      // Da caricare: le cartelle mai lette e quelle lette prima (aperte e richiuse, o dal filtro di
+      // prima) che non contengono ancora il risultato o la sua cartella, perché sono cambiate da allora.
+      const stale = new Set<string>();
       for (const p of res.paths) {
-        for (let dir = dirname(p); dir !== ''; dir = dirname(dir)) if (!this.dirs.has(dir)) missing.add(dir);
+        for (let child = p; child !== ''; child = dirname(child)) {
+          const dir = dirname(child);
+          if (!this.dirs.get(dir)?.some((e) => e.path === child)) stale.add(dir);
+        }
       }
       // Dall'alto in basso, poche alla volta: le cartelle sopra arrivano prima.
-      const list = [...missing].sort((a, b) => a.split('/').length - b.split('/').length).slice(0, 300);
+      const all = [...stale].sort((a, b) => a.split('/').length - b.split('/').length);
+      const list = all.slice(0, 300);
       for (let i = 0; i < list.length && seq === this.findSeq; i += 8) {
         await Promise.all(list.slice(i, i + 8).map((d) => this.load(d)));
       }
-      if (seq === this.findSeq) this.findTruncated = res.truncated;
+      if (seq !== this.findSeq) return;
+      this.findNote = res.incomplete ? 'incomplete' : res.truncated || all.length > list.length ? 'truncated' : '';
     } catch {
-      // Senza risposta il filtro resta sulle cartelle già aperte, come prima.
+      if (seq === this.findSeq) this.findNote = 'failed';
     } finally {
       if (seq === this.findSeq) this.finding = false;
     }
@@ -619,7 +633,7 @@ export class EdithaFileTree extends LitElement {
           ? html`<div class="empty">${this.filter ? (this.finding ? t('tree.finding') : t('tree.noMatch')) : t('tree.empty')}</div>`
           : nothing}
         ${rows.map((r) => this.renderRow(r))}
-        ${this.filter && this.findTruncated ? html`<div class="empty">${t('tree.findTruncated')}</div>` : nothing}
+        ${this.filter && this.findNote ? html`<div class="empty">${t(FIND_NOTES[this.findNote])}</div>` : nothing}
       </div>
     `;
   }

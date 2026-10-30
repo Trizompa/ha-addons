@@ -34,6 +34,8 @@ export const it = {
   'tree.noMatch': 'Nessun file corrisponde al filtro',
   'tree.finding': 'Cerco in tutte le cartelle…',
   'tree.findTruncated': 'Troppi risultati: compaiono solo i primi. Scrivi un nome più lungo.',
+  'tree.findIncomplete': 'Configurazione troppo grande per cercare dappertutto: qualche file potrebbe mancare.',
+  'tree.findFailed': 'Ricerca nelle cartelle non riuscita: il filtro vale solo per quelle aperte.',
   'tree.empty': 'Cartella vuota',
   'tree.loadError': 'Errore di caricamento',
   'tree.unusableLink': 'Collegamento non utilizzabile',

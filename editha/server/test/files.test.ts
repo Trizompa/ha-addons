@@ -396,11 +396,17 @@ describe('FileService', () => {
         'packages/sub/Heater_bagno.yaml': '',
         'heat/x.yaml': '',
         '.storage/heating_secret': '',
+        'backup/.storage/heating': '',
+        'custom/.git/heat_obj': '',
         'altro.yaml': '',
       });
       await symlink(sb.outsideDir, abs('heat_link'));
       const res = await files.findNames('HEAT');
-      assert.deepEqual(res, { paths: ['heat', 'packages/heating.yaml', 'packages/sub/Heater_bagno.yaml'], truncated: false });
+      assert.deepEqual(res, {
+        paths: ['heat', 'packages/heating.yaml', 'packages/sub/Heater_bagno.yaml'],
+        truncated: false,
+        incomplete: false,
+      });
       assert.deepEqual((await files.findNames('   ')).paths, []);
     });
 
@@ -409,6 +415,13 @@ describe('FileService', () => {
       const res = await files.findNames('.yaml', 2);
       assert.equal(res.paths.length, 2);
       assert.equal(res.truncated, true);
+      assert.equal(res.incomplete, false);
+    });
+
+    it('su una /config troppo grande dice che la ricerca è incompleta, non che i risultati sono troppi', async () => {
+      await writeTree(sb.configDir, { 'a/uno.yaml': '', 'a/due.yaml': '', 'b/zz.yaml': '' });
+      const res = await files.findNames('zz', 300, 3);
+      assert.deepEqual([res.truncated, res.incomplete], [false, true]);
     });
   });
 

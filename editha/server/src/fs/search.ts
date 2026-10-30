@@ -3,7 +3,7 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import { EdithaError } from '../errors.js';
 import { isTempName } from './atomic.js';
 import { decodeText } from './files.js';
-import { READ_ONLY_DIRS } from './paths.js';
+import { NESTED_SKIP_DIRS as SKIP_DIRS, READ_ONLY_DIRS } from './paths.js';
 
 /** SR-1: ricerca in tutti i file. */
 export interface SearchOptions {
@@ -43,8 +43,6 @@ const MAX_LINE = 400;
 const MAX_SCAN = 10_000;
 export const SEARCH_BUDGET_MS = 8000;
 /** File che non vale la pena leggere: database, archivi, immagini. */
-/** Cartelle saltate a qualunque profondità. */
-const SKIP_DIRS: readonly string[] = ['.storage', '.cloud', '.git'];
 const SKIP_EXT = /\.(db|db-shm|db-wal|sqlite|sqlite3|zip|gz|tar|tgz|png|jpe?g|gif|webp|ico|bmp|mp3|mp4|wav|pdf|woff2?|ttf|so|pyc)$/i;
 
 /**

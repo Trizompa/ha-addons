@@ -340,6 +340,17 @@ test('FS-12 – il filtro per nome trova anche i file nelle cartelle mai aperte'
   await filter.fill('');
   // Tolto il filtro, le cartelle tornano chiuse com'erano.
   await expect(row(page, 'galleria/sotto/dentro.svg')).toHaveCount(0);
+
+  // Un file nuovo in una cartella già letta dal filtro (ma chiusa) si trova lo stesso.
+  const nuovo = path.join(configDir, 'galleria/sotto/nuovoXYZ.svg');
+  await writeFile(nuovo, '<svg xmlns="http://www.w3.org/2000/svg"/>');
+  try {
+    await filter.fill('nuovoXYZ');
+    await expect(row(page, 'galleria/sotto/nuovoXYZ.svg')).toBeVisible();
+  } finally {
+    await filter.fill('');
+    await rm(nuovo, { force: true });
+  }
 });
 
 test('UI – «Aa» cambia la grandezza del testo dell\'editor e la ricorda', async ({ page }) => {

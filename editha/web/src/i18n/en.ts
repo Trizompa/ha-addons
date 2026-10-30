@@ -34,6 +34,8 @@ export const en: Record<keyof Dictionary, string> = {
   'tree.noMatch': 'No file matches the filter',
   'tree.finding': 'Looking in all folders…',
   'tree.findTruncated': 'Too many matches: only the first ones are shown. Type a longer name.',
+  'tree.findIncomplete': 'This configuration is too large to search all of it: some files may be missing.',
+  'tree.findFailed': "Couldn't search all folders: only the opened ones are filtered.",
   'tree.empty': 'Empty folder',
   'tree.loadError': 'Loading error',
   'tree.unusableLink': 'Unusable link',

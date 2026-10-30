@@ -4,6 +4,8 @@ import { EdithaError, fromFsError } from '../errors.js';
 
 /** Cartelle di primo livello in sola lettura (SEC-8, D9). */
 export const READ_ONLY_DIRS: readonly string[] = ['.storage', '.cloud', 'deps', 'tts', '.git'];
+/** Cartelle saltate a qualunque profondità da ricerche e filtri (copie di .storage, repository). */
+export const NESTED_SKIP_DIRS: readonly string[] = ['.storage', '.cloud', '.git'];
 
 export interface ResolvedPath {
   /** Percorso relativo alla radice, normalizzato ('' = radice). */

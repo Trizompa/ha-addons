@@ -57,7 +57,7 @@ The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits
 | FS-9 | Configurable exclusion list (glob patterns). | P2 |
 | FS-10 | Preview of images (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG) and PDFs instead of the editor, with dimensions and actual size; SVGs cannot run scripts. | P1 |
 | FS-11 | Gallery of the images of a folder (not subfolders) in the preview tab: lazy thumbnails (none over 5 MB), filter by name, three sizes, large view with previous/next and Esc, file context menu on each image, reloaded when the folder changes. | P2 |
-| FS-12 | The tree filter searches file and folder names in the whole of /config (system folders and links excluded, at most 300 matches or 50,000 entries read) and loads the folders that contain them. | P1 |
+| FS-12 | The tree filter searches file and folder names in the whole of /config (system folders, nested .storage, .cloud and .git folders and links excluded; at most 300 matches or 50,000 entries read, with a different notice for each limit) and loads the folders that contain them. | P1 |
 
 ## 3. Editor
 
