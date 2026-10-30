@@ -29,6 +29,8 @@ export interface ToolbarState {
   haHints: boolean;
   /** Cerca e sostituisci aperto nel file attivo. */
   findOpen: boolean;
+  /** Pannello dell'anteprima dei template aperto. */
+  templateOpen: boolean;
 }
 
 const THEME_ICON: Record<ThemeMode, string> = { auto: icons.themeAuto, light: icons.themeLight, dark: icons.themeDark };
@@ -172,7 +174,7 @@ export class EdithaToolbar extends LitElement {
       ${this.button('outline', t('toolbar.outline'), icons.outline, { on: s.outline, disabled: !s.hasTab && !s.outline, cls: 'hide-narrow' })}
       <span class="sep"></span>
       ${this.button('insert', t('toolbar.insert'), icons.insert, { on: s.insertOpen, disabled: !s.hasTab && !s.insertOpen })}
-      ${this.button('template', t('toolbar.template'), icons.template, { disabled: !s.hasTab })}
+      ${this.button('template', t('toolbar.template'), icons.template, { on: s.templateOpen, disabled: !s.hasTab && !s.templateOpen })}
       ${this.button('ha-hints', t('toolbar.haHints'), icons.haHints, { on: s.haHints, cls: 'hide-narrow' })}
       ${this.button('ha-menu', t('toolbar.ha'), icons.homeAssistant, { disabled: s.haBusy })}
       <span class="spacer"></span>

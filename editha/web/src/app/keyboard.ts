@@ -44,7 +44,8 @@ export class KeyboardController {
       case 'insert':
         return this.app.snippets.toggleInsert();
       case 'template':
-        return void this.app.ha.previewTemplate();
+        // Il pulsante accende e spegne il pannello; Alt+T invece mostra sempre il template sotto il cursore.
+        return this.app.template ? this.app.ha.closeTemplate() : void this.app.ha.previewTemplate();
       case 'ha-menu':
         return void this.app.ha.haMenu(e.detail.rect);
       case 'language':

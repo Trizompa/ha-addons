@@ -360,19 +360,19 @@ fuori (niente GitHub né altri server).
   Un clic sul nome apre il file. L'elenco si aggiorna quando salvi un file con il pannello aperto,
   o con il pulsante di aggiornamento.
 - L'elenco mostra al massimo 2000 righe. Se sono di più compare un avviso e il commit non si può
-  fare: escludi con l'occhio barrato le cartelle che non vuoi conservare, poi fai il commit.
+  fare: escludi con il cerchio barrato le cartelle che non vuoi conservare, poi fai il commit.
 - Una cartella che Git non segue ancora è **una riga sola**, con il numero di file che contiene
-  (per esempio `custom_components/ · 1450 file`). L'**occhio barrato** accanto a un file o a
+  (per esempio `custom_components/ · 1450 file`). Il **cerchio barrato** accanto a un file o a
   una cartella nuovi li **esclude** dal repository: aggiunge una riga al `.gitignore`, così non
   compaiono più. Al primo commit, che di solito contiene tutta la configurazione, conviene
   escludere prima le cartelle che non servono (scaricate da HACS, copie di altre app…).
 - La **freccetta** accanto a una cartella nuova la apre: i suoi file compaiono uno per uno, ognuno
-  con la sua spunta e il suo occhio barrato, così puoi metterne nel commit o escluderne solo
+  con la sua spunta e il suo cerchio barrato, così puoi metterne nel commit o escluderne solo
   alcuni. La spunta della cartella diventa allora "in parte" e il conteggio, per esempio,
   `3 di 8 file`; un clic sulla spunta della cartella la riprende intera. Si vedono al massimo
   200 file: gli altri entrano solo con la cartella intera.
-- **Spunta o occhio barrato?** La spunta decide solo cosa entra nel commit che stai per fare: un
-  file senza spunta resta tra le modifiche e lo ritrovi la volta dopo. L'occhio barrato invece
+- **Spunta o cerchio barrato?** La spunta decide solo cosa entra nel commit che stai per fare: un
+  file senza spunta resta tra le modifiche e lo ritrovi la volta dopo. Il cerchio barrato invece
   esclude per sempre.
 - La sezione **Esclusi** elenca file e cartelle esclusi dal repository; **Includi** li fa
   ricomparire tra le modifiche (toglie la riga dal `.gitignore`, senza toccare i file).

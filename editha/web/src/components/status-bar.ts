@@ -13,7 +13,7 @@ export interface StatusInfo {
   dirty: boolean;
   /** null: nessuna validazione per questo linguaggio. */
   /** `skipped`: file troppo grande, il controllo YAML non è stato fatto. */
-  lint: { errors: number; warnings: number; skipped?: boolean } | null;
+  lint: { errors: number; warnings: number; skipped?: boolean; open?: boolean } | null;
 }
 
 /** Barra di stato (UI-1): percorso, posizione, linguaggio, esito della validazione. */
@@ -93,6 +93,9 @@ export class EdithaStatusBar extends LitElement {
         cursor: pointer;
         border-radius: var(--radius-sm);
       }
+      button.problems[aria-pressed='true'] {
+        background: var(--surface-3);
+      }
       button.problems:hover {
         background: var(--hover);
         text-decoration: underline;
@@ -108,6 +111,7 @@ export class EdithaStatusBar extends LitElement {
     return html`<button
       class="item problems ${lint.errors ? 'err' : 'warn'}"
       title=${t('status.openProblems')}
+      aria-pressed=${String(!!lint.open)}
       @click=${() => this.dispatchEvent(new CustomEvent('open-problems', { bubbles: true, composed: true }))}
     >
       ${icon(lint.errors ? icons.alert : icons.warning, 14)}

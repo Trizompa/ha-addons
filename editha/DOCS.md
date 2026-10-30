@@ -348,19 +348,19 @@ sends nothing outside (no GitHub or other servers).
   Clicking the name opens the file. The list updates when you save a file with the panel open, or
   with the refresh button.
 - The list shows at most 2000 rows. With more, a warning appears and committing is disabled:
-  exclude with the crossed-out eye the folders you do not want to keep, then commit.
+  exclude with the crossed-out circle the folders you do not want to keep, then commit.
 - A folder Git does not track yet is **a single row**, with the number of files it contains (for
-  example `custom_components/ · 1450 files`). The **crossed-out eye** next to a new file or
+  example `custom_components/ · 1450 files`). The **crossed-out circle** next to a new file or
   folder **excludes** it from the repository: it adds a line to `.gitignore`, so it no longer
   shows up. Before the first commit, which usually contains the whole configuration, exclude the
   folders you do not need (downloaded by HACS, other apps' copies…).
 - The **arrow** next to a new folder opens it: its files show one by one, each with its own tick
-  and crossed-out eye, so you can commit or exclude only some of them. The folder tick then shows
+  and crossed-out circle, so you can commit or exclude only some of them. The folder tick then shows
   as partly selected and the count becomes, for example, `3 of 8 files`; clicking the folder tick
   takes the whole folder again. Up to 200 files are listed: the others go in only with the whole
   folder.
-- **Tick or crossed-out eye?** The tick only decides what goes into the commit you are about to
-  make: an unticked file stays among the changes and you find it next time. The crossed-out eye
+- **Tick or crossed-out circle?** The tick only decides what goes into the commit you are about to
+  make: an unticked file stays among the changes and you find it next time. The crossed-out circle
   excludes for good.
 - The **Excluded** section lists files and folders excluded from the repository; **Include**
   brings them back among the changes (it removes the line from `.gitignore`, the files are not

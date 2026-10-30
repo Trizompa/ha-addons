@@ -915,7 +915,10 @@ export class EdithaApp extends LitElement {
       language: lang.label,
       readOnly: tab.readOnly,
       dirty: tab.dirty,
-      lint: lang.id === 'yaml' ? { errors, warnings, skipped: s.doc.length > LINT_MAX_CHARS } : null,
+      lint:
+        lang.id === 'yaml'
+          ? { errors, warnings, skipped: s.doc.length > LINT_MAX_CHARS, open: !onSide && this.pane.problemsOpen }
+          : null,
     };
   }
 
@@ -941,6 +944,7 @@ export class EdithaApp extends LitElement {
       historyOpen: !!this.history,
       haHints: this.settings.haHints,
       findOpen: !!s && searchPanelOpen(s),
+      templateOpen: !!this.template,
     };
   }
 
@@ -993,6 +997,8 @@ export class EdithaApp extends LitElement {
   }
 
   override willUpdate(changed: Map<PropertyKey, unknown>): void {
+    // Il pulsante dell'anteprima template resta acceso finché il pannello è aperto.
+    if (changed.has('template') && !!changed.get('template') !== !!this.template) this.toolbar = this.computeToolbar();
     // Il pulsante Cronologia della barra mostra se la cronologia è aperta.
     if (changed.has('history') && this.toolbar && this.toolbar.historyOpen !== !!this.history) this.refreshToolbar();
   }

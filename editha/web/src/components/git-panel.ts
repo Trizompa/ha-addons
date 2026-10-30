@@ -61,7 +61,7 @@ export class EdithaGitPanel extends LitElement {
   declare logMore: boolean;
   /** Commit aperti: i file toccati (o 'loading', o un errore). */
   declare expanded: Map<string, CommitFiles | 'loading' | { error: string }>;
-  /** Esclusioni di percorsi precisi nel .gitignore (quelle dell'occhio barrato), da poter annullare. */
+  /** Esclusioni di percorsi precisi nel .gitignore (quelle del cerchio barrato), da poter annullare. */
   declare ignoredList: { line: string; path: string }[];
   declare showIgnored: boolean;
   /** Cartelle nuove aperte per scegliere i file uno per uno. */
@@ -660,7 +660,7 @@ export class EdithaGitPanel extends LitElement {
                     ?disabled=${this.busy}
                     @click=${() => void this.unignore(e.line, e.path)}
                   >
-                    ${icon(icons.show, 14)} ${t('git.unignore')}
+                    ${icon(icons.include, 14)} ${t('git.unignore')}
                   </button>
                 </li>`,
               )}
@@ -805,7 +805,7 @@ export class EdithaGitPanel extends LitElement {
     nested: 'git.nestedExcluded',
   };
 
-  /** I file di una cartella nuova aperta, ognuno con la sua spunta e il suo occhio barrato. */
+  /** I file di una cartella nuova aperta, ognuno con la sua spunta e il suo cerchio barrato. */
   private renderFolderFiles(c: GitChange, blocked: boolean) {
     const folder = c.folder!;
     const whole = this.unchecked.has(c.path);
@@ -832,7 +832,7 @@ export class EdithaGitPanel extends LitElement {
                 ?disabled=${this.busy}
                 @click=${() => void this.ignore(p)}
               >
-                ${icon(icons.hide, 15)}
+                ${icon(icons.exclude, 15)}
               </button>`}
         </li>`,
       )}
@@ -874,7 +874,7 @@ export class EdithaGitPanel extends LitElement {
             <span class="badge deleted">${t('git.statusDeleted').slice(0, 1)}</span> ${t('git.statusDeleted')}</span
           >
         </div>
-        <div class="legend-row"><span class="sym">${icon(icons.hide, 15)}</span><span>${t('git.legendEye')}</span></div>
+        <div class="legend-row"><span class="sym">${icon(icons.exclude, 15)}</span><span>${t('git.legendEye')}</span></div>
         ${this.info?.head
           ? html`<div class="legend-row"><span class="sym">${icon(icons.compare, 15)}</span><span>${t('git.legendCompare')}</span></div>`
           : nothing}
@@ -933,7 +933,7 @@ export class EdithaGitPanel extends LitElement {
                   ?disabled=${this.busy}
                   @click=${() => void this.ignore(c.path)}
                 >
-                  ${icon(icons.hide, 15)}
+                  ${icon(icons.exclude, 15)}
                 </button>`
               : nothing}
             ${!c.folder && !c.untracked && this.info?.head && (c.blocked === null || c.blocked === 'conflict' || c.blocked === 'filter')

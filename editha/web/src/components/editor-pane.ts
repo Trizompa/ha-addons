@@ -3,7 +3,7 @@ import { Annotation, EditorState, Transaction, type ChangeSet, type StateEffect 
 import { EditorView } from '@codemirror/view';
 import { redo, undo } from '@codemirror/commands';
 import { closeSearchPanel, openSearchPanel, searchPanelOpen } from '@codemirror/search';
-import { openLintPanel } from '@codemirror/lint';
+import { closeLintPanel, openLintPanel } from '@codemirror/lint';
 import { snippet } from '@codemirror/autocomplete';
 import type { Tab } from '../state/tabs.js';
 
@@ -328,8 +328,15 @@ export class EdithaEditorPane extends LitElement {
   }
 
   /** Pannello con l'elenco dei problemi del file; un clic porta alla riga. */
+  /** Elenco dei problemi: si apre, e un secondo clic sul conteggio lo chiude. */
   openProblems(): void {
-    if (this.view && this.current) openLintPanel(this.view);
+    if (!this.view || !this.current) return;
+    if (this.problemsOpen) closeLintPanel(this.view);
+    else openLintPanel(this.view);
+  }
+
+  get problemsOpen(): boolean {
+    return !!this.view?.dom.querySelector('.cm-panel-lint');
   }
 
   /** Toglie il focus all'editor: su iPhone è l'unico modo per chiudere la tastiera. */

@@ -306,6 +306,29 @@ test('UI – cerca e sostituisci: il pulsante resta acceso e un secondo clic chi
   await expect(button).toHaveAttribute('aria-pressed', 'false');
 });
 
+test('UI – anteprima template ed elenco dei problemi: un secondo clic chiude', async ({ page }) => {
+  await openFile(page, 'cerca/due.yaml');
+  await page.locator('.cm-line', { hasText: 'value:' }).click();
+  await page.keyboard.press('End');
+  for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowLeft');
+  const template = page.locator('editha-toolbar button[title^="Anteprima template"]');
+  await template.click();
+  await expect(page.locator('editha-template-panel')).toBeVisible();
+  await expect(template).toHaveAttribute('aria-pressed', 'true');
+  await template.click();
+  await expect(page.locator('editha-template-panel')).toHaveCount(0);
+  await expect(template).toHaveAttribute('aria-pressed', 'false');
+
+  await openFile(page, 'entita/sbagliata.yaml');
+  const problems = page.locator('editha-status-bar button.problems');
+  await problems.click();
+  await expect(page.locator('.cm-panel-lint')).toBeVisible();
+  await expect(problems).toHaveAttribute('aria-pressed', 'true');
+  await problems.click();
+  await expect(page.locator('.cm-panel-lint')).toHaveCount(0);
+  await expect(problems).toHaveAttribute('aria-pressed', 'false');
+});
+
 test('SEC-8 – le cartelle protette si leggono ma non si modificano', async ({ page }) => {
   await page.locator('editha-file-tree button[data-action="toggle-system"]').click();
   await openFile(page, '.storage/core.config');
@@ -1345,7 +1368,7 @@ test('GIT-1…6 – pannello Git: inizializza, modifiche, commit dei file scelti
   await expect(panel.locator('.changes-head')).toContainText('Modifiche');
   await expect(panel.locator('ul.changes')).toContainText('configuration.yaml');
   await expect(panel.locator('.hint')).toContainText('primo commit');
-  // Una cartella nuova è una riga sola, con il numero di file; con l'occhio barrato si esclude.
+  // Una cartella nuova è una riga sola, con il numero di file; con il cerchio barrato si esclude.
   const tabsRow = panel.locator('ul.changes li', { hasText: 'tabs/' }).first();
   await expect(tabsRow).toContainText('3 file');
   await tabsRow.locator('button[data-action="git-ignore"]').click();
