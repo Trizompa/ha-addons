@@ -917,7 +917,7 @@ export class EdithaApp extends LitElement {
       dirty: tab.dirty,
       lint:
         lang.id === 'yaml'
-          ? { errors, warnings, skipped: s.doc.length > LINT_MAX_CHARS, open: !onSide && this.pane.problemsOpen }
+          ? { errors, warnings, skipped: s.doc.length > LINT_MAX_CHARS, open: this.editor.problemsOpen }
           : null,
     };
   }
