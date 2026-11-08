@@ -41,7 +41,9 @@ export class SnippetsController {
     if (s) {
       const head = s.selection.main.head;
       const around = linesAround(s, head);
-      const value = valueAt(around.lines, around.index, around.before.length);
+      // Su una riga con un template il valore della chiave è il template: niente sostituzioni.
+      const template = /\{[{%]/.test(around.lines[around.index] ?? '');
+      const value = template ? null : valueAt(around.lines, around.index, around.before.length);
       const ctx = value ? null : detailAtPos(s, head);
       if (value && value.ctx.kind === kind) {
         const text = (value.space ? ' ' : '') + insertText(value.ctx, label);
@@ -49,7 +51,8 @@ export class SnippetsController {
       } else if (ctx && ctx.kind === kind) {
         ok = editor.replaceBefore(ctx.typed, insertText(ctx, label));
       } else {
-        ok = editor.insertText(label);
+        // Dentro un template il valore è un testo di Jinja: tra virgolette.
+        ok = editor.insertText(template ? `'${label.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'` : label);
       }
     }
     if (!ok) this.app.toasts.show(t('insert.needEditable'), 'warning');

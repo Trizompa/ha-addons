@@ -321,7 +321,20 @@ describe('template: entità e friendly_name (HA-11, HA-13)', () => {
     assert.deepEqual(hints.map((p) => text.slice(p.from, p.to)), ['friendly_name', 'friendly_name', 'friendly_name']);
     assert.match(hints[0]!.message, /entity_name\(\)/);
     assert.deepEqual(lintYaml(text, '', known, false).filter((p) => p.severity === 'info'), []);
+    // Commenti e blocchi raw non sono codice.
+    const quiet = "a: \"{# {{ states('light.nessuna') }} friendly_name #}{% raw %}{{ states('light.altra') }}{% endraw %}\"\n";
+    assert.deepEqual(lintYaml(quiet, '', known, true), []);
     // ESPHome: friendly_name è una chiave del dispositivo, e i template non sono quelli di HA.
     assert.deepEqual(lintYaml('a: "{{ x.friendly_name }}"\n', 'esphome/presa.yaml', known, true), []);
+  });
+});
+
+describe('limite dei problemi con tanti consigli', () => {
+  it('i consigli non tolgono posto agli avvisi', () => {
+    const many = Array.from({ length: 250 }, (_, i) => `t${i}: "{{ state_attr('sensor.a', 'friendly_name') }}"`);
+    const text = [...many, 'z: "{{ states(\'sensor.b\') }}"', 'w: yes', ''].join('\n');
+    const res = lintYaml(text, '', new Set(['sensor.a']), true);
+    assert.equal(res.length, 200);
+    assert.equal(res.filter((p) => p.severity === 'warning').length, 2);
   });
 });

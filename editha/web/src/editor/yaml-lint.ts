@@ -655,8 +655,10 @@ function unknownEntities(doc: Document.Parsed, text: string, known: ReadonlySet<
   });
 }
 
-/** Codice dei template in un testo: {{ … }} e {% … %} (i commenti {# #} restano fuori). */
+/** Codice dei template in un testo: {{ … }} e {% … %}. */
 const TEMPLATE_CODE = /\{\{[\s\S]*?\}\}|\{%[\s\S]*?%\}/g;
+/** Commenti {# #} e blocchi raw: non sono codice (si coprono con spazi, così le posizioni restano). */
+const NOT_CODE = /\{#[\s\S]*?#\}|\{%[-+]?\s*raw\s*[-+]?%\}[\s\S]*?\{%[-+]?\s*endraw\s*[-+]?%\}/g;
 /** friendly_name letto in un template: state_attr(x, 'friendly_name'), attributes.friendly_name, map(attribute='attributes.friendly_name'). */
 const FRIENDLY_NAME = /(['"])friendly_name\1|\.friendly_name\b/g;
 
@@ -671,19 +673,21 @@ function templateHints(
   known: ReadonlySet<string> | undefined,
   friendly: boolean,
   out: YamlProblem[],
+  tips: YamlProblem[],
 ): void {
   const run = { deadline: performance.now() + SUGGESTIONS_MS, computed: 0 };
   visit(doc, {
     Scalar: (_key, node) => {
       if (node.tag || !node.range || typeof node.value !== 'string') return;
-      const source = text.slice(node.range[0], node.range[1]);
-      if (!/\{[{%]/.test(source)) return;
+      const raw = text.slice(node.range[0], node.range[1]);
+      if (!/\{[{%]/.test(raw)) return;
+      const source = raw.replace(NOT_CODE, (m) => m.replace(/[^\n]/g, ' '));
       for (const code of source.matchAll(TEMPLATE_CODE)) {
         const base = node.range[0] + code.index;
         if (friendly) {
           for (const m of code[0].matchAll(FRIENDLY_NAME)) {
             const from = base + m.index + m[0].indexOf('friendly_name');
-            out.push({ from, to: from + 'friendly_name'.length, severity: 'info', message: t('yaml.explain.friendlyName') });
+            tips.push({ from, to: from + 'friendly_name'.length, severity: 'info', message: t('yaml.explain.friendlyName') });
           }
         }
         if (!known?.size) continue;
@@ -817,8 +821,10 @@ export function lintYaml(text: string, path = '', knownEntities?: ReadonlySet<st
   suggestionsPending = false;
   if (knownEntities?.size) for (const doc of list) unknownEntities(doc, text, knownEntities, warnings);
   // ESPHome non usa i template di Home Assistant (lì friendly_name è una chiave del dispositivo).
+  // I consigli a parte: non tolgono posto agli avvisi nel limite di MAX_PROBLEMS.
+  const tips: YamlProblem[] = [];
   if (!esphome && (knownEntities?.size || friendlyName)) {
-    for (const doc of list) templateHints(doc, text, knownEntities, friendlyName, warnings);
+    for (const doc of list) templateHints(doc, text, knownEntities, friendlyName, warnings, tips);
   }
 
   // Tabulazioni e spazi speciali: la spiegazione chiara sostituisce gli errori della libreria sulla riga.
@@ -891,10 +897,11 @@ export function lintYaml(text: string, path = '', knownEntities?: ReadonlySet<st
 
   // Un avviso sulla stessa riga di un errore aggiungerebbe solo confusione.
   const errorLines = new Set(problems.map((p) => lines.indexAt(p.from)));
-  for (const w of warnings) if (!errorLines.has(lines.indexAt(w.from))) problems.push(w);
-  // Il limite vale per tutto: prima gli errori, poi gli avvisi, in ordine di posizione.
+  for (const w of [...warnings, ...tips]) if (!errorLines.has(lines.indexAt(w.from))) problems.push(w);
+  // Il limite vale per tutto: prima gli errori, poi gli avvisi, poi i consigli, in ordine di posizione.
   problems.sort((a, b) => a.from - b.from);
   if (problems.length <= MAX_PROBLEMS) return problems;
-  const kept = new Set([...problems.filter((p) => p.severity === 'error'), ...problems.filter((p) => p.severity !== 'error')].slice(0, MAX_PROBLEMS));
+  const rank = ['error', 'warning', 'info'] as const;
+  const kept = new Set(rank.flatMap((r) => problems.filter((p) => p.severity === r)).slice(0, MAX_PROBLEMS));
   return problems.filter((p) => kept.has(p));
 }

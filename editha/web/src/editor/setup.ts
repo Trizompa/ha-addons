@@ -92,17 +92,23 @@ function replaceAction(text: string) {
   };
 }
 
-/** Quando arrivano o cambiano le entità di Home Assistant il controllo riparte (entità sconosciute). */
+/**
+ * Quando arrivano o cambiano le entità di Home Assistant, o si accendono e spengono gli aiuti, il
+ * controllo riparte (entità sconosciute, consiglio su friendly_name anche senza Home Assistant).
+ */
 const relintOnHaData = ViewPlugin.fromClass(
   class {
     private readonly unsubscribe: () => void;
     private ids: ReadonlySet<string>;
+    private hints: boolean;
     constructor(view: EditorView) {
       this.ids = haData.entityIds();
+      this.hints = haData.hints;
       this.unsubscribe = haData.subscribe(() => {
         const ids = haData.entityIds();
-        if (ids === this.ids) return;
+        if (ids === this.ids && haData.hints === this.hints) return;
         this.ids = ids;
+        this.hints = haData.hints;
         view.dispatch({ effects: relint.of(null) });
       });
     }
