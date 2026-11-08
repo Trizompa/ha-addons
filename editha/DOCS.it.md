@@ -178,8 +178,17 @@ punti.
 esista nel tuo Home Assistant. Una scritta male (`light.salotoo`) viene sottolineata in giallo;
 se esiste un'entità simile, il messaggio la propone e **Sostituisci con…** la corregge con un clic.
 È un avviso, non un errore: un'entità appena creata nella configurazione esiste solo dopo un
-riavvio o un ricaricamento. Senza collegamento a Home Assistant, o con gli aiuti di Home Assistant
-spenti, il controllo non c'è.
+riavvio o un ricaricamento. Dentro i template lo stesso controllo vale per l'entità passata a
+`states('…')`, `state_attr('…', …)`, `is_state('…', …)`, `entity_name('…')`, `device_name('…')`,
+`area_name('…')` e funzioni simili. Senza collegamento a Home Assistant, o con gli aiuti di Home
+Assistant spenti, il controllo non c'è.
+
+**`friendly_name` nei template**: da Home Assistant 2026.11 i nomi delle entità sono composti dal
+nome del dispositivo e da quello dell'entità, e `friendly_name` sta per essere deprecato. Dove un
+template lo legge (`state_attr('…', 'friendly_name')`, `….attributes.friendly_name`), EDITHA lo
+sottolinea con dei puntini blu: un consiglio, non un problema. Il messaggio suggerisce
+`entity_name()`, `device_name()` e `area_name()`. La chiave `friendly_name:` (per esempio sotto
+`customize:`) non viene segnata. Il consiglio segue gli aiuti di Home Assistant (lampadina).
 
 I file molto grandi (oltre 1 MB) non vengono controllati e non hanno lo schema, così l'editor resta
 reattivo.
@@ -202,7 +211,7 @@ Gli **aiuti di Home Assistant** (la lampadina nella barra, accesa all'inizio) mo
 attributi** dell'entità su cui stai lavorando, senza disturbare mentre scrivi:
 
 - nel **pannello Inserisci** (scheda Entità), un riquadro in alto mostra l'entità del blocco dove
-  si trova il cursore: i suoi stati (quello attuale segnato, poi quelli possibili: `hvac_modes`, le
+  si trova il cursore (o le entità del template sulla riga del cursore): i suoi stati (quello attuale segnato, poi quelli possibili: `hvac_modes`, le
   opzioni di un select, quelli tipici del dominio come `on`/`off` o `open`/`closed`) e i suoi
   attributi (`current_temperature`, `hvac_action`…). Un clic inserisce il valore al cursore; dopo
   `state:`, `to:` o `from:` sostituisce quello che hai iniziato a scrivere e aggiunge le virgolette
@@ -211,7 +220,7 @@ attributi** dell'entità su cui stai lavorando, senza disturbare mentre scrivi:
   `state_attr('…', '…')`, `is_state('…', '…')` e `states.….attributes.`, mostra gli stessi valori
   nell'editor. Non compaiono mai da soli.
 
-La lampadina accende e spegne anche l'avviso per le [entità sconosciute](#controllo-yaml-spiegato).
+La lampadina accende e spegne anche l'avviso per le [entità sconosciute](#controllo-yaml-spiegato) e il consiglio su `friendly_name`.
 Spegnila quando vuoi un editor semplice: EDITHA ricorda la scelta.
 
 ![Suggerimenti delle entità](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/autocomplete-entities.png)

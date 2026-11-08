@@ -286,3 +286,42 @@ describe('entità sconosciute (HA-11)', () => {
     assert.match(p!.message, /riavvio o un ricaricamento/);
   });
 });
+
+describe('template: entità e friendly_name (HA-11, HA-13)', () => {
+  const known = new Set(['sensor.presa_3_potenza', 'light.salotto']);
+
+  it('le entità passate alle funzioni dei template, anche entity_name/device_name/area_name', () => {
+    const text = [
+      'message: "{{ device_name(\'sensor.presa_3_potenza\') }} {{ entity_name(\'sensor.presa_33_potenza\') }}"',
+      'title: "{{ area_name(\'cucina\') }} {{ states(\'light.salottoo\') }}"',
+      'value_template: >',
+      '  {{ is_state("light.nessuna_simile_davvero", "on") }}',
+      '',
+    ].join('\n');
+    const found = lintYaml(text, '', known).filter((p) => p.severity === 'warning');
+    assert.deepEqual(
+      found.map((p) => text.slice(p.from, p.to)),
+      ['sensor.presa_33_potenza', 'light.salottoo', 'light.nessuna_simile_davvero'],
+    );
+    assert.equal(found[0]!.fix, 'sensor.presa_3_potenza');
+    assert.equal(found[1]!.fix, 'light.salotto');
+  });
+
+  it('friendly_name nei template è un consiglio, solo con gli aiuti accesi e non come chiave', () => {
+    const text = [
+      'message: "{{ state_attr(\'light.salotto\', \'friendly_name\') }} e {{ states.light.salotto.attributes.friendly_name }}"',
+      'list: "{{ states.light | map(attribute=\'attributes.friendly_name\') | list }}"',
+      'customize:',
+      '  light.salotto:',
+      '    friendly_name: Salotto',
+      'note: "friendly_name fuori da un template"',
+      '',
+    ].join('\n');
+    const hints = lintYaml(text, '', known, true).filter((p) => p.severity === 'info');
+    assert.deepEqual(hints.map((p) => text.slice(p.from, p.to)), ['friendly_name', 'friendly_name', 'friendly_name']);
+    assert.match(hints[0]!.message, /entity_name\(\)/);
+    assert.deepEqual(lintYaml(text, '', known, false).filter((p) => p.severity === 'info'), []);
+    // ESPHome: friendly_name è una chiave del dispositivo, e i template non sono quelli di HA.
+    assert.deepEqual(lintYaml('a: "{{ x.friendly_name }}"\n', 'esphome/presa.yaml', known, true), []);
+  });
+});

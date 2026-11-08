@@ -939,9 +939,11 @@ export class EdithaApp extends LitElement {
     const lang = languageOf(tab.path);
     let errors = 0;
     let warnings = 0;
+    let infos = 0;
     forEachDiagnostic(s, (d) => {
       if (d.severity === 'error') errors++;
       else if (d.severity === 'warning') warnings++;
+      else if (d.severity === 'info') infos++;
     });
     this.status = {
       path: tab.path,
@@ -953,7 +955,7 @@ export class EdithaApp extends LitElement {
       dirty: tab.dirty,
       lint:
         lang.id === 'yaml'
-          ? { errors, warnings, skipped: s.doc.length > LINT_MAX_CHARS, open: this.editor.problemsOpen }
+          ? { errors, warnings, infos, skipped: s.doc.length > LINT_MAX_CHARS, open: this.editor.problemsOpen }
           : null,
     };
   }

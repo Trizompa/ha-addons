@@ -63,7 +63,7 @@ function yamlLinter(path: string): Extension {
   return linter(
     // Il testo con «\n» (anche per i file CRLF): le posizioni coincidono con quelle del documento.
     (view) => {
-      const problems = lintYaml(view.state.doc.toString(), path, haData.entityIds());
+      const problems = lintYaml(view.state.doc.toString(), path, haData.entityIds(), haData.hints);
       // Suggestioni non ancora calcolate (tante entità sconosciute): un altro giro subito dopo.
       if (suggestionsPending) setTimeout(() => view.dom.isConnected && view.dispatch({ effects: relint.of(null) }), 50);
       return problems.map((p) => ({

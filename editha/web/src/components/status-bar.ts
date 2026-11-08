@@ -13,7 +13,7 @@ export interface StatusInfo {
   dirty: boolean;
   /** null: nessuna validazione per questo linguaggio. */
   /** `skipped`: file troppo grande, il controllo YAML non è stato fatto. */
-  lint: { errors: number; warnings: number; skipped?: boolean; open?: boolean } | null;
+  lint: { errors: number; warnings: number; infos?: number; skipped?: boolean; open?: boolean } | null;
 }
 
 /** Barra di stato (UI-1): percorso, posizione, linguaggio, esito della validazione. */
@@ -75,6 +75,9 @@ export class EdithaStatusBar extends LitElement {
       .warn {
         color: var(--warning);
       }
+      .hint {
+        color: var(--accent);
+      }
       .ro {
         padding: 1px 8px;
         border-radius: 999px;
@@ -105,19 +108,23 @@ export class EdithaStatusBar extends LitElement {
 
   private renderLint(lint: NonNullable<StatusInfo['lint']>) {
     if (lint.skipped) return html`<span class="item">${t('lint.tooLarge')}</span>`;
-    if (lint.errors === 0 && lint.warnings === 0) {
+    const infos = lint.infos ?? 0;
+    if (lint.errors === 0 && lint.warnings === 0 && infos === 0) {
       return html`<span class="item ok" title=${t('status.yamlValidTitle')}>${icon(icons.ok, 14)} ${t('status.yamlValid')}</span>`;
     }
+    const parts = [
+      lint.errors ? t(lint.errors === 1 ? 'status.errors.one' : 'status.errors.many', { n: lint.errors }) : '',
+      lint.warnings ? t(lint.warnings === 1 ? 'status.warnings.one' : 'status.warnings.many', { n: lint.warnings }) : '',
+      infos ? t(infos === 1 ? 'status.infos.one' : 'status.infos.many', { n: infos }) : '',
+    ].filter(Boolean);
+    const kind = lint.errors ? 'err' : lint.warnings ? 'warn' : 'hint';
     return html`<button
-      class="item problems ${lint.errors ? 'err' : 'warn'}"
+      class="item problems ${kind}"
       title=${t('status.openProblems')}
       aria-pressed=${String(!!lint.open)}
       @click=${() => this.dispatchEvent(new CustomEvent('open-problems', { bubbles: true, composed: true }))}
     >
-      ${icon(lint.errors ? icons.alert : icons.warning, 14)}
-      ${lint.errors ? t(lint.errors === 1 ? 'status.errors.one' : 'status.errors.many', { n: lint.errors }) : ''}
-      ${lint.errors && lint.warnings ? ' · ' : ''}
-      ${lint.warnings ? t(lint.warnings === 1 ? 'status.warnings.one' : 'status.warnings.many', { n: lint.warnings }) : ''}
+      ${icon(lint.errors ? icons.alert : lint.warnings ? icons.warning : icons.info, 14)} ${parts.join(' · ')}
     </button>`;
   }
 

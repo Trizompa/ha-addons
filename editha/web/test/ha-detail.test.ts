@@ -163,3 +163,12 @@ describe('attributi e stati nei suggerimenti (HA-12)', () => {
     assert.equal(valueAt(['- entity_id: climate.salotto', '  attribute: hv'], 1, 15)?.ctx.kind, 'attribute');
   });
 });
+
+describe('pannello Inserisci sulle righe con un template (HA-12)', () => {
+  it('mostra le entità passate alle funzioni del template, anche entity_name()', () => {
+    const ctx = at("message: \"{{ entity_name('sensor.presa') }} {{ states('light.a') }}|\"", true);
+    assert.deepEqual(ctx?.entities, ['sensor.presa', 'light.a']);
+    assert.equal(ctx?.kind, null);
+    assert.equal(at("message: \"{{ now() }}|\"", true), null);
+  });
+});

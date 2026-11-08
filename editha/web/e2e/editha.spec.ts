@@ -438,6 +438,26 @@ test.describe('Home Assistant', () => {
     await expect(page.locator('editha-status-bar')).toContainText('1 avviso');
   });
 
+  test('HA-13 – friendly_name nei template: consiglio puntinato, che si spegne con la lampadina', async ({ page }) => {
+    await openFile(page, 'tabs/b.yaml');
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.insertText("\nmsg: \"{{ state_attr('light.cucina', 'friendly_name') }} {{ entity_name('light.cucinx') }}\"\n");
+    const hint = page.locator('.cm-lintRange-info', { hasText: 'friendly_name' });
+    await expect(hint).toBeVisible();
+    // L'entità sbagliata dentro entity_name() è un'entità sconosciuta come le altre.
+    await expect(page.locator('.cm-lintRange-warning', { hasText: 'light.cucinx' })).toBeVisible();
+    await expect(page.locator('editha-status-bar')).toContainText('1 suggerimento');
+    await hint.hover();
+    await expect(page.locator('.cm-tooltip-hover .cm-diagnostic-info')).toContainText('usa entity_name(), device_name() o area_name()');
+    await page.mouse.move(0, 0);
+    await page.locator('editha-toolbar button[aria-label^="Aiuti di Home Assistant"]').click();
+    await expect(page.locator('.cm-lintRange-info')).toHaveCount(0);
+    await expect(page.locator('.cm-lintRange-warning')).toHaveCount(0);
+    await page.locator('editha-toolbar button[aria-label^="Aiuti di Home Assistant"]').click();
+    await expect(page.locator('.cm-lintRange-info')).toHaveCount(1);
+  });
+
   test('HA-12 – attributi e stati: niente menu scrivendo, Ctrl+Spazio e riquadro nel pannello', async ({ page }) => {
     await openFile(page, 'tabs/c.yaml');
     await editor(page).click();

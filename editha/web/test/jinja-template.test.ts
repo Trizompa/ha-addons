@@ -99,6 +99,7 @@ describe('anteprima template: riga dell\'errore ed entità (HA-7)', () => {
       entitiesIn("{{ states('sensor.a') }} {{ is_state(\"light.b\", 'on') }} {{ states.switch.c.state }} {{ 'light.turn_on' }}"),
       ['sensor.a', 'light.b', 'switch.c'],
     );
+    assert.deepEqual(entitiesIn("{{ entity_name('sensor.a') }} {{ device_name('light.b') }} {{ area_name('cucina') }}"), ['sensor.a', 'light.b']);
     assert.deepEqual(entitiesIn("{# states('sensor.old') #}{{ 'states.light.x' }}{% raw %}{{ states('a.b') }}{% endraw %}"), []);
     assert.deepEqual(entitiesIn("It's {{ states.sensor.x.state }} o'clock"), ['sensor.x']);
   });

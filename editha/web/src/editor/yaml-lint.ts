@@ -12,11 +12,13 @@ import {
   type YAMLError,
 } from 'yaml';
 import { t, type MessageKey } from '../i18n/index.js';
+import { ENTITY_FN } from './jinja-template.js';
 
 export interface YamlProblem {
   from: number;
   to: number;
-  severity: 'error' | 'warning';
+  /** 'info': un consiglio, non un problema (friendly_name nei template). */
+  severity: 'error' | 'warning' | 'info';
   message: string;
   /** Correzione proposta: il testo da mettere al posto di from–to (entità scritta male). */
   fix?: string;
@@ -653,14 +655,69 @@ function unknownEntities(doc: Document.Parsed, text: string, known: ReadonlySet<
   });
 }
 
+/** Codice dei template in un testo: {{ … }} e {% … %} (i commenti {# #} restano fuori). */
+const TEMPLATE_CODE = /\{\{[\s\S]*?\}\}|\{%[\s\S]*?%\}/g;
+/** friendly_name letto in un template: state_attr(x, 'friendly_name'), attributes.friendly_name, map(attribute='attributes.friendly_name'). */
+const FRIENDLY_NAME = /(['"])friendly_name\1|\.friendly_name\b/g;
+
+/**
+ * Dentro i template: le entità sconosciute passate a states(), state_attr(), entity_name()… (HA-11,
+ * con `known`) e, con `friendly`, un consiglio dove si legge friendly_name, che Home Assistant
+ * 2026.11 sta per deprecare a favore di entity_name(), device_name() e area_name().
+ */
+function templateHints(
+  doc: Document.Parsed,
+  text: string,
+  known: ReadonlySet<string> | undefined,
+  friendly: boolean,
+  out: YamlProblem[],
+): void {
+  const run = { deadline: performance.now() + SUGGESTIONS_MS, computed: 0 };
+  visit(doc, {
+    Scalar: (_key, node) => {
+      if (node.tag || !node.range || typeof node.value !== 'string') return;
+      const source = text.slice(node.range[0], node.range[1]);
+      if (!/\{[{%]/.test(source)) return;
+      for (const code of source.matchAll(TEMPLATE_CODE)) {
+        const base = node.range[0] + code.index;
+        if (friendly) {
+          for (const m of code[0].matchAll(FRIENDLY_NAME)) {
+            const from = base + m.index + m[0].indexOf('friendly_name');
+            out.push({ from, to: from + 'friendly_name'.length, severity: 'info', message: t('yaml.explain.friendlyName') });
+          }
+        }
+        if (!known?.size) continue;
+        for (const m of code[0].matchAll(ENTITY_FN)) {
+          const id = m[2]!;
+          if (known.has(id)) continue;
+          // Il gruppo 2 chiude la corrispondenza, prima della virgoletta finale.
+          const from = base + m.index + m[0].length - 1 - id.length;
+          const suggestion = closestEntity(id, known, run);
+          out.push({
+            from,
+            to: from + id.length,
+            severity: 'warning',
+            message: suggestion
+              ? t('yaml.explain.unknownEntitySuggest', { id, suggestion })
+              : t('yaml.explain.unknownEntity', { id }),
+            ...(suggestion ? { fix: suggestion } : {}),
+          });
+        }
+      }
+    },
+  });
+}
+
 /**
  * Validazione YAML (HA-1) con spiegazioni concrete degli errori di indentazione e avvisi
  * per gli errori tipici di Home Assistant che restano YAML valido. Le posizioni coincidono
  * con quelle dell'editor (offset nel testo), così la sottolineatura cade nel punto giusto (FEP #5).
  * `path` (relativo a /config) decide quali tag sono validi: in esphome/ anche quelli di ESPHome.
- * `knownEntities` (le entità di Home Assistant) attiva l'avviso per le entità sconosciute (HA-11).
+ * `knownEntities` (le entità di Home Assistant) attiva l'avviso per le entità sconosciute (HA-11);
+ * `friendlyName` il consiglio su friendly_name nei template (HA-13). Tutti e due seguono gli aiuti di
+ * Home Assistant (la lampadina).
  */
-export function lintYaml(text: string, path = '', knownEntities?: ReadonlySet<string>): YamlProblem[] {
+export function lintYaml(text: string, path = '', knownEntities?: ReadonlySet<string>, friendlyName = false): YamlProblem[] {
   // File enormi (dati, log incollati): niente controllo, l'editor resta reattivo.
   if (text.length > LINT_MAX_CHARS) return [];
   const problems: YamlProblem[] = [];
@@ -759,6 +816,10 @@ export function lintYaml(text: string, path = '', knownEntities?: ReadonlySet<st
 
   suggestionsPending = false;
   if (knownEntities?.size) for (const doc of list) unknownEntities(doc, text, knownEntities, warnings);
+  // ESPHome non usa i template di Home Assistant (lì friendly_name è una chiave del dispositivo).
+  if (!esphome && (knownEntities?.size || friendlyName)) {
+    for (const doc of list) templateHints(doc, text, knownEntities, friendlyName, warnings);
+  }
 
   // Tabulazioni e spazi speciali: la spiegazione chiara sostituisce gli errori della libreria sulla riga.
   const spaces = whitespaceProblems(lines);

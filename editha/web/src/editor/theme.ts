@@ -91,6 +91,7 @@ export const edithaTheme = EditorView.theme({
   '.cm-diagnostic': { padding: '6px 10px', borderLeftWidth: '4px', fontFamily: 'var(--font-ui)' },
   '.cm-diagnostic-error': { borderLeftColor: 'var(--danger)' },
   '.cm-diagnostic-warning': { borderLeftColor: 'var(--warning)' },
+  '.cm-diagnostic-info': { borderLeftColor: 'var(--accent)' },
   '.cm-lintRange-error': {
     backgroundImage: 'none',
     textDecoration: 'underline wavy var(--danger)',
@@ -99,6 +100,13 @@ export const edithaTheme = EditorView.theme({
   '.cm-lintRange-warning': {
     backgroundImage: 'none',
     textDecoration: 'underline wavy var(--warning)',
+    textUnderlineOffset: '3px',
+  },
+  // Un consiglio (friendly_name nei template), non un problema: puntini, più discreti delle onde.
+  '.cm-lintRange-info': {
+    backgroundImage: 'none',
+    textDecoration: 'underline dotted var(--accent)',
+    textDecorationThickness: '2px',
     textUnderlineOffset: '3px',
   },
   // Pannello "Problemi" (Ctrl+Maiusc+M o clic sul conteggio nella barra di stato).

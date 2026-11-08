@@ -4,6 +4,8 @@
  * template, e di quali entità si parla. Solo testo: niente CodeMirror, così si prova da sola.
  */
 
+import { ENTITY_FN } from './jinja-template.js';
+
 /** Quello che serve di un'entità (EntityInfo del server ha anche nome e unità). */
 export interface DetailEntity {
   entity_id: string;
@@ -278,6 +280,12 @@ export function detailOptions(ctx: DetailContext, entities: readonly DetailEntit
 export function panelContext(lines: string[], index: number, before: string): DetailContext | null {
   const detail = detailContext(lines, index, before);
   if (detail) return detail;
+  // Riga con un template: le entità passate a states(), entity_name(), area_name()…
+  const line = lines[index] ?? '';
+  if (/\{[{%]/.test(line)) {
+    const ids = [...new Set([...line.matchAll(ENTITY_FN)].map((m) => m[2]!))];
+    if (ids.length) return { kind: null, entities: ids, typed: 0, quote: '', template: true, key: null };
+  }
   // La chiave della riga del cursore, o quella più vicina sopra con un rientro non maggiore.
   const indent = indentOf(lines[index] ?? '') || (/^\s*$/.test(before) ? before.length : 0);
   for (let i = index; i >= 0; i--) {

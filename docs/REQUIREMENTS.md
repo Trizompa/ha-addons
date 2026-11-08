@@ -96,8 +96,9 @@ The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits
 | HA-8 | Entity/service cache refreshed on request and periodically (or via WebSocket `state_changed`). | P1 |
 | HA-9 | Check with concrete explanations (lines involved, expected indentation) and warnings for typical HA mistakes that are still valid YAML: unquoted `on`/`off`/`yes`/`no`, `key:value` without a space, odd indentation. Also explained: unquoted `{{ }}` templates (read as a key), a key that is a list or a `{ }` block, `*name` alias without an anchor, repeated keys, missing colon between key and value. List of problems with line and link. | P1 |
 | HA-10 | Autocompletion of Material Design icons after `mdi:`, with preview. | P1 |
-| HA-11 | Warning (not error) for entity ids after `entity_id:`, `entity:`, `entities:` (also comma-separated, lists, scene maps, `include_/exclude_entities`) that Home Assistant does not know; the closest entity of the same domain is suggested with a one-click fix. No check without the entity list; templates and tagged values are skipped. | P1 |
-| HA-12 | States and attributes of the entity of the block under the cursor: a box in the Insert panel (click to insert, replacing the started value, quoted when YAML needs it) and Ctrl+Space only (never automatic) after `attribute:`, `state:`/`to:`/`from:`, in `state_attr`/`is_state_attr`/`is_state`/`states.x.attributes.`. Only attribute names and declared state lists reach the browser, never other attribute values. HA-11 and HA-12 can be turned off with a toolbar button (setting `haHints`). | P1 |
+| HA-11 | Warning (not error) for entity ids after `entity_id:`, `entity:`, `entities:` (also comma-separated, lists, scene maps, `include_/exclude_entities`) that Home Assistant does not know; the closest entity of the same domain is suggested with a one-click fix. No check without the entity list; tagged values are skipped. Inside templates only the quoted first argument of `states`, `is_state`, `state_attr`, `is_state_attr`, `has_value`, `state_translated`, `expand`, `device_id`, `entity_name`, `device_name`, `area_name` is checked. | P1 |
+| HA-12 | States and attributes of the entity of the block under the cursor: a box in the Insert panel (click to insert, replacing the started value, quoted when YAML needs it) and Ctrl+Space only (never automatic) after `attribute:`, `state:`/`to:`/`from:`, in `state_attr`/`is_state_attr`/`is_state`/`states.x.attributes.`. Only attribute names and declared state lists reach the browser, never other attribute values. HA-11, HA-12 and HA-13 can be turned off with a toolbar button (setting `haHints`). | P1 |
+| HA-13 | Tip (info severity, blue dotted underline) where a template reads `friendly_name` (`'friendly_name'` as a string, `.friendly_name`), deprecated by Home Assistant 2026.11, suggesting `entity_name()`, `device_name()`, `area_name()`. Not on YAML keys, not in esphome/. Follows the Home Assistant hints toggle. | P2 |
 
 ## 5. Home Assistant actions
 
@@ -239,6 +240,7 @@ editha/
 
 | Version | Requirements covered |
 | --- | --- |
+| 0.45.0 | HA-11 inside templates and for `entity_name`/`device_name`/`area_name`; HA-13 `friendly_name` tip; Insert panel box for template lines; dependency updates (server security advisories). |
 | 0.44.0 | FS-12: name filter across all folders; Aa menu for the editor text size (setting `fontSizeAuto`, 12–20 px), in the language menu on phones. |
 | 0.43.0 | Clear (×) in filter and search fields; funnel for name filters, find-replace icon, crossed-out circle for Git exclude; toggle buttons (find, template preview, problems) pressed while open and closed on a second click. |
 | 0.42.0 | FS-11: image gallery of a folder; hover messages wrap at 560 px. |

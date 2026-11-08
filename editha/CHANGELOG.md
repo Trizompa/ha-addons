@@ -2,6 +2,12 @@
 
 Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
+## 0.45.0
+
+- **Ready for Home Assistant 2026.11**: `entity_name()`, `device_name()` and `area_name()` in templates now get the same help as `states()`: Ctrl+Space, the Insert panel box and the unknown entity warning. The unknown entity warning now also works inside templates, for example `states('light.salotoo')`.
+- **`friendly_name` tip**: Home Assistant 2026.11 is deprecating `friendly_name` in templates. Where a template reads it, EDITHA adds a blue dotted underline with a short explanation. It is a tip, not an error, and it turns off with the Home Assistant hints (light bulb).
+- Updated libraries, including security fixes for the server (none of the reported issues could be reached in EDITHA).
+
 ## 0.44.0
 
 - **Text size**: the new **Aa** button (next to the language) makes the editor text bigger or smaller: automatic as before, or a fixed size from 12 to 20 px. On phones it is in the language menu. (Thanks for asking!)

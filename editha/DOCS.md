@@ -170,8 +170,17 @@ colon.
 exists in your Home Assistant. A misspelled one (`light.livingroon`) gets a yellow underline;
 when a similar entity exists, the message suggests it and **Replace with…** fixes it in one click.
 It is a warning, not an error: an entity you have just created in the configuration only exists
-after a restart or a reload. Without a connection to Home Assistant, or with the Home Assistant
-hints turned off, there is no check.
+after a restart or a reload. Inside templates the same check covers the entity passed to
+`states('…')`, `state_attr('…', …)`, `is_state('…', …)`, `entity_name('…')`, `device_name('…')`,
+`area_name('…')` and similar functions. Without a connection to Home Assistant, or with the Home
+Assistant hints turned off, there is no check.
+
+**`friendly_name` in templates**: since Home Assistant 2026.11 entity names are built from the
+device and entity name, and `friendly_name` is being deprecated. Where a template reads it
+(`state_attr('…', 'friendly_name')`, `….attributes.friendly_name`), EDITHA adds a blue dotted
+underline: a tip, not a problem. The message suggests `entity_name()`, `device_name()` and
+`area_name()`. The `friendly_name:` key (for example under `customize:`) is not marked. The tip
+follows the Home Assistant hints (light bulb).
 
 Very large files (over 1 MB) are not checked, and get no outline, so the editor stays responsive.
 
@@ -194,7 +203,7 @@ Press Ctrl+Space, or just type:
 attributes** of the entity you are working on, without getting in the way while you type:
 
 - in the **Insert panel** (Entities tab), a box at the top shows the entity of the block where the
-  cursor is: its states (the current one marked, then the possible ones: `hvac_modes`, the options
+  cursor is (or the entities of the template on the cursor line): its states (the current one marked, then the possible ones: `hvac_modes`, the options
   of a select, the usual ones of the domain such as `on`/`off` or `open`/`closed`) and its
   attributes (`current_temperature`, `hvac_action`…). A click inserts the value at the cursor; after
   `state:`, `to:` or `from:` it replaces what you have started typing and adds quotes when Home
@@ -203,7 +212,7 @@ attributes** of the entity you are working on, without getting in the way while 
   `is_state('…', '…')` and `states.….attributes.`, shows the same values in the editor. They never
   pop up by themselves.
 
-The light bulb also turns the [unknown entity](#yaml-check-explained) warning on and off. Turn it
+The light bulb also turns the [unknown entity](#yaml-check-explained) warning and the `friendly_name` tip on and off. Turn it
 off when you want a plain editor: EDITHA remembers the choice.
 
 ![Entity suggestions](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/autocomplete-entities.png)

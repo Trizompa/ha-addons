@@ -2,6 +2,12 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.45.0
+
+- **Pronta per Home Assistant 2026.11**: `entity_name()`, `device_name()` e `area_name()` nei template ora hanno gli stessi aiuti di `states()`: Ctrl+Spazio, il riquadro del pannello Inserisci e l'avviso per le entità sconosciute. L'avviso per le entità sconosciute ora funziona anche dentro i template, per esempio `states('light.salotoo')`.
+- **Consiglio su `friendly_name`**: Home Assistant 2026.11 sta deprecando `friendly_name` nei template. Dove un template lo legge, EDITHA lo sottolinea con dei puntini blu e una breve spiegazione. È un consiglio, non un errore, e si spegne con gli aiuti di Home Assistant (lampadina).
+- Librerie aggiornate, con correzioni di sicurezza per il server (nessuno dei problemi segnalati era raggiungibile in EDITHA).
+
 ## 0.44.0
 
 - **Grandezza del testo**: il nuovo pulsante **Aa** (accanto alla lingua) ingrandisce o rimpicciolisce il testo dell'editor: automatica come prima, oppure fissa da 12 a 20 px. Sul telefono è nel menu della lingua. (Grazie per la richiesta!)

@@ -139,8 +139,13 @@ export function syntaxErrorLine(template: string): number | null {
   return open ? templateLine(template, open.pos) : null;
 }
 
-/** Funzioni dei template che ricevono un entity_id come primo argomento. */
-const ENTITY_FN = /\b(?:states|is_state|state_attr|is_state_attr|has_value|state_translated|expand|device_id)\(\s*(['"])([a-z_]+\.[a-z0-9_]+)\1/g;
+/**
+ * Funzioni dei template che ricevono un entity_id come primo argomento: il gruppo 2 è l'entità.
+ * entity_name, device_name e area_name sono quelle che Home Assistant 2026.11 consiglia al posto di
+ * friendly_name (area_name e device_name accettano anche id di aree e dispositivi, senza il punto).
+ */
+export const ENTITY_FN =
+  /\b(?:states|is_state|state_attr|is_state_attr|has_value|state_translated|expand|device_id|entity_name|device_name|area_name)\(\s*(['"])([a-z_]+\.[a-z0-9_]+)\1/g;
 const STATES_DOT = /\bstates\.([a-z_]+)\.([a-z0-9_]+)\b/g;
 
 /** Entità citate nel template (in states('…'), is_state('…'), states.dominio.nome…). */
