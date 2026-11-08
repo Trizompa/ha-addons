@@ -15,7 +15,7 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
-    "@fastify/static": "10.1.6",
+    "@fastify/static": "10.1.10",
     "fastify": "5.12.7",
     "yaml": "2.9.1"
   },
