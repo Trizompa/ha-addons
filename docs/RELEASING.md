@@ -19,10 +19,10 @@ Reminder for the maintainer. Items marked ☐ are done only once, at the first p
    version reaches `main`: Home Assistant downloads the image of the version it reads in
    `config.yaml`, and the install or update fails if that image does not exist yet.
 6. Merge into the `main` branch (pull request or fast-forward).
-7. Tag and release: on `main` create the tag `v` + version (e.g. `v1.0.0`) from **Releases → Draft
-   a new release → Choose a tag**, or `git tag v1.0.0 && git push origin v1.0.0`. The *Release*
-   workflow checks that the number matches `config.yaml` and publishes the release with the
-   CHANGELOG text.
+7. Tag and release: run **Actions → Release → Run workflow** on `main` (it creates the tag
+   `v` + the version in `config.yaml` on that commit), or push the tag yourself:
+   `git tag v1.0.0 && git push origin v1.0.0`. The *Release* workflow checks that the number
+   matches `config.yaml` and publishes the release with the CHANGELOG text.
 
 Home Assistant sees the update as soon as the version in `config.yaml` on `main` changes: the
 tag is only for the releases page on GitHub.

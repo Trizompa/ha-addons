@@ -1,11 +1,14 @@
 name: Release
 
 # Pushing a tag such as v1.0.0 publishes a GitHub release with the matching CHANGELOG section.
+# It can also be started by hand (Actions → Release → Run workflow) on main: it then creates the
+# tag v<version of editha/config.yaml> on that commit.
 # Home Assistant does not need it (it reads the version from editha/config.yaml), but it gives
 # users a page to follow and a clear history.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -18,13 +21,20 @@ jobs:
       - uses: actions/checkout@v7
       - name: Tag and app version must match
         run: |
-          tag="${GITHUB_REF_NAME#v}"
           version=$(sed -n 's/^version: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' editha/config.yaml)
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            tag="$GITHUB_REF_NAME"
+          else
+            # By hand: only from main, and the tag must not exist yet.
+            test "$GITHUB_REF_NAME" = main || { echo "run it on main"; exit 1; }
+            tag="v$version"
+          fi
           echo "tag $tag, config.yaml $version"
-          test "$tag" = "$version"
+          test "${tag#v}" = "$version"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
       - name: Notes from the changelog
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          version="${TAG#v}"
           awk -v v="$version" '
             $0 == "## " v { on = 1; next }
             /^## / && on { exit }
@@ -32,9 +42,14 @@ jobs:
           ' editha/CHANGELOG.md > notes.md
           test -s notes.md || { echo "no CHANGELOG section for $version"; exit 1; }
           printf '\n---\n[Documentation](https://github.com/%s/blob/%s/editha/DOCS.md) · update from the app page in Home Assistant.\n' \
-            "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" >> notes.md
+            "$GITHUB_REPOSITORY" "$TAG" >> notes.md
           cat notes.md
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --title "EDITHA $GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            gh release create "$TAG" --title "EDITHA $TAG" --notes-file notes.md --verify-tag
+          else
+            gh release create "$TAG" --title "EDITHA $TAG" --notes-file notes.md --target "$GITHUB_SHA"
+          fi
