@@ -44,9 +44,27 @@ if (!versions.length) throw new Error('no version kept in the history');
 await call('PUT', '/api/draft', { path: 'configuration.yaml', content: 'draft\n', etag: 'x', client: 'ci' });
 await call('PUT', '/api/session', { tabs: [], active: null });
 
-// Reading and searching.
+// Copy, restore an earlier version, replace, delete (the deleted folder is copied to /data first).
+await call('POST', '/api/copy', { from: 'packages/renamed.yaml', to: 'packages/copy.yaml' });
+await call('POST', '/api/restore', { path: 'configuration.yaml', id: versions[0].id });
+await call('POST', '/api/file', { path: 'trash', type: 'directory' });
+await call('POST', '/api/file', { path: 'trash/old.yaml', type: 'file', content: 'c: 1\n' });
+await call('DELETE', '/api/file?path=trash');
+await call('DELETE', '/api/file?path=packages/copy.yaml');
+
+// Reading, searching, replacing, folder ZIP.
 await call('GET', '/api/tree');
 await call('POST', '/api/search', { query: 'AppArmor' });
+await call('POST', '/api/replace', { paths: ['other_user.yaml'], query: 'a: 2', replacement: 'a: 3' });
+const zip = await fetch(`${base}/api/download?path=packages`);
+if (!zip.ok) throw new Error(`folder ZIP -> ${zip.status}`);
+console.log('ok  GET /api/download?path=packages');
+
+// Home Assistant through the Supervisor: there is none in CI, so the call fails,
+// but it must fail as "not reachable" (DNS and sockets allowed), not crash the server.
+const ha = await fetch(`${base}/api/ha/check`, { method: 'POST' });
+console.log(`ok  POST /api/ha/check -> ${ha.status} (no Supervisor in CI)`);
+await call('GET', '/api/health');
 
 // Local Git: git runs as a child process and writes /config/.git.
 await call('POST', '/api/git/init');
@@ -54,5 +72,6 @@ const commit = await call('POST', '/api/git/commit', { message: 'AppArmor check'
 if (!commit.hash) throw new Error('commit without hash');
 await call('GET', '/api/git/status');
 await call('GET', '/api/git/log');
+await call('POST', '/api/git/ignore', { path: 'packages' });
 
 console.log('all features work with the profile enforced');

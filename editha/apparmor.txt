@@ -2,11 +2,13 @@
 
 # EDITHA: AppArmor profile (SEC-10).
 # The Supervisor renames the profile to the app's slug when it loads it.
-# Allowed: reading the container, writing only /config, /data and the
-# temporary folders, the HTTP server behind ingress, calls to Home Assistant
-# through the Supervisor, and running node and git.
+# Allowed: reading the container, writing only /config, /data, /run and /tmp,
+# the HTTP server behind ingress, calls to Home Assistant through the
+# Supervisor, and running the programs of the image (s6-overlay, node, git).
 # Everything else is denied: other capabilities (mount, raw sockets, ptrace,
 # setuid…), other network types, and writes to the app's own code.
+# No abi line on purpose: older AppArmor versions on Supervised hosts do not
+# know it and would refuse the whole profile.
 profile editha flags=(attach_disconnected,mediate_deleted) {
   #include <abstractions/base>
 
@@ -40,9 +42,9 @@ profile editha flags=(attach_disconnected,mediate_deleted) {
   /run/{s6,s6-rc*,service}/** ix,
   /package/** ix,
   /command/** ix,
-  /etc/services.d/** rwix,
-  /etc/cont-init.d/** rwix,
-  /etc/cont-finish.d/** rwix,
+  /etc/services.d/** ix,
+  /etc/cont-init.d/** ix,
+  /etc/cont-finish.d/** ix,
   /run/{,**} rwk,
   /dev/tty rw,
   /tmp/** rwk,
@@ -54,6 +56,8 @@ profile editha flags=(attach_disconnected,mediate_deleted) {
   /config/** rwlk,
   /data/** rwlk,
 
-  # Home Assistant's system folders stay read-only even for EDITHA (SEC-8).
-  deny /config/{.storage,.cloud,deps,tts}/** wl,
+  # Home Assistant's system folders stay read-only even for EDITHA (SEC-8):
+  # the folders themselves too (no rename, delete or permission change).
+  # "audit" logs each attempt, so it shows up in the host log.
+  audit deny /config/{.storage,.cloud,deps,tts}{,/**} wl,
 }

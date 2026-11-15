@@ -4,7 +4,7 @@ Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella ing
 
 ## 0.46.0
 
-- **Un profilo AppArmor tutto suo**: EDITHA ora gira con un profilo di sicurezza fatto apposta. Può scrivere solo nella tua configurazione e nella sua cartella dei dati, e le cartelle di sistema di Home Assistant (`.storage`, `.cloud`, `deps`, `tts`) non possono essere scritte nemmeno da EDITHA. Home Assistant mostra un punteggio di sicurezza più alto nella pagina dell'app.
+- **Un profilo AppArmor tutto suo**: EDITHA ora gira con un profilo di sicurezza fatto apposta. Può scrivere solo nella tua configurazione, nella sua cartella dei dati e nelle cartelle temporanee, e le cartelle di sistema di Home Assistant (`.storage`, `.cloud`, `deps`, `tts`) non possono essere scritte, rinominate o eliminate nemmeno da EDITHA. Home Assistant mostra un punteggio di sicurezza più alto nella pagina dell'app.
 - **Link per i feedback** in Informazioni: **Proponi un'idea o segnala un problema** apre i moduli su GitHub.
 - Libreria del server aggiornata (Fastify).
 

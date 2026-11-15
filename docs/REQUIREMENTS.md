@@ -41,7 +41,7 @@ The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits
 | SEC-7 | `secrets.yaml`: editable, but the values never end up in the logs or in autocompletion responses (keys only). `secrets.yaml` and its copies (see `isSecretsFile` in `server/src/fs/search.ts`: names that contain `secrets` followed, anywhere, by `.yaml`/`.yml`, such as `secrets_copia.yaml.bak`, `secrets.yaml~` or `old_secrets.yaml`; the singular `secret` only with a copy suffix, such as `secret.yaml` or `secret_old.yaml`; also when reached through a link) are excluded from search and replace, never in folder ZIPs (0.34.0), never in Git commits, no template preview. | P0 |
 | SEC-8 | Sensitive folders (`.storage`, `.cloud`, `deps`, `tts`, `.git`) hidden in the tree by default, visible with a button (choice remembered) and always read-only; an explicit write unlock is to be evaluated. | P1 |
 | SEC-9 | Backend logs without file content. | P0 |
-| SEC-10 | Custom AppArmor profile (`editha/apparmor.txt`): writes only to `/config`, `/data` and the temporary folders; `.storage`, `.cloud`, `deps` and `tts` denied for writing even to the app (defence in depth for SEC-8, `.git` excluded because of GIT); only the file capabilities a save needs (`chown`, `dac_override`, `dac_read_search`, `fowner`, `fsetid`); TCP/UDP, netlink and unix sockets only; programs: s6-overlay, node, git. | P1 |
+| SEC-10 | Custom AppArmor profile (`editha/apparmor.txt`): writes only to `/config`, `/data`, `/run` and `/tmp`; `.storage`, `.cloud`, `deps` and `tts` (the folders and their content) denied for writing, renaming and linking even to the app, and logged (`audit deny`; defence in depth for SEC-8, `.git` excluded because of GIT; an explicit write unlock as in SEC-8 would need a profile change); only the file capabilities a save needs (`chown`, `dac_override`, `dac_read_search`, `fowner`, `fsetid`); TCP/UDP, netlink and unix sockets only; only the programs of the image (`/bin`, `/usr/bin`, s6-overlay, git-core), nothing executable from `/config` or `/data`; no `abi` line (older AppArmor on Supervised hosts). CI loads it on the runner and checks the features and the denials. Without AppArmor on the host the Supervisor starts the app unconfined. | P1 |
 
 ## 2. File explorer
 
@@ -195,6 +195,7 @@ LICENSE                  MIT
 .github/
   workflows/             tests, browser tests and build for amd64/aarch64 (ENG-3, ENG-4); release
   ISSUE_TEMPLATE/        templates for bug reports and proposals
+  scripts/               apparmor-check.mjs: features checked with the AppArmor profile enforced (SEC-10)
 docs/
   REQUIREMENTS.md        this document
   DEVELOPMENT.md         how to try the code, server API
@@ -203,6 +204,7 @@ docs/
 editha/
   config.yaml            app manifest (ingress, /config, homeassistant_api)
   build.yaml, Dockerfile image: server and web interface build + Node.js runtime
+  apparmor.txt           AppArmor profile, loaded by the Supervisor (SEC-10)
   icon.png, logo.png
   README.md, DOCS.md, DOCS.it.md, CHANGELOG.md, CHANGELOG.it.md
   server/

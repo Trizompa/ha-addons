@@ -163,6 +163,9 @@ jobs:
           if docker exec editha-aa sh -c 'echo x > /config/.storage/core.config'; then
             echo "writing to /config/.storage must be denied"; exit 1
           fi
+          if docker exec editha-aa mv /config/.storage /config/storage-moved; then
+            echo "renaming /config/.storage must be denied"; exit 1
+          fi
           if docker exec editha-aa sh -c 'echo x > /app/dist/main.js'; then
             echo "writing to the app's code must be denied"; exit 1
           fi
@@ -172,9 +175,14 @@ jobs:
           sudo dmesg | grep 'apparmor="DENIED"' | grep 'profile="editha' > all-denied.txt || true
           cat all-denied.txt
           grep -q 'name="/config/.storage/core.config"' all-denied.txt
+          grep -q 'name="/config/.storage/"' all-denied.txt
           grep -q 'name="/app/dist/main.js"' all-denied.txt
+          # Dropped kernel messages would hide denials.
+          if sudo dmesg | grep -q -e 'callbacks suppressed' -e 'rate limit exceeded'; then
+            echo "kernel messages were dropped, the check is not reliable"; exit 1
+          fi
           # …and nothing else may have been denied (start, features, stop).
-          grep -v -e 'name="/config/.storage/core.config"' -e 'name="/app/dist/main.js"' all-denied.txt > denied.txt || true
+          grep -v -e 'name="/config/.storage/' -e 'name="/app/dist/main.js"' all-denied.txt > denied.txt || true
           if [ -s denied.txt ]; then
             echo "unexpected AppArmor denials:"; cat denied.txt; exit 1
           fi

@@ -468,9 +468,11 @@ Cmd+Maiusc+Z e i suggerimenti restano Ctrl+Spazio.
 - **Altri siti**: una pagina di un altro sito non può far fare niente a EDITHA (per esempio
   riavviare Home Assistant) attraverso il tuo browser.
 - **Cartelle di sistema** in sola lettura.
-- **AppArmor**: l'app gira con un suo profilo AppArmor. Può scrivere solo in `/config` e nella sua
-  cartella dei dati, non può modificare i propri file di programma, e le cartelle di sistema di
-  Home Assistant (`.storage`, `.cloud`, `deps`, `tts`) non possono essere scritte nemmeno da EDITHA.
+- **AppArmor**: l'app gira con un suo profilo AppArmor. Può scrivere solo in `/config`, nella sua
+  cartella dei dati e nelle cartelle temporanee, usa solo i programmi che stanno dentro l'app, non
+  può modificare i propri file di programma, e le cartelle di sistema di Home Assistant
+  (`.storage`, `.cloud`, `deps`, `tts`) non possono essere scritte, rinominate o eliminate
+  nemmeno da EDITHA. (Su un sistema senza AppArmor, Home Assistant avvia ogni app senza profilo.)
 - **Nessun bisogno di internet**: tutto quello che serve a EDITHA è dentro l'app.
 
 ## Problemi frequenti

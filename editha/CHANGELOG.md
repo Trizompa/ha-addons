@@ -4,7 +4,7 @@ Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
 ## 0.46.0
 
-- **Its own AppArmor profile**: EDITHA now runs with a security profile made for it. It can write only to your configuration and to its own data folder, and Home Assistant's system folders (`.storage`, `.cloud`, `deps`, `tts`) cannot be written even by EDITHA itself. Home Assistant shows a higher security rating on the app page.
+- **Its own AppArmor profile**: EDITHA now runs with a security profile made for it. It can write only to your configuration, its own data folder and temporary folders, and Home Assistant's system folders (`.storage`, `.cloud`, `deps`, `tts`) cannot be written, renamed or deleted even by EDITHA itself. Home Assistant shows a higher security rating on the app page.
 - **Feedback link** in About: **Suggest an idea or report a problem** opens the forms on GitHub.
 - Updated server library (Fastify).
 
