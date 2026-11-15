@@ -168,9 +168,13 @@ jobs:
           fi
           echo "system folders and app code are protected"
           docker stop -t 20 editha-aa
-          # Nothing else may have been denied (start, features, stop).
-          sudo dmesg | grep 'apparmor="DENIED"' | grep 'profile="editha' \
-            | grep -v -e 'name="/config/.storage/core.config"' -e 'name="/app/dist/main.js"' > denied.txt || true
+          # The two blocks above must come from AppArmor (not from file permissions)…
+          sudo dmesg | grep 'apparmor="DENIED"' | grep 'profile="editha' > all-denied.txt || true
+          cat all-denied.txt
+          grep -q 'name="/config/.storage/core.config"' all-denied.txt
+          grep -q 'name="/app/dist/main.js"' all-denied.txt
+          # …and nothing else may have been denied (start, features, stop).
+          grep -v -e 'name="/config/.storage/core.config"' -e 'name="/app/dist/main.js"' all-denied.txt > denied.txt || true
           if [ -s denied.txt ]; then
             echo "unexpected AppArmor denials:"; cat denied.txt; exit 1
           fi
