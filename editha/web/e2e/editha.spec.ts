@@ -951,12 +951,16 @@ test.describe('Vista divisa (ED-17)', () => {
   });
 });
 
-test('Informazioni: autore, versione e licenza', async ({ page }) => {
+test('Informazioni: autore, versione, licenza e link per i feedback', async ({ page }) => {
   await page.locator('editha-toolbar button[title="Informazioni su EDITHA"]').click();
   const about = page.locator('editha-about-dialog dialog[open]');
   await expect(about).toContainText('Trizompa');
   await expect(about).toContainText('MIT');
   await expect(about.locator('[data-field="version"]')).toHaveText(/^\d+\.\d+\.\d+$/);
+  const feedback = about.locator('[data-field="feedback"]');
+  await expect(feedback).toHaveText("Proponi un'idea o segnala un problema");
+  await expect(feedback).toHaveAttribute('href', 'https://github.com/Trizompa/ha-addons/issues/new/choose');
+  await expect(feedback).toHaveAttribute('target', '_blank');
   await about.locator('button', { hasText: 'Chiudi' }).click();
   await expect(about).toHaveCount(0);
 });

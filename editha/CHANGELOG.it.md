@@ -2,6 +2,12 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.46.0
+
+- **Un profilo AppArmor tutto suo**: EDITHA ora gira con un profilo di sicurezza fatto apposta. Può scrivere solo nella tua configurazione e nella sua cartella dei dati, e le cartelle di sistema di Home Assistant (`.storage`, `.cloud`, `deps`, `tts`) non possono essere scritte nemmeno da EDITHA. Home Assistant mostra un punteggio di sicurezza più alto nella pagina dell'app.
+- **Link per i feedback** in Informazioni: **Proponi un'idea o segnala un problema** apre i moduli su GitHub.
+- Libreria del server aggiornata (Fastify).
+
 ## 0.45.0
 
 - **Pronta per Home Assistant 2026.11**: `entity_name()`, `device_name()` e `area_name()` nei template ora hanno gli stessi aiuti di `states()`: Ctrl+Spazio, il riquadro del pannello Inserisci e l'avviso per le entità sconosciute. L'avviso per le entità sconosciute ora funziona anche dentro i template, per esempio `states('light.salotoo')`.

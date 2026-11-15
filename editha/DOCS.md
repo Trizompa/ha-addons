@@ -49,7 +49,8 @@ through Home Assistant (Ingress), with your Home Assistant login.
 - **Toolbar** (top): file explorer, save and save all, undo and redo, find and replace, file
   history, word wrap, split view, outline, insert panel, template preview, Home Assistant hints and
   the Home Assistant menu. On the right: language (Automatic (browser), Italiano, English), **Aa** for the text size of
-  the editor (automatic, or a fixed size from 12 to 20 px), theme (automatic, light, dark) and About.
+  the editor (automatic, or a fixed size from 12 to 20 px), theme (automatic, light, dark) and About (version, links and
+  **Suggest an idea or report a problem**).
 - **File explorer** (left): the content of `/config`. Above it: search in all files, Git, new
   file, new folder, system folders, upload, refresh and collapse all.
 - **Tabs and editor** (centre): one tab per open file. A dot on a tab means unsaved changes.
@@ -451,6 +452,9 @@ and suggestions stay Ctrl+Space.
 - **Other sites**: a page from another website cannot make EDITHA do anything (for example restart
   Home Assistant) through your browser.
 - **System folders** are read-only.
+- **AppArmor**: the app runs with its own AppArmor profile. It can write only to `/config` and to
+  its own data folder, it cannot change its own program files, and Home Assistant's system folders
+  (`.storage`, `.cloud`, `deps`, `tts`) cannot be written even by EDITHA itself.
 - **No internet needed**: everything EDITHA uses is inside the app.
 
 ## Troubleshooting

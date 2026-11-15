@@ -41,6 +41,7 @@ The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits
 | SEC-7 | `secrets.yaml`: editable, but the values never end up in the logs or in autocompletion responses (keys only). `secrets.yaml` and its copies (see `isSecretsFile` in `server/src/fs/search.ts`: names that contain `secrets` followed, anywhere, by `.yaml`/`.yml`, such as `secrets_copia.yaml.bak`, `secrets.yaml~` or `old_secrets.yaml`; the singular `secret` only with a copy suffix, such as `secret.yaml` or `secret_old.yaml`; also when reached through a link) are excluded from search and replace, never in folder ZIPs (0.34.0), never in Git commits, no template preview. | P0 |
 | SEC-8 | Sensitive folders (`.storage`, `.cloud`, `deps`, `tts`, `.git`) hidden in the tree by default, visible with a button (choice remembered) and always read-only; an explicit write unlock is to be evaluated. | P1 |
 | SEC-9 | Backend logs without file content. | P0 |
+| SEC-10 | Custom AppArmor profile (`editha/apparmor.txt`): writes only to `/config`, `/data` and the temporary folders; `.storage`, `.cloud`, `deps` and `tts` denied for writing even to the app (defence in depth for SEC-8, `.git` excluded because of GIT); only the file capabilities a save needs (`chown`, `dac_override`, `dac_read_search`, `fowner`, `fsetid`); TCP/UDP, netlink and unix sockets only; programs: s6-overlay, node, git. | P1 |
 
 ## 2. File explorer
 
@@ -162,7 +163,7 @@ Only the repository in `/config`, on the device: no network commands (no push, p
 | UI-4 | Non-blocking notifications for results (saved, check ok/failed, reload done). | P0 |
 | UI-5 | Basic accessibility: keyboard navigation in the tree and tabs. | P2 |
 | UI-6 | The toolbar always acts on the active tab; buttons have a consistent state (e.g. "Save" disabled if there are no changes) and the same active/inactive style as the tabs (FEP #15). | P0 |
-| UI-8 | "About" dialog: author, repository, version, license, credits. | P2 |
+| UI-8 | "About" dialog: author, repository, feedback link (GitHub issue forms, 0.46.0), version, license, credits. | P2 |
 | UI-7 | "Copy all" in the toolbar or in the editor context menu (FEP #15). | P2 |
 
 ## 10. Engineering
@@ -240,6 +241,7 @@ editha/
 
 | Version | Requirements covered |
 | --- | --- |
+| 0.46.0 | SEC-10 AppArmor profile; UI-8 feedback link; README feature lists updated; fastify 5.12.8. |
 | 0.45.0 | HA-11 inside templates and for `entity_name`/`device_name`/`area_name`; HA-13 `friendly_name` tip; Insert panel box for template lines; dependency updates (server security advisories). |
 | 0.44.0 | FS-12: name filter across all folders; Aa menu for the editor text size (setting `fontSizeAuto`, 12–20 px), in the language menu on phones. |
 | 0.43.0 | Clear (×) in filter and search fields; funnel for name filters, find-replace icon, crossed-out circle for Git exclude; toggle buttons (find, template preview, problems) pressed while open and closed on a second click. |

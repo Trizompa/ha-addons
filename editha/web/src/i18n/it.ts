@@ -555,6 +555,8 @@ export const it = {
   'space.openTitle': 'Spazio occupato dalla cronologia',
   'about.developer': 'Sviluppatore',
   'about.repository': 'Repository',
+  'about.feedback': 'Feedback',
+  'about.feedbackLink': "Proponi un'idea o segnala un problema",
   'about.version': 'Versione',
   'about.license': 'Licenza',
   'about.thanks': 'Realizzato con CodeMirror, Lit, Fastify e le icone Material Design.',

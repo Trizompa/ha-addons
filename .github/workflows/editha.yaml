@@ -6,10 +6,12 @@ on:
     paths:
       - "editha/**"
       - ".github/workflows/editha.yaml"
+      - ".github/scripts/**"
   pull_request:
     paths:
       - "editha/**"
       - ".github/workflows/editha.yaml"
+      - ".github/scripts/**"
 
 permissions:
   contents: read
@@ -131,6 +133,50 @@ jobs:
             exit 1
           fi
           echo "external address correctly rejected"
+      - name: AppArmor profile (enforced)
+        # SEC-10: the GitHub runners have AppArmor turned on, like Home Assistant OS. The profile
+        # is loaded into the kernel and the app runs under it, as the Supervisor does.
+        if: matrix.arch == 'amd64'
+        run: |
+          image=editha:${{ matrix.arch }}
+          sudo aa-enabled
+          sudo apparmor_parser -r -W editha/apparmor.txt
+          cfg="$RUNNER_TEMP/aa-config"
+          data="$RUNNER_TEMP/aa-data"
+          mkdir -p "$cfg/.storage" "$data"
+          echo "homeassistant:" > "$cfg/configuration.yaml"
+          echo "a: 1" > "$cfg/other_user.yaml"
+          echo "{}" > "$cfg/.storage/core.config"
+          # A file that belongs to another user: saving it needs dac_override, keeping its owner chown.
+          sudo chown 1000:1000 "$cfg/other_user.yaml"
+          sudo dmesg --clear
+          docker run -d --name editha-aa --network hassio --ip 172.30.33.11 \
+            --security-opt apparmor=editha -e SUPERVISOR_TOKEN=token-di-prova \
+            -v "$cfg:/config" -v "$data:/data" "$image"
+          test "$(docker inspect -f '{{.AppArmorProfile}}' editha-aa)" = editha
+          docker run --rm --network hassio --ip 172.30.32.2 --entrypoint node \
+            -v "$GITHUB_WORKSPACE/.github/scripts:/scripts:ro" "$image" \
+            /scripts/apparmor-check.mjs http://172.30.33.11:8099
+          test "$(sudo stat -c '%u:%g' "$cfg/other_user.yaml")" = 1000:1000
+          echo "owner of other_user.yaml kept"
+          # What the profile must block: system folders and the app's own code.
+          if docker exec editha-aa sh -c 'echo x > /config/.storage/core.config'; then
+            echo "writing to /config/.storage must be denied"; exit 1
+          fi
+          if docker exec editha-aa sh -c 'echo x > /app/dist/main.js'; then
+            echo "writing to the app's code must be denied"; exit 1
+          fi
+          echo "system folders and app code are protected"
+          docker stop -t 20 editha-aa
+          # Nothing else may have been denied (start, features, stop).
+          sudo dmesg | grep 'apparmor="DENIED"' | grep 'profile="editha' \
+            | grep -v -e 'name="/config/.storage/core.config"' -e 'name="/app/dist/main.js"' > denied.txt || true
+          if [ -s denied.txt ]; then
+            echo "unexpected AppArmor denials:"; cat denied.txt; exit 1
+          fi
+          echo "no unexpected AppArmor denials"
       - name: Server log
         if: always()
-        run: docker logs editha || true
+        run: |
+          docker logs editha || true
+          docker logs editha-aa || true

@@ -1,0 +1,59 @@
+#include <tunables/global>
+
+# EDITHA: AppArmor profile (SEC-10).
+# The Supervisor renames the profile to the app's slug when it loads it.
+# Allowed: reading the container, writing only /config, /data and the
+# temporary folders, the HTTP server behind ingress, calls to Home Assistant
+# through the Supervisor, and running node and git.
+# Everything else is denied: other capabilities (mount, raw sockets, ptrace,
+# setuid…), other network types, and writes to the app's own code.
+profile editha flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  # Capabilities: only the ones a save needs to keep a file's owner and
+  # permissions (files in /config can belong to other users).
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability fowner,
+  capability fsetid,
+
+  # Network: HTTP server (ingress), Home Assistant API via the Supervisor,
+  # name resolution, and the interface list read when the server starts.
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+  network unix,
+
+  # Start/stop by the Supervisor and s6-overlay; git timeouts.
+  signal (send, receive),
+
+  # Read access to the container's own files.
+  /** r,
+
+  # S6-Overlay (base image)
+  /init ix,
+  /bin/** ix,
+  /usr/bin/** ix,
+  /run/{s6,s6-rc*,service}/** ix,
+  /package/** ix,
+  /command/** ix,
+  /etc/services.d/** rwix,
+  /etc/cont-init.d/** rwix,
+  /etc/cont-finish.d/** rwix,
+  /run/{,**} rwk,
+  /dev/tty rw,
+  /tmp/** rwk,
+
+  # git (local commands only, GIT-1…6)
+  /usr/libexec/git-core/** ix,
+
+  # The user's configuration and the app's data (backups, drafts, git HOME).
+  /config/** rwlk,
+  /data/** rwlk,
+
+  # Home Assistant's system folders stay read-only even for EDITHA (SEC-8).
+  deny /config/{.storage,.cloud,deps,tts}/** wl,
+}

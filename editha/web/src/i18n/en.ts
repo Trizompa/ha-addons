@@ -541,6 +541,8 @@ export const en: Record<keyof Dictionary, string> = {
   'space.openTitle': 'Space taken by the history',
   'about.developer': 'Developer',
   'about.repository': 'Repository',
+  'about.feedback': 'Feedback',
+  'about.feedbackLink': 'Suggest an idea or report a problem',
   'about.version': 'Version',
   'about.license': 'License',
   'about.thanks': 'Built with CodeMirror, Lit, Fastify and Material Design icons.',

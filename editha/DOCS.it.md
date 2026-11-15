@@ -52,7 +52,8 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
   e sostituisci, cronologia del file, a capo automatico, vista divisa, schema, pannello Inserisci,
   anteprima template, aiuti di Home Assistant e menu di Home Assistant. A destra: lingua (Automatica (browser), Italiano,
   English), **Aa** per la grandezza del testo dell'editor (automatica, oppure fissa da 12 a 20 px),
-  tema (automatico, chiaro, scuro) e Informazioni.
+  tema (automatico, chiaro, scuro) e Informazioni (versione, link e
+  **Proponi un'idea o segnala un problema**).
 - **Esplora file** (a sinistra): il contenuto di `/config`. Sopra: cerca in tutti i file, Git,
   nuovo file, nuova cartella, cartelle di sistema, carica, aggiorna e comprimi tutto.
 - **Tab ed editor** (al centro): una tab per ogni file aperto. Il pallino su una tab indica
@@ -467,6 +468,9 @@ Cmd+Maiusc+Z e i suggerimenti restano Ctrl+Spazio.
 - **Altri siti**: una pagina di un altro sito non può far fare niente a EDITHA (per esempio
   riavviare Home Assistant) attraverso il tuo browser.
 - **Cartelle di sistema** in sola lettura.
+- **AppArmor**: l'app gira con un suo profilo AppArmor. Può scrivere solo in `/config` e nella sua
+  cartella dei dati, non può modificare i propri file di programma, e le cartelle di sistema di
+  Home Assistant (`.storage`, `.cloud`, `deps`, `tts`) non possono essere scritte nemmeno da EDITHA.
 - **Nessun bisogno di internet**: tutto quello che serve a EDITHA è dentro l'app.
 
 ## Problemi frequenti

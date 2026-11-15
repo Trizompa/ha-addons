@@ -16,9 +16,13 @@
 EDITHA is a file editor for your Home Assistant configuration. It opens from the sidebar and works
 on a PC, a tablet or a phone. It explains YAML errors in plain words, suggests your entities,
 actions and icons, checks the configuration before every restart and keeps the previous version
-of every file you save. It also shows the outline of your YAML files (automations and scripts by
-alias), previews images and PDFs, renders templates with the live states of your entities, and has
-a local Git panel to commit your configuration (nothing leaves Home Assistant).
+of every file you save. It flags unknown entities even inside templates and points out the
+template changes of Home Assistant 2026.11. It also shows the outline of your YAML files
+(automations and scripts by alias), previews images and PDFs (also as a gallery for a whole
+folder), renders templates with the live states of your entities, lets you pick the text size, and
+has a local Git panel to commit your configuration (nothing leaves Home Assistant). It runs only
+through Ingress, with its own AppArmor profile, and Home Assistant's system folders stay
+read-only.
 
 | | |
 | --- | --- |
