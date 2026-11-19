@@ -246,7 +246,7 @@ editha/
 | Version | Requirements covered |
 | --- | --- |
 | 0.46.0 | SEC-10 AppArmor profile; UI-8 feedback link; README feature lists updated; fastify 5.12.8. |
-| 0.47.0 | ED-19 temporary tabs, tab context menu, optional double-click to open; Ko-fi link in the READMEs and GitHub Sponsor button. |
+| 0.47.0 | ED-19 temporary tabs, tab context menu, optional double-click to open; Ko-fi link in the READMEs and GitHub Sponsor button; package.json versions aligned with the app (checked by CI). |
 | 0.45.0 | HA-11 inside templates and for `entity_name`/`device_name`/`area_name`; HA-13 `friendly_name` tip; Insert panel box for template lines; dependency updates (server security advisories). |
 | 0.44.0 | FS-12: name filter across all folders; Aa menu for the editor text size (setting `fontSizeAuto`, 12–20 px), in the language menu on phones. |
 | 0.43.0 | Clear (×) in filter and search fields; funnel for name filters, find-replace icon, crossed-out circle for Git exclude; toggle buttons (find, template preview, problems) pressed while open and closed on a second click. |
