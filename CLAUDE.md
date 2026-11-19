@@ -16,7 +16,11 @@ code review. When the work is ready, stop and ask whether to publish.
 
 ## Design choices are the maintainer's
 
-When a feature has a choice that changes how EDITHA behaves for users (defaults, what a click
-does, what is on or off), propose the options and wait for the maintainer to pick one in clear
-words. A "sì" to a message that also asks about something else is not a choice: ask one
-question at a time and never bundle a design decision with another topic.
+Every point I propose or ask about needs its own clear answer from the maintainer before I
+implement it. A point left unanswered is NOT approved: do not build it, ask again. This covers
+features (e.g. a new menu), defaults and behaviour (what a click does, what is on or off) and
+anything users will see.
+
+A generic "sì" / "ok" / "vado" to a message with several points, or to a message that also talks
+about something else, approves nothing: list the open points and ask for an answer on each one.
+Never bundle a decision with another topic.
