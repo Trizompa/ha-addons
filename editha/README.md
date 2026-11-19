@@ -24,3 +24,5 @@ A file editor for your Home Assistant configuration, from the sidebar, on PC, ta
 
 See the **Documentation** tab for the full guide. Ideas and problems:
 [GitHub](https://github.com/Trizompa/ha-addons/issues/new/choose).
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/trizompa)

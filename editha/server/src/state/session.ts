@@ -15,6 +15,8 @@ export interface Session {
   active: string | null;
   /** ED-17: file mostrato nella colonna destra della vista divisa (assente = vista singola). */
   side?: string | null;
+  /** ED-19: tab provvisoria (assente = nessuna). */
+  provisional?: string | null;
 }
 
 export const EMPTY_SESSION: Session = { tabs: [], active: null };
@@ -43,6 +45,7 @@ export const sessionSchema = {
     },
     active: { type: ['string', 'null'] },
     side: { type: ['string', 'null'] },
+    provisional: { type: ['string', 'null'] },
   },
   additionalProperties: false,
 } as const;
@@ -64,7 +67,9 @@ function sanitize(raw: unknown): Partial<Session> {
   const tabs = Array.isArray(r.tabs) ? r.tabs.filter(isTab).slice(0, MAX_SESSION_TABS) : [];
   const active = typeof r.active === 'string' && tabs.some((t) => t.path === r.active) ? r.active : null;
   const side = typeof r.side === 'string' && tabs.some((t) => t.path === r.side) ? r.side : null;
-  return side ? { tabs, active, side } : { tabs, active };
+  const provisional =
+    typeof r.provisional === 'string' && tabs.some((t) => t.path === r.provisional) ? r.provisional : null;
+  return { tabs, active, ...(side ? { side } : {}), ...(provisional ? { provisional } : {}) };
 }
 
 export function createSessionStore(dataDir: string): JsonStore<Session> {

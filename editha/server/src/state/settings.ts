@@ -3,6 +3,8 @@ import { JsonStore } from './json-store.js';
 
 export type ThemeMode = 'auto' | 'light' | 'dark';
 export type LanguageSetting = 'auto' | 'it' | 'en';
+/** ED-19: un clic apre il file in una tab provvisoria, oppure serve il doppio clic. */
+export type OpenMode = 'click' | 'double';
 
 /** Impostazioni dell'interfaccia (CFG-1): un'unica fonte, in /data. */
 export interface Settings {
@@ -21,6 +23,8 @@ export interface Settings {
   haHints: boolean;
   /** Carattere dell'editor automatico (13 px su PC, 14 su telefono); se false vale fontSize. */
   fontSizeAuto: boolean;
+  /** Come si aprono i file dall'albero (ED-19). */
+  openMode: OpenMode;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -34,6 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
   outlineVisible: false,
   haHints: true,
   fontSizeAuto: true,
+  openMode: 'click',
 };
 
 /** Schema JSON condiviso da validazione delle richieste e lettura da disco. */
@@ -50,6 +55,7 @@ export const settingsSchema = {
     outlineVisible: { type: 'boolean' },
     haHints: { type: 'boolean' },
     fontSizeAuto: { type: 'boolean' },
+    openMode: { type: 'string', enum: ['click', 'double'] },
   },
   additionalProperties: false,
 } as const;
@@ -72,6 +78,7 @@ function sanitize(raw: unknown): Partial<Settings> {
   if (typeof r.outlineVisible === 'boolean') out.outlineVisible = r.outlineVisible;
   if (typeof r.haHints === 'boolean') out.haHints = r.haHints;
   if (typeof r.fontSizeAuto === 'boolean') out.fontSizeAuto = r.fontSizeAuto;
+  if (r.openMode === 'click' || r.openMode === 'double') out.openMode = r.openMode;
   return out;
 }
 

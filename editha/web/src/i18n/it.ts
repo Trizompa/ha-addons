@@ -21,6 +21,8 @@ export const it = {
   'language.auto': 'Automatica (browser)',
   'language.it': 'Italiano',
   'language.en': 'English',
+  'openMode.click': 'Apri i file con un clic (tab provvisoria)',
+  'openMode.double': 'Apri i file con un doppio clic',
 
   // Albero dei file
   'tree.title': 'Esplora file',
@@ -59,6 +61,14 @@ export const it = {
   'tabs.modified': ' (modificato)',
   'tabs.close': 'Chiudi (Alt+W)',
   'tabs.closeName': 'Chiudi {name}',
+  'tabs.provisional': ' (provvisoria: il prossimo file aperto con un clic prende il suo posto)',
+  'tabs.menu.close': 'Chiudi',
+  'tabs.menu.closeOthers': 'Chiudi le altre',
+  'tabs.menu.closeRight': 'Chiudi quelle a destra',
+  'tabs.menu.closeSaved': 'Chiudi quelle salvate',
+  'tabs.menu.closeAll': 'Chiudi tutte',
+  'tabs.menu.keep': 'Tieni aperta',
+  'tabs.menu.keepHint': 'doppio clic',
   'status.noFile': 'Nessun file aperto',
   'status.yamlValid': 'YAML valido',
   'status.yamlValidTitle': 'Sintassi YAML valida',

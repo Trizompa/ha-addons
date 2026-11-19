@@ -2,6 +2,12 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.47.0
+
+- **Tab provvisorie**: un clic su un file lo apre in una tab provvisoria (nome in corsivo), e il prossimo file cliccato prende il suo posto. Niente più mucchi di tab solo per dare un'occhiata. Se ci scrivi, la salvi o fai doppio clic, resta.
+- **Menu della tab**: tasto destro su una tab (pressione prolungata sul telefono) per **Chiudi**, **Chiudi le altre**, **Chiudi quelle a destra**, **Chiudi quelle salvate**, **Chiudi tutte** e **Tieni aperta**.
+- **Aprire i file con un doppio clic**, se preferisci: si sceglie nel menu della lingua. Il clic singolo resta quello predefinito.
+
 ## 0.46.0
 
 - **Un profilo AppArmor tutto suo**: EDITHA ora gira con un profilo di sicurezza fatto apposta. Può scrivere solo nella tua configurazione, nella sua cartella dei dati e nelle cartelle temporanee, e le cartelle di sistema di Home Assistant (`.storage`, `.cloud`, `deps`, `tts`) non possono essere scritte, rinominate o eliminate nemmeno da EDITHA. Home Assistant mostra un punteggio di sicurezza più alto nella pagina dell'app.

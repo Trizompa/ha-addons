@@ -24,6 +24,9 @@ async function openFile(page: Page, p: string) {
   }
   await row(page, p).click();
   await expect(activeTab(page)).toHaveAttribute('data-path', p);
+  // ED-19: un clic apre una tab provvisoria; i test tengono aperti i file come con il doppio clic.
+  if (await tab(page, p).evaluate((e) => e.classList.contains('provisional'))) await tab(page, p).dblclick();
+  await expect(tab(page, p)).not.toHaveClass(/provisional/);
 }
 
 /** BK-7: la finestra dello spazio si apre dal pannello Cronologia (con un file aperto). */
@@ -39,10 +42,85 @@ test.beforeEach(async ({ page, request }) => {
   for (const d of (await (await request.get('api/drafts')).json()).drafts) {
     await request.delete(`api/draft?path=${encodeURIComponent(d.path)}`);
   }
-  await request.post('api/settings', { data: { theme: 'auto', sidebarVisible: true, wordWrap: false, showSystem: false, language: 'it', outlineVisible: false } });
+  await request.post('api/settings', { data: { theme: 'auto', sidebarVisible: true, wordWrap: false, showSystem: false, language: 'it', outlineVisible: false, openMode: 'click' } });
   await page.goto('./');
   // Su telefono l'albero parte chiuso: basta che sia caricato.
   await expect(row(page, 'configuration.yaml')).toBeAttached();
+});
+
+test('ED-19 – un clic apre una tab provvisoria che il file successivo sostituisce', async ({ page }) => {
+  await row(page, 'tabs').click();
+  await row(page, 'tabs/a.yaml').click();
+  await expect(tab(page, 'tabs/a.yaml')).toHaveClass(/provisional/);
+  await row(page, 'tabs/b.yaml').click();
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'tabs/b.yaml');
+  await expect(tab(page, 'tabs/a.yaml')).toHaveCount(0);
+  await expect(page.locator('editha-tab-bar .tab')).toHaveCount(1);
+  await expect(editor(page)).toContainText('contenuto: B');
+
+  // Scrivere la tiene aperta: il clic seguente apre una tab in più.
+  await editor(page).click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' # nota');
+  await expect(tab(page, 'tabs/b.yaml')).not.toHaveClass(/provisional/);
+  // Annullando la modifica resta comunque aperta.
+  await page.keyboard.press('Control+z');
+  await expect(tab(page, 'tabs/b.yaml')).not.toHaveClass(/dirty/);
+  await row(page, 'tabs/c.yaml').click();
+  await expect(page.locator('editha-tab-bar .tab')).toHaveCount(2);
+  await expect(tab(page, 'tabs/c.yaml')).toHaveClass(/provisional/);
+
+  // Doppio clic sulla tab: resta anche lei.
+  await tab(page, 'tabs/c.yaml').dblclick();
+  await expect(tab(page, 'tabs/c.yaml')).not.toHaveClass(/provisional/);
+  await row(page, 'tabs/a.yaml').click();
+  await expect(page.locator('editha-tab-bar .tab')).toHaveCount(3);
+
+  // Doppio clic nell'albero: tab normale da subito.
+  await row(page, 'configuration.yaml').dblclick();
+  await expect(tab(page, 'configuration.yaml')).not.toHaveClass(/provisional/);
+  await expect(tab(page, 'tabs/a.yaml')).toHaveClass(/provisional/);
+
+  // Si ritrova dopo un ricaricamento.
+  await page.waitForTimeout(800);
+  await page.reload();
+  await expect(tab(page, 'tabs/a.yaml')).toHaveClass(/provisional/);
+  await expect(tab(page, 'configuration.yaml')).not.toHaveClass(/provisional/);
+  await expect(tab(page, 'tabs/b.yaml')).not.toHaveClass(/provisional/);
+});
+
+test('ED-19 – menu della tab: chiudi le altre, quelle a destra, tieni aperta', async ({ page }) => {
+  await openFile(page, 'tabs/a.yaml');
+  await openFile(page, 'tabs/b.yaml');
+  await openFile(page, 'tabs/c.yaml');
+  await tab(page, 'tabs/a.yaml').click({ button: 'right' });
+  await expect(menuItem(page, 'Tieni aperta')).toHaveCount(0);
+  await menuItem(page, 'Chiudi quelle a destra').click();
+  await expect(page.locator('editha-tab-bar .tab')).toHaveCount(1);
+
+  await row(page, 'configuration.yaml').click();
+  await tab(page, 'configuration.yaml').click({ button: 'right' });
+  await menuItem(page, 'Tieni aperta').click();
+  await expect(tab(page, 'configuration.yaml')).not.toHaveClass(/provisional/);
+
+  await tab(page, 'configuration.yaml').click({ button: 'right' });
+  await menuItem(page, 'Chiudi le altre').click();
+  await expect(page.locator('editha-tab-bar .tab')).toHaveCount(1);
+  await tab(page, 'configuration.yaml').click({ button: 'right' });
+  await menuItem(page, 'Chiudi tutte').click();
+  await expect(page.locator('editha-tab-bar .tab')).toHaveCount(0);
+});
+
+test('ED-19 – con il doppio clic scelto, un clic seleziona soltanto', async ({ page, request }) => {
+  await page.locator('editha-toolbar button.lang:not(.text-size)').click();
+  await menuItem(page, 'Apri i file con un doppio clic').click();
+  await row(page, 'configuration.yaml').click();
+  await expect(row(page, 'configuration.yaml')).toHaveClass(/selected/);
+  await expect(page.locator('editha-tab-bar .tab')).toHaveCount(0);
+  await row(page, 'configuration.yaml').dblclick();
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'configuration.yaml');
+  await expect(tab(page, 'configuration.yaml')).not.toHaveClass(/provisional/);
+  expect((await (await request.get('api/settings')).json()).openMode).toBe('double');
 });
 
 test('FEP #19 – chiudendo la tab attiva l\'editor mostra la nuova tab attiva e salva il file giusto', async ({ page }) => {

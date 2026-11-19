@@ -56,6 +56,10 @@ docs/                requirements, development notes, release checklist, images
 .github/             CI, release workflow, issue and pull request templates
 ```
 
+## Support
+
+If EDITHA saves you some time, you can buy me a coffee on [Ko-fi](https://ko-fi.com/trizompa). Thanks!
+
 ## License
 
 [MIT](LICENSE) © [Trizompa](https://github.com/Trizompa)

@@ -33,6 +33,8 @@ export class SessionController {
         if (!(failure instanceof ApiError && PERMANENT_OPEN_ERRORS.has(failure.code))) this.unrestored.push(saved);
       }
     }
+    const provisional = session.provisional ? this.app.tabs.find(session.provisional) : undefined;
+    if (provisional) provisional.provisional = true;
     const active = (session.active && this.app.tabs.find(session.active)) || this.app.tabs.tabs[0];
     if (active) this.app.activate(active.path);
     const side = session.side ? this.app.tabs.find(session.side) : undefined;
@@ -68,6 +70,7 @@ export class SessionController {
       tabs: [...open, ...kept].slice(0, 50),
       active: this.app.tabs.active?.path ?? null,
       side: this.app.split ? (this.app.side?.shown?.path ?? null) : null,
+      provisional: this.app.tabs.provisionals()[0]?.path ?? null,
     };
     try {
       await api.saveSession(session);

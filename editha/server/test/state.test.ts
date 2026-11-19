@@ -57,6 +57,14 @@ describe('impostazioni e sessione', () => {
     await call('POST', '/api/settings', { outlineVisible: false });
   });
 
+  it('ricorda come si aprono i file dall\'albero (ED-19)', async () => {
+    assert.equal((await call('GET', '/api/settings')).json().openMode, 'click');
+    assert.equal((await call('POST', '/api/settings', { openMode: 'double' })).json().openMode, 'double');
+    assert.equal((await call('GET', '/api/settings')).json().openMode, 'double');
+    assert.equal((await call('POST', '/api/settings', { openMode: 'triple' })).statusCode, 400);
+    await call('POST', '/api/settings', { openMode: 'click' });
+  });
+
   it('ignora un file di impostazioni rovinato', async () => {
     await writeFile(path.join(sb.dataDir, 'settings.json'), '{ non json');
     assert.deepEqual((await call('GET', '/api/settings')).json(), DEFAULT_SETTINGS);
@@ -70,6 +78,7 @@ describe('impostazioni e sessione', () => {
       ],
       active: 'automations.yaml',
       side: 'configuration.yaml',
+      provisional: 'automations.yaml',
     };
     assert.equal((await call('PUT', '/api/session', session)).statusCode, 200);
     assert.deepEqual((await call('GET', '/api/session')).json(), session);
@@ -78,7 +87,11 @@ describe('impostazioni e sessione', () => {
   it('scarta una tab attiva che non è tra quelle aperte', async () => {
     await writeFile(
       path.join(sb.dataDir, 'session.json'),
-      JSON.stringify({ tabs: [{ path: 'a.yaml', anchor: 0, head: 0, scrollTop: 0 }, { bad: true }], active: 'b.yaml' }),
+      JSON.stringify({
+        tabs: [{ path: 'a.yaml', anchor: 0, head: 0, scrollTop: 0 }, { bad: true }],
+        active: 'b.yaml',
+        provisional: 'c.yaml',
+      }),
     );
     assert.deepEqual((await call('GET', '/api/session')).json(), {
       tabs: [{ path: 'a.yaml', anchor: 0, head: 0, scrollTop: 0 }],

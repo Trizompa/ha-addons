@@ -18,6 +18,8 @@ export class SaveController {
 
   async save(tab: EditorTab | null = this.app.focusedTab()): Promise<boolean> {
     if (!tab || tab.readOnly) return false;
+    // ED-19: anche salvare tiene aperta una tab provvisoria.
+    this.app.pinTab(tab);
     // Niente da salvare: Ctrl+S su una tab pulita non deve proporre di sovrascrivere il file.
     if (!tab.dirty && !this.saving.has(tab)) return true;
     // Un secondo Ctrl+S mentre il primo è in viaggio aspetta: altrimenti partirebbe con

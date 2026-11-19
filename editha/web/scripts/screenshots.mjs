@@ -292,6 +292,11 @@ async function session(theme, { width = 1440, height = 860, scale = 2, tabs = []
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ theme, language: 'en', sidebarVisible: !mobile, wordWrap: false, showSystem: false, outlineVisible: outline }),
   });
+  // Changes typed for the previous picture stay as drafts: without this a recovery dialog appears.
+  for (const d of (await (await fetch(BASE + 'api/drafts')).json()).drafts) {
+    const client = d.client ? `&client=${encodeURIComponent(d.client)}` : '';
+    await fetch(BASE + `api/draft?path=${encodeURIComponent(d.path)}${client}`, { method: 'DELETE' });
+  }
   await fetch(BASE + 'api/session', {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },

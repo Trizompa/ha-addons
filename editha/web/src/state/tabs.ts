@@ -9,6 +9,11 @@ export interface Tab<S> {
   /** Stato dell'editor (documento, cronologia, selezione) di questa tab. */
   state: S;
   dirty: boolean;
+  /**
+   * ED-19: tab provvisoria, aperta con un clic nell'albero. Il prossimo file aperto
+   * così prende il suo posto; una modifica, un salvataggio o un doppio clic la tengono aperta.
+   */
+  provisional?: boolean;
 }
 
 /**
@@ -98,6 +103,33 @@ export class TabsModel<S> {
   /** Tab che stanno dentro `path` (il file stesso o i file di una cartella). */
   within(path: string): Tab<S>[] {
     return this.list.filter((t) => isWithin(t.path, path));
+  }
+
+  /** Tab provvisorie (di solito una sola). */
+  provisionals(): Tab<S>[] {
+    return this.list.filter((t) => t.provisional);
+  }
+
+  /** Rende normale una tab provvisoria; false se non lo era. */
+  pin(path: string): boolean {
+    const tab = this.find(path);
+    if (!tab?.provisional) return false;
+    tab.provisional = false;
+    return true;
+  }
+
+  /**
+   * Mette la tab `path` nella posizione di `old`, che esce dall'elenco, e la attiva
+   * (ED-19: il nuovo file provvisorio prende il posto del precedente).
+   */
+  takePlace(path: string, old: string): Tab<S> | null {
+    const from = this.list.findIndex((t) => t.path === path);
+    if (from === -1 || path === old || this.find(old) === undefined) return this.active;
+    const [tab] = this.list.splice(from, 1);
+    const at = this.list.findIndex((t) => t.path === old);
+    this.list.splice(at, 1, tab!);
+    this.activeIndex = at;
+    return tab!;
   }
 
   /** Sposta una tab in un'altra posizione mantenendo la stessa tab attiva. */

@@ -10,6 +10,8 @@ export interface TabView {
   name: string;
   dirty: boolean;
   readOnly: boolean;
+  /** ED-19: scheda provvisoria (nome in corsivo). */
+  provisional: boolean;
 }
 
 /**
@@ -74,6 +76,8 @@ export class EdithaTabBar extends LitElement {
         font-size: 13px;
         cursor: pointer;
         user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
         flex: none;
       }
       .tab:hover {
@@ -107,7 +111,8 @@ export class EdithaTabBar extends LitElement {
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-      .tab.dirty .name {
+      /* ED-19: il corsivo indica la scheda provvisoria (le modifiche hanno il punto). */
+      .tab.provisional .name {
         font-style: italic;
       }
       .end {
@@ -167,8 +172,41 @@ export class EdithaTabBar extends LitElement {
     }
   }
 
-  private emit(name: string, path: string): void {
-    this.dispatchEvent(new CustomEvent(name, { detail: { path }, bubbles: true, composed: true }));
+  private emit(name: string, path: string, extra: Record<string, unknown> = {}): void {
+    this.dispatchEvent(new CustomEvent(name, { detail: { path, ...extra }, bubbles: true, composed: true }));
+  }
+
+  // Pressione prolungata su touch: Safari su iPhone non genera il menu contestuale.
+  private pressTimer: ReturnType<typeof setTimeout> | undefined;
+  private pressOrigin: { x: number; y: number } | null = null;
+  private longPressAt = 0;
+
+  private onPointerDown(e: PointerEvent, path: string): void {
+    if (e.pointerType !== 'touch') return;
+    const x = e.clientX;
+    const y = e.clientY;
+    this.cancelPress();
+    this.pressOrigin = { x, y };
+    this.pressTimer = setTimeout(() => {
+      this.pressOrigin = null;
+      this.longPressAt = Date.now();
+      this.emit('tab-context', path, { x, y });
+    }, 500);
+  }
+
+  private onPointerMove(e: PointerEvent): void {
+    if (!this.pressOrigin) return;
+    if (Math.hypot(e.clientX - this.pressOrigin.x, e.clientY - this.pressOrigin.y) > 10) this.cancelPress();
+  }
+
+  private cancelPress(): void {
+    clearTimeout(this.pressTimer);
+    this.pressOrigin = null;
+  }
+
+  /** Il clic che chiude una pressione prolungata non attiva la tab. */
+  private pressedLong(): boolean {
+    return Date.now() - this.longPressAt < 800;
   }
 
   override render() {
@@ -188,12 +226,21 @@ export class EdithaTabBar extends LitElement {
           const fi = fileIcon(tab.name);
           const active = tab.path === this.active;
           return html`<div
-            class="tab ${active ? 'active' : ''} ${tab.dirty ? 'dirty' : ''}"
+            class="tab ${active ? 'active' : ''} ${tab.dirty ? 'dirty' : ''} ${tab.provisional ? 'provisional' : ''}"
             role="tab"
             aria-selected=${active}
-            title=${tab.path + (tab.dirty ? t('tabs.modified') : '')}
+            title=${tab.path + (tab.dirty ? t('tabs.modified') : '') + (tab.provisional ? t('tabs.provisional') : '')}
             data-path=${tab.path}
-            @click=${() => this.emit('tab-activate', tab.path)}
+            @click=${() => !this.pressedLong() && this.emit('tab-activate', tab.path)}
+            @dblclick=${() => this.emit('tab-pin', tab.path)}
+            @contextmenu=${(e: MouseEvent) => {
+              e.preventDefault();
+              if (!this.pressedLong()) this.emit('tab-context', tab.path, { x: e.clientX, y: e.clientY });
+            }}
+            @pointerdown=${(e: PointerEvent) => this.onPointerDown(e, tab.path)}
+            @pointermove=${(e: PointerEvent) => this.onPointerMove(e)}
+            @pointerup=${() => this.cancelPress()}
+            @pointercancel=${() => this.cancelPress()}
             @auxclick=${(e: MouseEvent) => {
               if (e.button === 1) this.emit('tab-close', tab.path);
             }}

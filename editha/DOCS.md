@@ -48,12 +48,18 @@ through Home Assistant (Ingress), with your Home Assistant login.
 
 - **Toolbar** (top): file explorer, save and save all, undo and redo, find and replace, file
   history, word wrap, split view, outline, insert panel, template preview, Home Assistant hints and
-  the Home Assistant menu. On the right: language (Automatic (browser), Italiano, English), **Aa**
+  the Home Assistant menu. On the right: language (Automatic (browser), Italiano, English, and how files open), **Aa**
   for the text size of the editor (automatic, or a fixed size from 12 to 20 px), theme (automatic,
   light, dark) and About (version, links and **Suggest an idea or report a problem**).
 - **File explorer** (left): the content of `/config`. Above it: search in all files, Git, new
   file, new folder, system folders, upload, refresh and collapse all.
 - **Tabs and editor** (centre): one tab per open file. A dot on a tab means unsaved changes.
+  A click in the file explorer opens the file in a temporary tab, with its name in italics: the
+  next file you open with a click takes its place, so browsing many files does not leave many
+  tabs. The tab stays open as soon as you type in it or save it, or when you double-click it or
+  the file. Right-click a tab (long press on a phone) to close it, the others, the ones to the
+  right, the saved ones or all of them, or to keep it open. If you prefer to open files with a
+  double-click, choose it in the language menu.
 - **Status bar** (bottom): file path, YAML check result, cursor position, encoding and language.
 
 Open tabs, the active tab, the theme and the language are remembered when you leave EDITHA or

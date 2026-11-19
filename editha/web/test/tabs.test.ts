@@ -111,4 +111,39 @@ describe('TabsModel', () => {
     assert.deepEqual(m.tabs.map((t) => t.path), ['b', 'c', 'a']);
     assert.equal(m.active?.path, 'b');
   });
+
+  it('rende normale una tab provvisoria (ED-19)', () => {
+    const m = model('a', 'b');
+    m.find('b')!.provisional = true;
+    assert.deepEqual(m.provisionals().map((t) => t.path), ['b']);
+    assert.equal(m.pin('b'), true);
+    assert.equal(m.pin('b'), false);
+    assert.equal(m.pin('a'), false);
+    assert.deepEqual(m.provisionals(), []);
+  });
+
+  it('la nuova tab provvisoria prende il posto della vecchia e diventa attiva (ED-19)', () => {
+    const m = model('a', 'p', 'c');
+    m.find('p')!.provisional = true;
+    m.activate('p');
+    m.insert(tab('n'));
+    assert.deepEqual(m.tabs.map((t) => t.path), ['a', 'p', 'n', 'c']);
+    m.takePlace('n', 'p');
+    assert.deepEqual(m.tabs.map((t) => t.path), ['a', 'n', 'c']);
+    assert.equal(m.active?.path, 'n');
+    // Con la vecchia a destra della nuova, la nuova finisce comunque al suo posto.
+    m.activate('a');
+    m.insert(tab('z'));
+    m.takePlace('a', 'c');
+    assert.deepEqual(m.tabs.map((t) => t.path), ['z', 'n', 'a']);
+    assert.equal(m.active?.path, 'a');
+  });
+
+  it('takePlace non fa nulla con tab sconosciute', () => {
+    const m = model('a', 'b');
+    m.takePlace('x', 'a');
+    m.takePlace('a', 'x');
+    m.takePlace('a', 'a');
+    assert.deepEqual(m.tabs.map((t) => t.path), ['a', 'b']);
+  });
 });

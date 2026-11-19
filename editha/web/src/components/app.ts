@@ -13,7 +13,7 @@ import { searchPanelOpen } from '@codemirror/search';
 import { LINT_MAX_CHARS } from '../editor/yaml-lint.js';
 import { basename } from '../state/paths.js';
 import { previewKind } from '../state/preview.js';
-import { MAC } from '../state/keys.js';
+import { MAC, shortcutLabel } from '../state/keys.js';
 import type { LinkKind } from '../editor/links.js';
 import { TabsModel } from '../state/tabs.js';
 import { icon, icons } from '../ui/icons.js';
@@ -86,6 +86,7 @@ const DEFAULT_SETTINGS: Settings = {
   outlineVisible: false,
   haHints: true,
   fontSizeAuto: true,
+  openMode: 'click',
 };
 
 const NARROW = '(max-width: 760px)';
@@ -519,6 +520,13 @@ export class EdithaApp extends LitElement {
       label: t(`language.${id}`),
       ...(id === current ? { icon: icons.ok } : {}),
     }));
+    // ED-19: come si aprono i file dall'albero.
+    const mode = this.settings.openMode;
+    items.push(
+      'separator',
+      { id: 'open-click', label: t('openMode.click'), ...(mode === 'click' ? { icon: icons.ok } : {}) },
+      { id: 'open-double', label: t('openMode.double'), ...(mode === 'double' ? { icon: icons.ok } : {}) },
+    );
     // Su telefono «Aa» e «Informazioni» non stanno nella barra: si raggiungono da qui.
     if (this.narrow) {
       items.push(
@@ -531,7 +539,14 @@ export class EdithaApp extends LitElement {
       | LanguageSetting
       | 'about'
       | 'font-size'
+      | 'open-click'
+      | 'open-double'
       | null;
+    if (choice === 'open-click' || choice === 'open-double') {
+      const openMode = choice === 'open-click' ? 'click' : 'double';
+      if (openMode !== mode) await this.updateSettings({ openMode });
+      return;
+    }
     if (choice === 'about') return (this.renderRoot.querySelector('editha-about-dialog') as EdithaAboutDialog).show();
     if (choice === 'font-size') return this.fontSizeMenu(rect);
     if (!choice || choice === current) return;
@@ -694,16 +709,32 @@ export class EdithaApp extends LitElement {
 
   private openSeq = 0;
 
-  async openFile(path: string, asText = false): Promise<void> {
+  /**
+   * Apre un file in una tab. `provisional` (ED-19, clic nell'albero): la tab è provvisoria e prende
+   * il posto della provvisoria di prima; aprendo da altre parti la tab resta.
+   */
+  async openFile(path: string, asText = false, provisional = false): Promise<void> {
     if (!asText && previewKind(path) && !this.tabs.find(path)) {
       this.openSeq++;
       this.openPreview(path);
       return;
     }
+    const existing = this.tabs.find(path);
+    if (existing && !provisional) this.pinTab(existing);
     // Due clic rapidi su A e poi B: vince B anche se A arriva dopo.
     const seq = ++this.openSeq;
     const tab = await this.loadTab(path);
-    if (!tab || seq !== this.openSeq) return;
+    if (!tab) return;
+    const created = !existing;
+    if (seq !== this.openSeq) {
+      // Clic superato da un altro: la sua tab provvisoria appena creata non resta in giro.
+      if (provisional && created && !tab.provisional && this.tabs.find(tab.path) === tab) this.discardTab(tab);
+      return;
+    }
+    if (provisional && created) {
+      tab.provisional = true;
+      this.replaceProvisional(tab);
+    }
     this.activate(tab.path);
     if (this.narrow) this.drawerOpen = false;
     // Su touch il focus aprirebbe la tastiera a ogni file aperto.
@@ -719,6 +750,87 @@ export class EdithaApp extends LitElement {
     this.refreshTabs();
     this.refreshStatus();
     this.session.scheduleSession();
+  }
+
+  /** ED-19: la nuova tab provvisoria prende il posto delle altre provvisorie (senza modifiche). */
+  private replaceProvisional(tab: EditorTab): void {
+    for (const old of this.tabs.provisionals()) {
+      if (old === tab) continue;
+      // Con modifiche, o mostrata nella colonna destra, la vecchia resta come tab normale.
+      if (old.dirty || this.side?.shown === old) {
+        old.provisional = false;
+        continue;
+      }
+      this.tabs.takePlace(tab.path, old.path);
+      this.detachTab(old);
+    }
+    this.refreshTabs();
+  }
+
+  /** ED-19: una tab provvisoria diventa normale (modifica, salvataggio, doppio clic, menu). */
+  pinTab(tab: EditorTab): void {
+    if (!this.tabs.pin(tab.path)) return;
+    this.refreshTabs();
+    this.session.scheduleSession();
+  }
+
+  /** Stacca dall'editor, dalla colonna destra e dalle bozze una tab che esce dall'elenco. */
+  private detachTab(tab: EditorTab): void {
+    this.pane.detach(tab);
+    if (this.side?.shown === tab) {
+      this.side.detach(tab);
+      this.side.showEmpty();
+    }
+    this.drafts.dropDraft(tab.path, tab);
+  }
+
+  /** Toglie una tab senza modifiche e senza domande (provvisoria superata da un altro clic). */
+  private discardTab(tab: EditorTab): void {
+    const active = this.tabs.active;
+    this.detachTab(tab);
+    const next = this.tabs.close(tab.path);
+    if (active === tab) {
+      if (next) this.pane.show(next);
+      else this.pane.showEmpty();
+    }
+    this.refreshTabs();
+    this.session.scheduleSession();
+  }
+
+  /** ED-19: menu della tab (tasto destro, o pressione prolungata su touch). */
+  async tabMenu(path: string, x: number, y: number): Promise<void> {
+    const tab = this.tabs.find(path);
+    if (!tab) return;
+    const list = this.tabs.tabs;
+    const index = list.indexOf(tab);
+    const items: MenuEntry[] = [
+      { id: 'close', label: t('tabs.menu.close'), hint: shortcutLabel('Alt+W') },
+      { id: 'others', label: t('tabs.menu.closeOthers'), disabled: list.length < 2 },
+      { id: 'right', label: t('tabs.menu.closeRight'), disabled: index === list.length - 1 },
+      'separator',
+      { id: 'saved', label: t('tabs.menu.closeSaved'), disabled: !list.some((x) => !x.dirty) },
+      { id: 'all', label: t('tabs.menu.closeAll') },
+    ];
+    if (tab.provisional) items.push('separator', { id: 'keep', label: t('tabs.menu.keep'), hint: t('tabs.menu.keepHint') });
+    const choice = await this.menu.show(items, x, y);
+    if (choice === 'keep') return this.pinTab(tab);
+    const targets =
+      choice === 'close'
+        ? [tab]
+        : choice === 'others'
+          ? list.filter((x) => x !== tab)
+          : choice === 'right'
+            ? list.slice(index + 1)
+            : choice === 'saved'
+              ? list.filter((x) => !x.dirty)
+              : choice === 'all'
+                ? [...list]
+                : [];
+    for (const target of targets) {
+      // Annullata la domanda sulle modifiche di una tab, ci si ferma lì.
+      if (!(await this.closeTab(target.path))) return;
+    }
+    if (choice === 'all' && this.preview) this.closePreview();
   }
 
   /** Chiude una tab chiedendo cosa fare delle modifiche non salvate (ED-6, FEP #10). */
@@ -744,12 +856,7 @@ export class EdithaApp extends LitElement {
     }
     // Lo stato della tab chiusa viene staccato dalla vista prima di scegliere la successiva:
     // l'editor mostra sempre il contenuto della nuova tab attiva (ED-4, FEP #19).
-    this.pane.detach(tab);
-    if (this.side?.shown === tab) {
-      this.side.detach(tab);
-      this.side.showEmpty();
-    }
-    this.drafts.dropDraft(tab.path, tab);
+    this.detachTab(tab);
     let next = this.tabs.close(tab.path);
     // Chiudendo una tab diversa da quella attiva, resta attiva quella di prima
     // (la domanda sulle modifiche l'aveva portata in primo piano solo per mostrarla).
@@ -779,6 +886,8 @@ export class EdithaApp extends LitElement {
       const dirty = !saved || !update.state.doc.eq(saved);
       if (dirty !== tab.dirty) {
         tab.dirty = dirty;
+        // ED-19: chi scrive in una tab provvisoria la tiene aperta.
+        if (dirty) this.tabs.pin(tab.path);
         this.refreshTabs();
       }
       // Dell'utente ogni modifica che Editha non ha fatto da sé (anche quelle scritte nella colonna destra).
@@ -906,7 +1015,13 @@ export class EdithaApp extends LitElement {
   // ——— stato visualizzato ———
 
   refreshTabs(): void {
-    this.tabViews = this.tabs.tabs.map((t) => ({ path: t.path, name: t.name, dirty: t.dirty, readOnly: t.readOnly }));
+    this.tabViews = this.tabs.tabs.map((t) => ({
+      path: t.path,
+      name: t.name,
+      dirty: t.dirty,
+      readOnly: t.readOnly,
+      provisional: !!t.provisional,
+    }));
     this.activePath = this.tabs.active?.path ?? null;
     this.refreshToolbar();
   }
@@ -1076,7 +1191,9 @@ export class EdithaApp extends LitElement {
             ?hidden=${this.searchOpen || this.gitOpen}
             .activePath=${this.previewShown ? this.preview : this.activePath}
             .showSystem=${this.settings.showSystem}
-            @file-open=${(e: CustomEvent<{ path: string }>) => void this.openFile(e.detail.path)}
+            .openMode=${this.settings.openMode}
+            @file-open=${(e: CustomEvent<{ path: string; provisional?: boolean }>) =>
+              void this.openFile(e.detail.path, false, e.detail.provisional ?? false)}
             @tree-context=${(e: CustomEvent<{ entry: Entry | null; x: number; y: number }>) =>
               void this.fileOps.onTreeContext(e)}
             @tree-action=${(e: CustomEvent<{ action: string }>) => this.fileOps.onTreeAction(e)}
@@ -1126,6 +1243,12 @@ export class EdithaApp extends LitElement {
               this.activate(e.detail.path);
             }}
             @tab-close=${(e: CustomEvent<{ path: string }>) => void this.closeTab(e.detail.path)}
+            @tab-pin=${(e: CustomEvent<{ path: string }>) => {
+              const tab = this.tabs.find(e.detail.path);
+              if (tab) this.pinTab(tab);
+            }}
+            @tab-context=${(e: CustomEvent<{ path: string; x: number; y: number }>) =>
+              void this.tabMenu(e.detail.path, e.detail.x, e.detail.y)}
             @preview-activate=${() => this.showPreview()}
             @preview-close=${() => this.closePreview()}
           ></editha-tab-bar>

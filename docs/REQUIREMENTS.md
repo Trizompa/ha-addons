@@ -81,6 +81,7 @@ The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits
 | ED-12 | Command palette and shortcuts listed in a help screen. | P2 |
 | ED-13 | Minimap. | P2 |
 | ED-17 | Split view in two columns: two files (or two places in the same file) side by side. | P1 |
+| ED-19 | Temporary tab: one click in the file tree opens the file in a temporary tab (italic name) that the next one-click file replaces; typing, saving or a double-click keeps it. Tab context menu (close, close others, to the right, saved, all, keep open). Optional double-click to open, kept in the settings and the session. | P1 |
 | ED-18 | Outline of the YAML file next to the editor (entries by alias: automations, scripts, sections, helpers), with jump to line and active entry; it can be turned on and off and the choice is kept. | P1 |
 
 ## 4. YAML and Home Assistant
@@ -195,6 +196,7 @@ LICENSE                  MIT
 .github/
   workflows/             tests, browser tests and build for amd64/aarch64 (ENG-3, ENG-4); release
   ISSUE_TEMPLATE/        templates for bug reports and proposals
+  FUNDING.yml            Sponsor button on GitHub (Ko-fi)
   scripts/               apparmor-check.mjs: features checked with the AppArmor profile enforced (SEC-10)
 docs/
   REQUIREMENTS.md        this document
@@ -244,6 +246,7 @@ editha/
 | Version | Requirements covered |
 | --- | --- |
 | 0.46.0 | SEC-10 AppArmor profile; UI-8 feedback link; README feature lists updated; fastify 5.12.8. |
+| 0.47.0 | ED-19 temporary tabs, tab context menu, optional double-click to open; Ko-fi link in the READMEs and GitHub Sponsor button. |
 | 0.45.0 | HA-11 inside templates and for `entity_name`/`device_name`/`area_name`; HA-13 `friendly_name` tip; Insert panel box for template lines; dependency updates (server security advisories). |
 | 0.44.0 | FS-12: name filter across all folders; Aa menu for the editor text size (setting `fontSizeAuto`, 12–20 px), in the language menu on phones. |
 | 0.43.0 | Clear (×) in filter and search fields; funnel for name filters, find-replace icon, crossed-out circle for Git exclude; toggle buttons (find, template preview, problems) pressed while open and closed on a second click. |

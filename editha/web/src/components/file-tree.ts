@@ -34,6 +34,7 @@ export class EdithaFileTree extends LitElement {
   static override properties = {
     activePath: { type: String },
     showSystem: { type: Boolean },
+    openMode: { type: String },
     dirs: { state: true },
     expanded: { state: true },
     selected: { state: true },
@@ -47,6 +48,8 @@ export class EdithaFileTree extends LitElement {
   declare activePath: string | null;
   /** Se false, le voci in sola lettura (cartelle di sistema) non compaiono (SEC-8). */
   declare showSystem: boolean;
+  /** ED-19: un clic apre il file in una tab provvisoria, oppure serve il doppio clic. */
+  declare openMode: 'click' | 'double';
   declare dirs: Map<string, Entry[]>;
   declare expanded: Set<string>;
   declare selected: TreeSelection | null;
@@ -66,6 +69,7 @@ export class EdithaFileTree extends LitElement {
     super();
     this.activePath = null;
     this.showSystem = false;
+    this.openMode = 'click';
     this.dirs = new Map();
     this.expanded = new Set();
     this.selected = null;
@@ -354,12 +358,27 @@ export class EdithaFileTree extends LitElement {
     return loaded ? loaded.length > 0 : !entry.empty;
   }
 
-  private onRowClick(entry: Entry): void {
+  /**
+   * ED-19: con il mouse un clic apre il file in una tab provvisoria (o lo seleziona soltanto,
+   * se si è scelto il doppio clic). Su touch il doppio tocco non è affidabile: un tocco apre sempre.
+   */
+  private onRowClick(entry: Entry, how: 'click' | 'key' = 'click'): void {
     if (Date.now() - this.longPressAt < 800) return;
     this.selected = { path: entry.path, type: entry.type, readOnly: entry.readOnly };
     if (entry.type === 'directory') void this.toggle(entry);
-    else if (entry.type === 'file') this.emit('file-open', { path: entry.path });
+    else if (entry.type === 'file') {
+      if (how === 'click' && this.openMode === 'double' && this.lastPointer !== 'touch') return;
+      this.emit('file-open', { path: entry.path, provisional: true });
+    }
   }
+
+  /** Doppio clic su un file: si apre in una tab normale, che resta. */
+  private onRowDblClick(entry: Entry): void {
+    if (entry.type === 'file') this.emit('file-open', { path: entry.path, provisional: false });
+  }
+
+  /** Tipo dell'ultimo puntatore premuto (mouse, penna o dito). */
+  private lastPointer = 'mouse';
 
   // Pressione prolungata su touch: Safari su iPhone non genera il menu contestuale.
   private pressTimer: ReturnType<typeof setTimeout> | undefined;
@@ -367,6 +386,7 @@ export class EdithaFileTree extends LitElement {
   private longPressAt = 0;
 
   private onPointerDown(e: PointerEvent): void {
+    this.lastPointer = e.pointerType;
     if (e.pointerType !== 'touch') return;
     const row = e
       .composedPath()
@@ -491,7 +511,7 @@ export class EdithaFileTree extends LitElement {
         else if (current) select(rows.find((r) => r.entry.path === dirname(current.path))?.entry);
         break;
       case 'Enter':
-        if (current) this.onRowClick(current);
+        if (current) this.onRowClick(current, 'key');
         break;
       case 'F2':
         if (current) this.emit('tree-action', { action: 'rename' });
@@ -530,6 +550,7 @@ export class EdithaFileTree extends LitElement {
       title=${entry.type === 'other' ? t('tree.unusableLink') : entry.path}
       style="padding-left:${8 + depth * 14}px"
       @click=${() => entry.type !== 'other' && this.onRowClick(entry)}
+      @dblclick=${() => this.onRowDblClick(entry)}
       @contextmenu=${(e: MouseEvent) => this.onRowContext(e, entry)}
     >
       <span class="chevron">${isDir && (open || this.hasChildren(entry)) ? icon(open ? icons.chevronDown : icons.chevronRight, 16) : nothing}</span>
