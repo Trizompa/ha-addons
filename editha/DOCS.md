@@ -50,7 +50,7 @@ through Home Assistant (Ingress), with your Home Assistant login.
   history, word wrap, split view, outline, insert panel, template preview, Home Assistant hints and
   the Home Assistant menu. On the right: language (Automatic (browser), Italiano, English, and how files open), **Aa**
   for the text size of the editor (automatic, or a fixed size from 12 to 20 px), theme (automatic,
-  light, dark) and About (version, links and **Suggest an idea or report a problem**).
+  light, dark) and About (version, links, **Suggest an idea or report a problem** and **Buy me a coffee on Ko-fi**).
 - **File explorer** (left): the content of `/config`. Above it: search in all files, Git, new
   file, new folder, system folders, upload, refresh and collapse all.
 - **Tabs and editor** (centre): one tab per open file. A dot on a tab means unsaved changes.

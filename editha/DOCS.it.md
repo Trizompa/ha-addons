@@ -53,7 +53,7 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
   anteprima template, aiuti di Home Assistant e menu di Home Assistant. A destra: lingua (Automatica (browser), Italiano,
   English, e come si aprono i file), **Aa** per la grandezza del testo dell'editor (automatica, oppure fissa da 12 a 20 px),
   tema (automatico, chiaro, scuro) e Informazioni (versione, link e
-  **Proponi un'idea o segnala un problema**).
+  **Proponi un'idea o segnala un problema** e **Offrimi un caffè su Ko-fi**).
 - **Esplora file** (a sinistra): il contenuto di `/config`. Sopra: cerca in tutti i file, Git,
   nuovo file, nuova cartella, cartelle di sistema, carica, aggiorna e comprimi tutto.
 - **Tab ed editor** (al centro): una tab per ogni file aperto. Il pallino su una tab indica

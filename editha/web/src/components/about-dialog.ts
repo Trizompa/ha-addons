@@ -6,6 +6,8 @@ import { VERSION } from '../version.js';
 const REPOSITORY = 'https://github.com/Trizompa/ha-addons';
 /** Idee e problemi: la scelta del modulo (segnalazione o proposta) su GitHub. */
 const FEEDBACK = `${REPOSITORY}/issues/new/choose`;
+/** Per chi vuole sostenere lo sviluppo: si apre solo con un clic, l'app non carica niente da lì. */
+const KOFI = 'https://ko-fi.com/trizompa';
 
 /** Finestra "Informazioni": autore, versione, licenza e riconoscimenti. */
 export class EdithaAboutDialog extends LitElement {
@@ -112,6 +114,8 @@ export class EdithaAboutDialog extends LitElement {
         <dd><a href=${REPOSITORY} target="_blank" rel="noopener noreferrer">${REPOSITORY.replace('https://', '')}</a></dd>
         <dt>${t('about.feedback')}</dt>
         <dd><a href=${FEEDBACK} target="_blank" rel="noopener noreferrer" data-field="feedback">${t('about.feedbackLink')}</a></dd>
+        <dt>${t('about.support')}</dt>
+        <dd><a href=${KOFI} target="_blank" rel="noopener noreferrer" data-field="support">${t('about.supportLink')}</a></dd>
         <dt>${t('about.version')}</dt>
         <dd data-field="version">${VERSION}</dd>
         <dt>${t('about.license')}</dt>

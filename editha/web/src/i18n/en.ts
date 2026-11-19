@@ -553,6 +553,8 @@ export const en: Record<keyof Dictionary, string> = {
   'about.repository': 'Repository',
   'about.feedback': 'Feedback',
   'about.feedbackLink': 'Suggest an idea or report a problem',
+  'about.support': 'Support',
+  'about.supportLink': 'Buy me a coffee on Ko-fi',
   'about.version': 'Version',
   'about.license': 'License',
   'about.thanks': 'Built with CodeMirror, Lit, Fastify and Material Design icons.',

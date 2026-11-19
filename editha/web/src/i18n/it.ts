@@ -567,6 +567,8 @@ export const it = {
   'about.repository': 'Repository',
   'about.feedback': 'Feedback',
   'about.feedbackLink': "Proponi un'idea o segnala un problema",
+  'about.support': 'Supporto',
+  'about.supportLink': 'Offrimi un caffè su Ko-fi',
   'about.version': 'Versione',
   'about.license': 'Licenza',
   'about.thanks': 'Realizzato con CodeMirror, Lit, Fastify e le icone Material Design.',

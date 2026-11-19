@@ -1044,6 +1044,10 @@ test('Informazioni: autore, versione, licenza e link per i feedback', async ({ p
   await expect(feedback).toHaveText("Proponi un'idea o segnala un problema");
   await expect(feedback).toHaveAttribute('href', 'https://github.com/Trizompa/ha-addons/issues/new/choose');
   await expect(feedback).toHaveAttribute('target', '_blank');
+  const support = about.locator('[data-field="support"]');
+  await expect(support).toHaveText('Offrimi un caffè su Ko-fi');
+  await expect(support).toHaveAttribute('href', 'https://ko-fi.com/trizompa');
+  await expect(support).toHaveAttribute('target', '_blank');
   await about.locator('button', { hasText: 'Chiudi' }).click();
   await expect(about).toHaveCount(0);
 });
