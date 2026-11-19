@@ -672,6 +672,8 @@ export class EdithaApp extends LitElement {
     selection?: { anchor: number; head: number },
     background = false,
     onError?: (err: unknown) => void,
+    /** Chiamata solo se la tab l'ha creata questa lettura (non un'apertura parallela dello stesso file). */
+    onCreated?: () => void,
   ): Promise<EditorTab | null> {
     const existing = this.tabs.find(path);
     if (existing) return existing;
@@ -703,6 +705,7 @@ export class EdithaApp extends LitElement {
     // Se nel frattempo lo stesso file è stato aperto da un'altra parte, vale la tab già in elenco.
     // Mai attivata qui: chi apre la mostra con activate(), se è ancora quella richiesta.
     const listed = background ? this.tabs.append(tab) : this.tabs.insert(tab);
+    if (listed === tab) onCreated?.();
     this.refreshTabs();
     return listed;
   }
@@ -723,12 +726,23 @@ export class EdithaApp extends LitElement {
     if (existing && !provisional) this.pinTab(existing);
     // Due clic rapidi su A e poi B: vince B anche se A arriva dopo.
     const seq = ++this.openSeq;
-    const tab = await this.loadTab(path);
+    let created = false;
+    const tab = await this.loadTab(path, undefined, false, undefined, () => (created = true));
     if (!tab) return;
-    const created = !existing;
     if (seq !== this.openSeq) {
-      // Clic superato da un altro: la sua tab provvisoria appena creata non resta in giro.
-      if (provisional && created && !tab.provisional && this.tabs.find(tab.path) === tab) this.discardTab(tab);
+      // Clic superato da un altro: la tab provvisoria creata da questo clic non resta in giro,
+      // ma mai se nel frattempo ha modifiche o è nella colonna destra.
+      if (
+        provisional &&
+        created &&
+        !tab.provisional &&
+        !tab.dirty &&
+        this.side?.shown !== tab &&
+        this.tabs.active !== tab &&
+        this.tabs.find(tab.path) === tab
+      ) {
+        this.discardTab(tab);
+      }
       return;
     }
     if (provisional && created) {
@@ -887,7 +901,7 @@ export class EdithaApp extends LitElement {
       if (dirty !== tab.dirty) {
         tab.dirty = dirty;
         // ED-19: chi scrive in una tab provvisoria la tiene aperta.
-        if (dirty) this.tabs.pin(tab.path);
+        if (dirty && tab.provisional) this.pinTab(tab);
         this.refreshTabs();
       }
       // Dell'utente ogni modifica che Editha non ha fatto da sé (anche quelle scritte nella colonna destra).

@@ -76,17 +76,18 @@ test('ED-19 – un clic apre una tab provvisoria che il file successivo sostitui
   await row(page, 'tabs/a.yaml').click();
   await expect(page.locator('editha-tab-bar .tab')).toHaveCount(3);
 
-  // Doppio clic nell'albero: tab normale da subito.
-  await row(page, 'configuration.yaml').dblclick();
-  await expect(tab(page, 'configuration.yaml')).not.toHaveClass(/provisional/);
-  await expect(tab(page, 'tabs/a.yaml')).toHaveClass(/provisional/);
-
   // Si ritrova dopo un ricaricamento.
   await page.waitForTimeout(800);
   await page.reload();
   await expect(tab(page, 'tabs/a.yaml')).toHaveClass(/provisional/);
-  await expect(tab(page, 'configuration.yaml')).not.toHaveClass(/provisional/);
   await expect(tab(page, 'tabs/b.yaml')).not.toHaveClass(/provisional/);
+  await expect(tab(page, 'tabs/c.yaml')).not.toHaveClass(/provisional/);
+
+  // Doppio clic nell'albero: il file resta aperto in una tab normale.
+  await row(page, 'configuration.yaml').dblclick();
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'configuration.yaml');
+  await expect(tab(page, 'configuration.yaml')).not.toHaveClass(/provisional/);
+  await expect(page.locator('editha-tab-bar .tab[data-path="configuration.yaml"]')).toHaveCount(1);
 });
 
 test('ED-19 – menu della tab: chiudi le altre, quelle a destra, tieni aperta', async ({ page }) => {

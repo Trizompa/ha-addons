@@ -81,8 +81,8 @@ The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits
 | ED-12 | Command palette and shortcuts listed in a help screen. | P2 |
 | ED-13 | Minimap. | P2 |
 | ED-17 | Split view in two columns: two files (or two places in the same file) side by side. | P1 |
-| ED-19 | Temporary tab: one click in the file tree opens the file in a temporary tab (italic name) that the next one-click file replaces; typing, saving or a double-click keeps it. Tab context menu (close, close others, to the right, saved, all, keep open). Optional double-click to open, kept in the settings and the session. | P1 |
 | ED-18 | Outline of the YAML file next to the editor (entries by alias: automations, scripts, sections, helpers), with jump to line and active entry; it can be turned on and off and the choice is kept. | P1 |
+| ED-19 | Temporary tab: one click in the file tree opens the file in a temporary tab (italic name) that the next one-click file replaces; typing, saving or a double-click keeps it. Tab context menu (close, close others, to the right, saved, all, keep open). Optional double-click to open, kept in the settings and the session. | P1 |
 
 ## 4. YAML and Home Assistant
 

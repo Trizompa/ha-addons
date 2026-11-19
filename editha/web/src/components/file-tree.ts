@@ -549,7 +549,11 @@ export class EdithaFileTree extends LitElement {
       data-path=${entry.path}
       title=${entry.type === 'other' ? t('tree.unusableLink') : entry.path}
       style="padding-left:${8 + depth * 14}px"
-      @click=${() => entry.type !== 'other' && this.onRowClick(entry)}
+      @click=${(e: MouseEvent) => {
+        // Il secondo clic di un doppio clic non riapre il file: ci pensa dblclick (ED-19).
+        if (entry.type === 'other' || (e.detail > 1 && entry.type === 'file')) return;
+        this.onRowClick(entry);
+      }}
       @dblclick=${() => this.onRowDblClick(entry)}
       @contextmenu=${(e: MouseEvent) => this.onRowContext(e, entry)}
     >

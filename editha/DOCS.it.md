@@ -62,11 +62,13 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
   file non restano tante tab. La tab resta aperta appena ci scrivi o la salvi, oppure con un
   doppio clic sulla tab o sul file. Con il tasto destro su una tab (pressione prolungata sul
   telefono) chiudi quella tab, le altre, quelle a destra, quelle salvate o tutte, oppure la tieni
-  aperta. Se preferisci aprire i file con un doppio clic, sceglilo nel menu della lingua.
+  aperta. Se preferisci aprire i file con un doppio clic, sceglilo nel menu della lingua: un clic
+  allora seleziona soltanto il file. Sul telefono un tocco apre comunque il file, come Invio
+  nell'esplora file.
 - **Barra di stato** (in basso): percorso del file, esito del controllo YAML, posizione del
   cursore, codifica e linguaggio.
 
-Tab aperte, tab attiva, tema e lingua restano memorizzati quando esci da EDITHA o riavvii
+Tab aperte (anche quella provvisoria), tab attiva, tema e lingua restano memorizzati quando esci da EDITHA o riavvii
 l'app.
 
 ![Tema chiaro](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-light.png)

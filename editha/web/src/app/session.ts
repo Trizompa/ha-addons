@@ -34,7 +34,8 @@ export class SessionController {
       }
     }
     const provisional = session.provisional ? this.app.tabs.find(session.provisional) : undefined;
-    if (provisional) provisional.provisional = true;
+    // Con una bozza recuperata (modifiche non salvate) la tab resta normale.
+    if (provisional && !provisional.dirty) provisional.provisional = true;
     const active = (session.active && this.app.tabs.find(session.active)) || this.app.tabs.tabs[0];
     if (active) this.app.activate(active.path);
     const side = session.side ? this.app.tabs.find(session.side) : undefined;

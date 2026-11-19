@@ -235,6 +235,8 @@ export class EdithaTabBar extends LitElement {
             @dblclick=${() => this.emit('tab-pin', tab.path)}
             @contextmenu=${(e: MouseEvent) => {
               e.preventDefault();
+              // Su Android il menu nativo può arrivare prima della pressione prolungata: una volta sola.
+              this.cancelPress();
               if (!this.pressedLong()) this.emit('tab-context', tab.path, { x: e.clientX, y: e.clientY });
             }}
             @pointerdown=${(e: PointerEvent) => this.onPointerDown(e, tab.path)}

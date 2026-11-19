@@ -59,10 +59,11 @@ through Home Assistant (Ingress), with your Home Assistant login.
   tabs. The tab stays open as soon as you type in it or save it, or when you double-click it or
   the file. Right-click a tab (long press on a phone) to close it, the others, the ones to the
   right, the saved ones or all of them, or to keep it open. If you prefer to open files with a
-  double-click, choose it in the language menu.
+  double-click, choose it in the language menu: a click then only selects the file. On a phone a
+  tap still opens the file, and so does Enter in the file explorer.
 - **Status bar** (bottom): file path, YAML check result, cursor position, encoding and language.
 
-Open tabs, the active tab, the theme and the language are remembered when you leave EDITHA or
+Open tabs (the temporary one too), the active tab, the theme and the language are remembered when you leave EDITHA or
 restart the app.
 
 ![Light theme](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-light.png)
