@@ -5,6 +5,9 @@ Reminder for the maintainer. Items marked ☐ are done only once, at the first p
 
 ## At every version
 
+Publishing (steps 5–7) starts only after the maintainer explicitly says to publish this version.
+Approving a mockup or the changes is not enough (see CLAUDE.md).
+
 1. `version` in `editha/config.yaml` bumped (MAJOR.MINOR.PATCH: PATCH for fixes, MINOR for new
    features, MAJOR for breaking changes).
 2. Entry with the same number (`## 1.0.0`) in `editha/CHANGELOG.md` (English: it is the one Home
