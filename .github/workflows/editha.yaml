@@ -31,6 +31,15 @@ jobs:
           cache: npm
           cache-dependency-path: editha/server/package-lock.json
       - run: npm ci
+      - name: Same version in config.yaml and package.json
+        working-directory: editha
+        run: |
+          app=$(sed -n 's/^version: "\(.*\)"$/\1/p' config.yaml)
+          for f in server/package.json server/package-lock.json web/package.json web/package-lock.json; do
+            v=$(node -p "require('./$f').version")
+            if [ "$v" != "$app" ]; then echo "$f has $v, config.yaml has $app"; exit 1; fi
+          done
+          echo "version $app everywhere"
       - run: npm run typecheck
       - run: npm test
 

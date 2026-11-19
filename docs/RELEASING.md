@@ -9,7 +9,8 @@ Publishing (steps 5–7) starts only after the maintainer explicitly says to pub
 Approving a mockup or the changes is not enough (see CLAUDE.md).
 
 1. `version` in `editha/config.yaml` bumped (MAJOR.MINOR.PATCH: PATCH for fixes, MINOR for new
-   features, MAJOR for breaking changes).
+   features, MAJOR for breaking changes). Same number in `editha/server` and `editha/web`:
+   `npm version <version> --no-git-tag-version` in each folder (the CI checks it).
 2. Entry with the same number (`## 1.0.0`) in `editha/CHANGELOG.md` (English: it is the one Home
    Assistant shows in the update dialog and that goes into the release) and in
    `editha/CHANGELOG.it.md` (Italian).

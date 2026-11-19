@@ -1,6 +1,6 @@
 {
   "name": "editha-server",
-  "version": "0.2.0",
+  "version": "0.47.0",
   "private": true,
   "description": "Backend di Editha: API dei file di /config, raggiungibile solo via Ingress",
   "license": "MIT",
