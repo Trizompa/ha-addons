@@ -38,6 +38,8 @@ jobs:
           awk -v v="$version" '
             $0 == "## " v { on = 1; next }
             /^## / && on { exit }
+            # The Ko-fi button is for the Home Assistant update dialog, not for the GitHub release.
+            /ko-fi\.com/ { next }
             on { print }
           ' editha/CHANGELOG.md > notes.md
           test -s notes.md || { echo "no CHANGELOG section for $version"; exit 1; }

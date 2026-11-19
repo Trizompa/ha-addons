@@ -9,6 +9,8 @@ Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 - **Open files with a double-click** if you prefer: choose it in the language menu. One click stays the default.
 - **Save buttons you can spot**: when there is something to save, **Save** and **Save all** turn blue with an orange dot.
 
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/trizompa)
+
 ## 0.46.0
 
 - **Its own AppArmor profile**: EDITHA now runs with a security profile made for it. It can write only to your configuration, its own data folder and temporary folders, and Home Assistant's system folders (`.storage`, `.cloud`, `deps`, `tts`) cannot be written, renamed or deleted even by EDITHA itself. Home Assistant shows a higher security rating on the app page.

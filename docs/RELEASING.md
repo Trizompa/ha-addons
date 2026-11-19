@@ -13,7 +13,9 @@ Approving a mockup or the changes is not enough (see CLAUDE.md).
    `npm version <version> --no-git-tag-version` in each folder (the CI checks it).
 2. Entry with the same number (`## 1.0.0`) in `editha/CHANGELOG.md` (English: it is the one Home
    Assistant shows in the update dialog and that goes into the release) and in
-   `editha/CHANGELOG.it.md` (Italian).
+   `editha/CHANGELOG.it.md` (Italian). The English entry ends with the Ko-fi button
+   (`[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/trizompa)`):
+   Home Assistant shows it in the update dialog, the Release workflow leaves it out of the GitHub release.
 3. Documentation updated if something the user sees changes (`editha/DOCS.md` and
    `editha/DOCS.it.md`). If the look changes, regenerate the images (see CONTRIBUTING.md).
 4. CI green on GitHub (tests and both image builds).
