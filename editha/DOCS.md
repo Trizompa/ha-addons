@@ -112,7 +112,7 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 
 ## Editing
 
-- **Save** with Ctrl+S (Cmd+S on a Mac), **save all** with Ctrl+Alt+S.
+- **Save** with Ctrl+S (Cmd+S on a Mac), **save all** with Ctrl+Alt+S. When there is something to save, the two buttons turn blue with an orange dot.
 - **Undo and redo** also undo indentation made with Tab.
 - **Find and replace** in the open file: Ctrl+F.
 - **Word wrap** and **split view** are in the toolbar. Split view shows two files side by side, or

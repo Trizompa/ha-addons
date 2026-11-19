@@ -97,6 +97,23 @@ export class EdithaToolbar extends LitElement {
       .spacer {
         flex: 1;
       }
+      /* Modifiche da salvare: icona blu e pallino, visibili a colpo d'occhio. */
+      .pending,
+      .icon-btn.pending:hover:not(:disabled) {
+        position: relative;
+        color: var(--accent);
+      }
+      .pending::after {
+        content: '';
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--warning);
+        box-shadow: 0 0 0 2px var(--surface);
+      }
       @media (max-width: 760px) {
         .brand small,
         .hide-narrow {
@@ -164,8 +181,11 @@ export class EdithaToolbar extends LitElement {
     return html`
       <div class="brand"><span class="logo">E</span><span>EDITHA<small>${t('app.tagline')}</small></span></div>
       ${this.button('toggle-sidebar', t('toolbar.sidebar'), icons.sidebar, { on: s.sidebarVisible })}
-      ${this.button('save', t('toolbar.save'), icons.save, { disabled: !s.canSave })}
-      ${this.button('save-all', t('toolbar.saveAll'), icons.saveAll, { disabled: !s.canSaveAll, cls: 'hide-narrow' })}
+      ${this.button('save', t('toolbar.save'), icons.save, { disabled: !s.canSave, cls: s.canSave ? 'pending' : '' })}
+      ${this.button('save-all', t('toolbar.saveAll'), icons.saveAll, {
+        disabled: !s.canSaveAll,
+        cls: `hide-narrow ${s.canSaveAll ? 'pending' : ''}`,
+      })}
       <span class="sep"></span>
       ${this.button('undo', t('toolbar.undo'), icons.undo, { disabled: !s.canUndo })}
       ${this.button('redo', t('toolbar.redo'), icons.redo, { disabled: !s.canRedo })}

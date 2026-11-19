@@ -7,6 +7,7 @@ Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella ing
 - **Tab provvisorie**: un clic su un file lo apre in una tab provvisoria (nome in corsivo), e il prossimo file cliccato prende il suo posto. Niente più mucchi di tab solo per dare un'occhiata. Se ci scrivi, la salvi o fai doppio clic, resta.
 - **Menu della tab**: tasto destro su una tab (pressione prolungata sul telefono) per **Chiudi**, **Chiudi le altre**, **Chiudi quelle a destra**, **Chiudi quelle salvate**, **Chiudi tutte** e **Tieni aperta**.
 - **Aprire i file con un doppio clic**, se preferisci: si sceglie nel menu della lingua. Il clic singolo resta quello predefinito.
+- **Pulsanti Salva più visibili**: quando c'è qualcosa da salvare, **Salva** e **Salva tutto** diventano blu con un pallino arancione.
 
 ## 0.46.0
 

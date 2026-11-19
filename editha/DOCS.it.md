@@ -120,7 +120,7 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 
 ## Modificare i file
 
-- **Salva** con Ctrl+S (Cmd+S su Mac), **salva tutto** con Ctrl+Alt+S.
+- **Salva** con Ctrl+S (Cmd+S su Mac), **salva tutto** con Ctrl+Alt+S. Quando c'è qualcosa da salvare, i due pulsanti diventano blu con un pallino arancione.
 - **Annulla e ripeti** annullano anche i rientri fatti con Tab.
 - **Cerca e sostituisci** nel file aperto: Ctrl+F.
 - **A capo automatico** e **vista divisa** sono nella barra. La vista divisa mostra due file

@@ -68,7 +68,7 @@ The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits
 | ED-2 | Modes for YAML, JSON, Python, JavaScript, TypeScript, CSS, Markdown, Jinja; plain text for the rest. | P0 |
 | ED-3 | Multiple tabs: unsaved changes indicator, state (undo, cursor, scroll) kept per tab, closing the file with a button and a shortcut. The active and inactive tabs are clearly distinguishable in both themes, with the same visual language as the toolbar (FEP #15). | P0 |
 | ED-4 | **Closing the active tab activates the adjacent tab and the editor shows its content**; closing the last one shows the empty state. "Save" always writes the active tab's content to its own file, never another tab's (FEP #19). Covered by e2e tests. | P0 |
-| ED-5 | Save with Ctrl/Cmd+S and a button; "Save all". | P0 |
+| ED-5 | Save with Ctrl/Cmd+S and a button; "Save all". With something to save, both buttons stand out at a glance (accent color and a warning-colored dot). | P0 |
 | ED-6 | Warning before closing a tab or the page with unsaved changes (FEP #10). | P0 |
 | ED-7 | Find/replace in the file (CM6 `search` extension). | P0 |
 | ED-8 | Theme Automatic (follows HA) / Light / Dark; the choice is remembered when leaving and re-entering the app (CFG-1, FEP #6). In both themes selected text stays readable, without overlapping characters, on Chrome, Firefox, Safari and the HA app (FEP #7). | P0 |
@@ -246,7 +246,7 @@ editha/
 | Version | Requirements covered |
 | --- | --- |
 | 0.46.0 | SEC-10 AppArmor profile; UI-8 feedback link; README feature lists updated; fastify 5.12.8. |
-| 0.47.0 | ED-19 temporary tabs, tab context menu, optional double-click to open; Ko-fi link in the READMEs and GitHub Sponsor button; package.json versions aligned with the app (checked by CI). |
+| 0.47.0 | ED-19 temporary tabs, tab context menu, optional double-click to open; ED-5 save buttons highlighted when there is something to save; Ko-fi link in the READMEs and GitHub Sponsor button; package.json versions aligned with the app (checked by CI). |
 | 0.45.0 | HA-11 inside templates and for `entity_name`/`device_name`/`area_name`; HA-13 `friendly_name` tip; Insert panel box for template lines; dependency updates (server security advisories). |
 | 0.44.0 | FS-12: name filter across all folders; Aa menu for the editor text size (setting `fontSizeAuto`, 12–20 px), in the language menu on phones. |
 | 0.43.0 | Clear (×) in filter and search fields; funnel for name filters, find-replace icon, crossed-out circle for Git exclude; toggle buttons (find, template preview, problems) pressed while open and closed on a second click. |

@@ -139,8 +139,12 @@ test('FEP #19 – chiudendo la tab attiva l\'editor mostra la nuova tab attiva e
   await editor(page).click();
   await page.keyboard.press('Control+End');
   await page.keyboard.type('modificato: si\n');
+  // Pulsante Salva evidenziato finché c'è qualcosa da salvare.
+  const save = page.locator('editha-toolbar button[title^="Salva (Ctrl+S)"]');
+  await expect(save).toHaveClass(/pending/);
   await page.keyboard.press('Control+s');
   await expect(activeTab(page)).not.toHaveClass(/dirty/);
+  await expect(save).not.toHaveClass(/pending/);
   expect(await disk('tabs/c.yaml')).toBe('contenuto: C\nmodificato: si\n');
   expect(await disk('tabs/b.yaml')).toBe('contenuto: B\n');
   expect(await disk('tabs/a.yaml')).toBe('contenuto: A\n');
