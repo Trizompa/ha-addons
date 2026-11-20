@@ -2,7 +2,7 @@ import { LitElement, css, html } from 'lit';
 import { Annotation, EditorState, Transaction, type ChangeSet, type StateEffect } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { redo, undo } from '@codemirror/commands';
-import { closeSearchPanel, openSearchPanel, searchPanelOpen } from '@codemirror/search';
+import { closeSearchPanel, getSearchQuery, openSearchPanel, searchPanelOpen, setSearchQuery } from '@codemirror/search';
 import { closeLintPanel, openLintPanel } from '@codemirror/lint';
 import { snippet } from '@codemirror/autocomplete';
 import type { Tab } from '../state/tabs.js';
@@ -99,10 +99,16 @@ export class EdithaEditorPane extends LitElement {
     const view = this.view;
     if (!view) return;
     if (this.current === tab) return;
+    // Ricerca aperta: la tab nuova la riprende con lo stesso testo e le stesse opzioni (issue #11).
+    const search = this.current && searchPanelOpen(view.state) ? getSearchQuery(view.state) : null;
     this.stash();
     this.current = tab;
     view.setState(tab.state);
     this.empty = false;
+    if (search) {
+      openSearchPanel(view);
+      view.dispatch({ effects: setSearchQuery.of(search) });
+    }
     const top = this.scrollTops.get(tab) ?? 0;
     requestAnimationFrame(() => {
       if (this.current === tab) view.scrollDOM.scrollTop = top;

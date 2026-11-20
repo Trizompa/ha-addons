@@ -64,7 +64,8 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
   telefono) chiudi quella tab, le altre, quelle a destra, quelle salvate o tutte, oppure la tieni
   aperta. Se preferisci aprire i file con un doppio clic, sceglilo nel menu della lingua: un clic
   allora seleziona soltanto il file. Sul telefono un tocco apre comunque il file, come Invio
-  nell'esplora file.
+  nell'esplora file. Col mouse puoi trascinare una tab per cambiare l'ordine delle tab, che
+  resta memorizzato.
 - **Barra di stato** (in basso): percorso del file, esito del controllo YAML, posizione del
   cursore, codifica e linguaggio.
 
@@ -122,7 +123,7 @@ Tasto destro su un file o una cartella (pressione prolungata sul telefono) apre 
 
 - **Salva** con Ctrl+S (Cmd+S su Mac), **salva tutto** con Ctrl+Alt+S. Quando c'è qualcosa da salvare, i due pulsanti diventano blu con un pallino arancione.
 - **Annulla e ripeti** annullano anche i rientri fatti con Tab.
-- **Cerca e sostituisci** nel file aperto: Ctrl+F.
+- **Cerca e sostituisci** nel file aperto: Ctrl+F. Se cambi tab mentre è aperto, la nuova tab riprende la stessa ricerca.
 - **A capo automatico** e **vista divisa** sono nella barra. La vista divisa mostra due file
   affiancati, oppure due punti dello stesso file: le modifiche fatte in una colonna compaiono
   nell'altra. **Apri a destra** nel menu di un file lo mette subito nella colonna destra.

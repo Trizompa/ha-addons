@@ -2,6 +2,12 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 0.48.0
+
+- **Riordina le tab**: col mouse trascini una tab dove vuoi. L'ordine resta memorizzato.
+- **La ricerca ti segue tra le tab**: con Cerca (Ctrl+F) aperto, cambiando tab resta la stessa ricerca, così cerchi la stessa entità in più file.
+- **Link a Ko-fi** in Informazioni, per chi vuole sostenere EDITHA.
+
 ## 0.47.0
 
 - **Tab provvisorie**: un clic su un file lo apre in una tab provvisoria (nome in corsivo), e il prossimo file cliccato prende il suo posto. Niente più mucchi di tab solo per dare un'occhiata. Se ci scrivi, la salvi o fai doppio clic, resta.

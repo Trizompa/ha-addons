@@ -60,7 +60,8 @@ through Home Assistant (Ingress), with your Home Assistant login.
   the file. Right-click a tab (long press on a phone) to close it, the others, the ones to the
   right, the saved ones or all of them, or to keep it open. If you prefer to open files with a
   double-click, choose it in the language menu: a click then only selects the file. On a phone a
-  tap still opens the file, and so does Enter in the file explorer.
+  tap still opens the file, and so does Enter in the file explorer. With a mouse you can drag a
+  tab to change the order of the tabs; the order is kept.
 - **Status bar** (bottom): file path, YAML check result, cursor position, encoding and language.
 
 Open tabs (the temporary one too), the active tab, the theme and the language are remembered when you leave EDITHA or
@@ -114,7 +115,7 @@ Right-click a file or folder in the explorer (long press on a phone) for its men
 
 - **Save** with Ctrl+S (Cmd+S on a Mac), **save all** with Ctrl+Alt+S. When there is something to save, the two buttons turn blue with an orange dot.
 - **Undo and redo** also undo indentation made with Tab.
-- **Find and replace** in the open file: Ctrl+F.
+- **Find and replace** in the open file: Ctrl+F. If you switch tab while it is open, the new tab gets the same search.
 - **Word wrap** and **split view** are in the toolbar. Split view shows two files side by side, or
   two parts of the same file: changes made in one column appear in the other. **Open on the
   right** in a file's menu puts it straight into the right column.

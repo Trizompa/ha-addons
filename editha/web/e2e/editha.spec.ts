@@ -112,6 +112,47 @@ test('ED-19 – menu della tab: chiudi le altre, quelle a destra, tieni aperta',
   await expect(page.locator('editha-tab-bar .tab')).toHaveCount(0);
 });
 
+test('issue #11 – le tab si riordinano trascinandole col mouse, e l\'ordine resta', async ({ page }) => {
+  await openFile(page, 'tabs/a.yaml');
+  await openFile(page, 'tabs/b.yaml');
+  await openFile(page, 'tabs/c.yaml');
+  const order = () => page.locator('editha-tab-bar .tab').evaluateAll((els) => els.map((e) => e.getAttribute('data-path')));
+  await expect.poll(order).toEqual(['tabs/a.yaml', 'tabs/b.yaml', 'tabs/c.yaml']);
+
+  const from = (await tab(page, 'tabs/a.yaml').boundingBox())!;
+  const to = (await tab(page, 'tabs/c.yaml').boundingBox())!;
+  await page.mouse.move(from.x + 20, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width - 5, to.y + to.height / 2, { steps: 8 });
+  await expect(tab(page, 'tabs/c.yaml')).toHaveClass(/drop-after/);
+  await page.mouse.up();
+  await expect.poll(order).toEqual(['tabs/b.yaml', 'tabs/c.yaml', 'tabs/a.yaml']);
+  await expect(page.locator('editha-tab-bar .tab.dragging')).toHaveCount(0);
+
+  // Un clic senza spostamento attiva soltanto la tab.
+  await tab(page, 'tabs/b.yaml').click();
+  await expect(activeTab(page)).toHaveAttribute('data-path', 'tabs/b.yaml');
+  await expect.poll(order).toEqual(['tabs/b.yaml', 'tabs/c.yaml', 'tabs/a.yaml']);
+
+  await page.waitForTimeout(1500);
+  await page.reload();
+  await expect.poll(order).toEqual(['tabs/b.yaml', 'tabs/c.yaml', 'tabs/a.yaml']);
+});
+
+test('issue #11 – la ricerca aperta passa alla tab successiva con lo stesso testo', async ({ page }) => {
+  await openFile(page, 'tabs/a.yaml');
+  await openFile(page, 'tabs/b.yaml');
+  await editor(page).click();
+  await page.keyboard.press('Control+f');
+  const field = page.locator('editha-editor-pane .cm-search input[name=search]').first();
+  await field.fill('contenuto');
+  await field.press('Enter');
+  await tab(page, 'tabs/a.yaml').click();
+  await expect(editor(page)).toContainText('contenuto: A');
+  await expect(field).toHaveValue('contenuto');
+  await expect(page.locator('editha-editor-pane .cm-searchMatch').first()).toBeVisible();
+});
+
 test('ED-19 – con il doppio clic scelto, un clic seleziona soltanto', async ({ page, request }) => {
   await page.locator('editha-toolbar button.lang:not(.text-size)').click();
   await menuItem(page, 'Apri i file con un doppio clic').click();

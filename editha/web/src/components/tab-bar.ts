@@ -24,6 +24,8 @@ export class EdithaTabBar extends LitElement {
     active: { type: String },
     preview: { type: String },
     previewFolder: { type: Boolean },
+    dragPath: { state: true },
+    dropIndex: { state: true },
   };
 
   declare tabs: TabView[];
@@ -32,6 +34,10 @@ export class EdithaTabBar extends LitElement {
   declare preview: string | null;
   /** L'anteprima è la galleria di una cartella (FS-11). */
   declare previewFolder: boolean;
+  /** Tab trascinata col mouse (null: nessun trascinamento in corso). */
+  declare dragPath: string | null;
+  /** Posizione in cui andrebbe la tab trascinata, contando le altre tab. */
+  declare dropIndex: number;
 
   constructor() {
     super();
@@ -39,6 +45,8 @@ export class EdithaTabBar extends LitElement {
     this.active = null;
     this.preview = null;
     this.previewFolder = false;
+    this.dragPath = null;
+    this.dropIndex = -1;
   }
 
   static override styles = [
@@ -162,6 +170,26 @@ export class EdithaTabBar extends LitElement {
         display: inline-flex;
         color: var(--text-faint);
       }
+      /* Trascinamento col mouse: la tab trascinata sbiadisce, una linea mostra dove andrà. */
+      .tab.dragging {
+        opacity: 0.5;
+      }
+      .tab.drop-before::after,
+      .tab.drop-after::after {
+        content: '';
+        position: absolute;
+        top: 4px;
+        bottom: 4px;
+        width: 2px;
+        border-radius: 1px;
+        background: var(--accent);
+      }
+      .tab.drop-before::after {
+        left: -2px;
+      }
+      .tab.drop-after::after {
+        right: -2px;
+      }
     `,
   ];
 
@@ -181,7 +209,62 @@ export class EdithaTabBar extends LitElement {
   private pressOrigin: { x: number; y: number } | null = null;
   private longPressAt = 0;
 
+  // Trascinamento col mouse per cambiare l'ordine delle tab (issue #11); al tocco resta il menu.
+  private drag: { path: string; x: number; id: number; moved: boolean } | null = null;
+
+  private startDrag(e: PointerEvent, path: string): void {
+    if (e.pointerType !== 'mouse' || e.button !== 0 || this.tabs.length < 2) return;
+    if ((e.target as HTMLElement).closest('.close')) return;
+    this.drag = { path, x: e.clientX, id: e.pointerId, moved: false };
+  }
+
+  private moveDrag(e: PointerEvent): void {
+    const drag = this.drag;
+    if (!drag || e.pointerId !== drag.id) return;
+    if (!drag.moved) {
+      if (Math.abs(e.clientX - drag.x) < 6) return;
+      drag.moved = true;
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      this.dragPath = drag.path;
+    }
+    // Posizione = quante altre tab hanno il centro a sinistra del puntatore.
+    const others = [...this.renderRoot.querySelectorAll<HTMLElement>('.tab:not(.preview)')].filter(
+      (el) => el.dataset.path !== drag.path,
+    );
+    this.dropIndex = others.filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.left + r.width / 2 < e.clientX;
+    }).length;
+    const strip = this.renderRoot.querySelector('.strip') as HTMLElement;
+    const r = strip.getBoundingClientRect();
+    if (e.clientX < r.left + 24) strip.scrollLeft -= 12;
+    else if (e.clientX > r.right - 24) strip.scrollLeft += 12;
+  }
+
+  private endDrag(e: PointerEvent, drop: boolean): void {
+    const drag = this.drag;
+    if (!drag || e.pointerId !== drag.id) return;
+    this.drag = null;
+    if (drag.moved && drop) {
+      const from = this.tabs.findIndex((t) => t.path === drag.path);
+      if (this.dropIndex !== from) this.emit('tab-move', drag.path, { index: this.dropIndex });
+    }
+    this.dragPath = null;
+    this.dropIndex = -1;
+  }
+
+  /** Classe della linea che indica dove finirà la tab trascinata. */
+  private dropClass(path: string): string {
+    if (this.dragPath === null || path === this.dragPath) return '';
+    const others = this.tabs.filter((t) => t.path !== this.dragPath);
+    const i = others.findIndex((t) => t.path === path);
+    if (i === this.dropIndex) return 'drop-before';
+    if (i === others.length - 1 && this.dropIndex === others.length) return 'drop-after';
+    return '';
+  }
+
   private onPointerDown(e: PointerEvent, path: string): void {
+    this.startDrag(e, path);
     if (e.pointerType !== 'touch') return;
     const x = e.clientX;
     const y = e.clientY;
@@ -195,6 +278,7 @@ export class EdithaTabBar extends LitElement {
   }
 
   private onPointerMove(e: PointerEvent): void {
+    this.moveDrag(e);
     if (!this.pressOrigin) return;
     if (Math.hypot(e.clientX - this.pressOrigin.x, e.clientY - this.pressOrigin.y) > 10) this.cancelPress();
   }
@@ -225,8 +309,11 @@ export class EdithaTabBar extends LitElement {
         (tab) => {
           const fi = fileIcon(tab.name);
           const active = tab.path === this.active;
+          const dragged = tab.path === this.dragPath;
           return html`<div
-            class="tab ${active ? 'active' : ''} ${tab.dirty ? 'dirty' : ''} ${tab.provisional ? 'provisional' : ''}"
+            class="tab ${active ? 'active' : ''} ${tab.dirty ? 'dirty' : ''} ${tab.provisional ? 'provisional' : ''} ${dragged
+              ? 'dragging'
+              : ''} ${this.dropClass(tab.path)}"
             role="tab"
             aria-selected=${active}
             title=${tab.path + (tab.dirty ? t('tabs.modified') : '') + (tab.provisional ? t('tabs.provisional') : '')}
@@ -241,8 +328,14 @@ export class EdithaTabBar extends LitElement {
             }}
             @pointerdown=${(e: PointerEvent) => this.onPointerDown(e, tab.path)}
             @pointermove=${(e: PointerEvent) => this.onPointerMove(e)}
-            @pointerup=${() => this.cancelPress()}
-            @pointercancel=${() => this.cancelPress()}
+            @pointerup=${(e: PointerEvent) => {
+              this.cancelPress();
+              this.endDrag(e, true);
+            }}
+            @pointercancel=${(e: PointerEvent) => {
+              this.cancelPress();
+              this.endDrag(e, false);
+            }}
             @auxclick=${(e: MouseEvent) => {
               if (e.button === 1) this.emit('tab-close', tab.path);
             }}

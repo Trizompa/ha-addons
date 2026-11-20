@@ -2,14 +2,20 @@
 
 Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
+## 0.48.0
+
+- **Reorder your tabs**: with a mouse, drag a tab where you want it. The order is kept.
+- **Search follows you across tabs**: with Find (Ctrl+F) open, switching tab keeps the same search, so you can look for the same entity in several files.
+- **Ko-fi link** in About, for anyone who wants to support EDITHA.
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/trizompa)
+
 ## 0.47.0
 
 - **Temporary tabs**: a click on a file opens it in a temporary tab (name in italics), and the next file you click takes its place. No more piles of tabs just from looking around. Type in it, save it or double-click it and it stays.
 - **Tab menu**: right-click a tab (long press on a phone) for **Close**, **Close others**, **Close to the right**, **Close saved**, **Close all** and **Keep open**.
 - **Open files with a double-click** if you prefer: choose it in the language menu. One click stays the default.
 - **Save buttons you can spot**: when there is something to save, **Save** and **Save all** turn blue with an orange dot.
-
-[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/trizompa)
 
 ## 0.46.0
 

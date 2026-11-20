@@ -1261,6 +1261,11 @@ export class EdithaApp extends LitElement {
               const tab = this.tabs.find(e.detail.path);
               if (tab) this.pinTab(tab);
             }}
+            @tab-move=${(e: CustomEvent<{ path: string; index: number }>) => {
+              this.tabs.move(e.detail.path, e.detail.index);
+              this.refreshTabs();
+              this.session.scheduleSession();
+            }}
             @tab-context=${(e: CustomEvent<{ path: string; x: number; y: number }>) =>
               void this.tabMenu(e.detail.path, e.detail.x, e.detail.y)}
             @preview-activate=${() => this.showPreview()}
