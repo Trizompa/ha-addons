@@ -24,3 +24,10 @@ anything users will see.
 A generic "sì" / "ok" / "vado" to a message with several points, or to a message that also talks
 about something else, approves nothing: list the open points and ask for an answer on each one.
 Never bundle a decision with another topic.
+
+## Stay inside what was agreed
+
+While a topic is still being discussed, do only what the maintainer approved, nothing around it.
+Anything else (version bumps, changelog wording, other files, anything visible on GitHub) waits
+for its own answer. Commit messages never mention issues or PRs (`#11`, "fixes #11"): GitHub
+links them on the issue page, which is visible to others.
