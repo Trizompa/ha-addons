@@ -48,10 +48,10 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
 
 ![Finestra principale](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-dark.png)
 
-- **Barra degli strumenti** (in alto): esplora file, salva e salva tutto, annulla e ripeti, cerca
-  e sostituisci, cronologia del file, a capo automatico, vista divisa, schema, pannello Inserisci,
-  anteprima template, aiuti di Home Assistant. A destra: **Controlla e Ricarica** (il menu di Home Assistant; sul
-  telefono solo la sua icona), lingua (Automatica (browser), Italiano,
+- **Barra degli strumenti** (in alto): esplora file; salva e salva tutto; annulla, ripeti e
+  cronologia del file; cerca e sostituisci, vista divisa, schema; pannello Inserisci, anteprima
+  template, aiuti di Home Assistant. A destra: **Comandi HA** (il menu di Home Assistant; sul
+  telefono solo la sua icona), a capo automatico, lingua (Automatica (browser), Italiano,
   English, e come si aprono i file), **Aa** per la grandezza del testo dell'editor (automatica, oppure fissa da 12 a 20 px),
   tema (automatico, chiaro, scuro) e Informazioni (versione, link e
   **Proponi un'idea o segnala un problema** e **Offrimi un caffè su Ko-fi**).
@@ -257,7 +257,7 @@ Il pulsante Inserisci apre un pannello laterale con due schede:
 
 ### Verifica, ricarica, riavvia
 
-Il pulsante **Controlla e Ricarica**, a destra nella barra, apre:
+Il pulsante **Comandi HA**, a destra nella barra, apre:
 
 - **Verifica configurazione**: chiede a Home Assistant di controllare tutta la configurazione e
   mostra l'esito.

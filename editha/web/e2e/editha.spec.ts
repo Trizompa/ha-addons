@@ -698,7 +698,7 @@ test.describe('Home Assistant', () => {
     await writeFile(path.join(configDir, 'check/rotto.yaml'), 'rotto: [\n');
     try {
       const haButton = page.locator('editha-toolbar button[title^="Home Assistant"]');
-      await expect(haButton).toHaveText('Controlla e Ricarica');
+      await expect(haButton).toHaveText('Comandi HA');
       await haButton.click();
       await menuItem(page, 'Verifica configurazione').click();
       await expect(page.locator('editha-dialog h2')).toHaveText('Configurazione non valida');
@@ -1327,7 +1327,7 @@ test('BK-6 – confronta due file dal menu contestuale', async ({ page }) => {
 test.describe('telefono', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
-  test('Controlla e Ricarica: sul telefono solo l\'icona, dentro lo schermo', async ({ page }) => {
+  test('Comandi HA: sul telefono solo l\'icona, dentro lo schermo', async ({ page }) => {
     const haButton = page.locator('editha-toolbar button[title^="Home Assistant"]');
     await expect(haButton).toBeVisible();
     await expect(haButton.locator('.ha-label')).toBeHidden();
