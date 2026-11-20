@@ -4,8 +4,8 @@ Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
 ## 0.48.0
 
-- **Reorder your tabs**: with a mouse, drag a tab where you want it. On a phone, long press a tab and use **Move left** / **Move right**. The order is kept.
-- **Search follows you across tabs**: with Find (Ctrl+F) open, switching tab keeps the same search, so you can look for the same entity in several files.
+- **Reorder your tabs** ([#11](https://github.com/Trizompa/ha-addons/issues/11)): with a mouse, drag a tab where you want it. On a phone, long press a tab and use **Move left** / **Move right**. The order is kept.
+- **Search follows you across tabs** ([#11](https://github.com/Trizompa/ha-addons/issues/11)): with Find (Ctrl+F or F3) open, switching tab keeps the same search, so you can carry on the search in the other tabs.
 - **HA Commands**: checking, reloading and restarting Home Assistant now have their own button with a label, on the right of the toolbar. Same menu as before.
 - **Tidier toolbar**: file history sits next to undo and redo, word wrap moves to the right with the settings, and dividers separate the groups.
 - **Ko-fi link** in About, for anyone who wants to support EDITHA.
