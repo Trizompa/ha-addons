@@ -697,7 +697,9 @@ test.describe('Home Assistant', () => {
     await mkdir(path.join(configDir, 'check'), { recursive: true });
     await writeFile(path.join(configDir, 'check/rotto.yaml'), 'rotto: [\n');
     try {
-      await page.locator('editha-toolbar button[title^="Home Assistant"]').click();
+      const haButton = page.locator('editha-toolbar button[title^="Home Assistant"]');
+      await expect(haButton).toHaveText('Controlla e Ricarica');
+      await haButton.click();
       await menuItem(page, 'Verifica configurazione').click();
       await expect(page.locator('editha-dialog h2')).toHaveText('Configurazione non valida');
       await expect(page.locator('editha-dialog pre')).toContainText('check/rotto.yaml');
@@ -1324,6 +1326,16 @@ test('BK-6 – confronta due file dal menu contestuale', async ({ page }) => {
 
 test.describe('telefono', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('Controlla e Ricarica: sul telefono solo l\'icona, dentro lo schermo', async ({ page }) => {
+    const haButton = page.locator('editha-toolbar button[title^="Home Assistant"]');
+    await expect(haButton).toBeVisible();
+    await expect(haButton.locator('.ha-label')).toBeHidden();
+    const box = (await haButton.boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    const last = (await page.locator('editha-toolbar button:visible').last().boundingBox())!;
+    expect(last.x + last.width).toBeLessThanOrEqual(390);
+  });
 
   test('UI-2 – colonna dei numeri compatta e righe spezzate allineate alla loro indentazione', async ({ page, request }) => {
     await request.post('api/settings', { data: { wordWrap: true } });

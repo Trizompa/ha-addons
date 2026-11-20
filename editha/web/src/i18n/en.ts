@@ -13,6 +13,7 @@ export const en: Record<keyof Dictionary, string> = {
   'toolbar.wrap': 'Word wrap',
   'toolbar.insert': 'Insert entity or snippet',
   'toolbar.ha': 'Home Assistant: check, reload, restart',
+  'toolbar.haLabel': 'Check & Reload',
   'toolbar.theme': 'Theme: {name}',
   'toolbar.language': 'Language: {name}',
   'theme.auto': 'Automatic',

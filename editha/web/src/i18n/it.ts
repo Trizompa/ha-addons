@@ -12,6 +12,7 @@ export const it = {
   'toolbar.wrap': 'A capo automatico',
   'toolbar.insert': 'Inserisci entità o snippet',
   'toolbar.ha': 'Home Assistant: verifica, ricarica, riavvia',
+  'toolbar.haLabel': 'Controlla e Ricarica',
   'toolbar.theme': 'Tema: {name}',
   'toolbar.language': 'Lingua: {name}',
   'theme.auto': 'Automatico',

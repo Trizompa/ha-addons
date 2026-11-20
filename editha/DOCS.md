@@ -47,8 +47,8 @@ through Home Assistant (Ingress), with your Home Assistant login.
 ![Main window](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/main-dark.png)
 
 - **Toolbar** (top): file explorer, save and save all, undo and redo, find and replace, file
-  history, word wrap, split view, outline, insert panel, template preview, Home Assistant hints and
-  the Home Assistant menu. On the right: language (Automatic (browser), Italiano, English, and how files open), **Aa**
+  history, word wrap, split view, outline, insert panel, template preview, Home Assistant hints. On the right: **Check & Reload** (the Home Assistant menu; only its
+  icon on a phone), language (Automatic (browser), Italiano, English, and how files open), **Aa**
   for the text size of the editor (automatic, or a fixed size from 12 to 20 px), theme (automatic,
   light, dark) and About (version, links, **Suggest an idea or report a problem** and **Buy me a coffee on Ko-fi**).
 - **File explorer** (left): the content of `/config`. Above it: search in all files, Git, new
@@ -248,7 +248,7 @@ The insert button opens a side panel with two tabs:
 
 ### Check, reload, restart
 
-The Home Assistant button in the toolbar:
+The **Check & Reload** button on the right of the toolbar opens:
 
 - **Check configuration**: asks Home Assistant to validate the whole configuration and shows the
   result.

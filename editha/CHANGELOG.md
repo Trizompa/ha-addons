@@ -6,6 +6,7 @@ Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
 - **Reorder your tabs**: with a mouse, drag a tab where you want it. On a phone, long press a tab and use **Move left** / **Move right**. The order is kept.
 - **Search follows you across tabs**: with Find (Ctrl+F) open, switching tab keeps the same search, so you can look for the same entity in several files.
+- **Check & Reload**: checking, reloading and restarting Home Assistant now have their own button with a label, on the right of the toolbar. Same menu as before.
 - **Ko-fi link** in About, for anyone who wants to support EDITHA.
 
 [![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/trizompa)

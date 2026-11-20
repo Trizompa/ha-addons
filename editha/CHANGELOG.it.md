@@ -6,6 +6,7 @@ Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella ing
 
 - **Riordina le tab**: col mouse trascini una tab dove vuoi. Sul telefono tieni premuta la tab e usa **Sposta a sinistra** / **Sposta a destra**. L'ordine resta memorizzato.
 - **La ricerca ti segue tra le tab**: con Cerca (Ctrl+F) aperto, cambiando tab resta la stessa ricerca, così cerchi la stessa entità in più file.
+- **Controlla e Ricarica**: verifica, ricarica e riavvio di Home Assistant hanno ora un pulsante con la scritta, a destra nella barra. Il menu è lo stesso di prima.
 - **Link a Ko-fi** in Informazioni, per chi vuole sostenere EDITHA.
 
 ## 0.47.0

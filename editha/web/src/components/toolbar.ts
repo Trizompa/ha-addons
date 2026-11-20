@@ -97,6 +97,39 @@ export class EdithaToolbar extends LitElement {
       .spacer {
         flex: 1;
       }
+      /* Verifica, ricarica e riavvio: pulsante con scritta, separato dagli strumenti dell'editor. */
+      .ha-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 32px;
+        margin-right: 8px;
+        padding: 0 6px 0 10px;
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background 0.12s;
+      }
+      .ha-btn:hover:not(:disabled) {
+        background: var(--hover);
+      }
+      .ha-btn:active:not(:disabled) {
+        background: var(--active);
+      }
+      .ha-btn:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .ha-btn:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
       /* Modifiche da salvare: icona blu e pallino, visibili a colpo d'occhio. */
       .pending,
       .icon-btn.pending:hover:not(:disabled) {
@@ -134,6 +167,20 @@ export class EdithaToolbar extends LitElement {
         .sep {
           display: none;
         }
+        /* Sul telefono solo l'icona, come gli altri pulsanti. */
+        .ha-btn {
+          justify-content: center;
+          width: 30px;
+          margin-right: 0;
+          padding: 0;
+          border: none;
+          background: transparent;
+          color: var(--text-muted);
+        }
+        .ha-btn .ha-label,
+        .ha-btn svg + svg {
+          display: none;
+        }
         .icon-btn {
           flex: none;
           width: 30px;
@@ -145,7 +192,8 @@ export class EdithaToolbar extends LitElement {
       }
       /* iPhone stretti (375 px) compresi: con 30 px l'ultimo pulsante usciva di mezzo pixel. */
       @media (max-width: 380px) {
-        .icon-btn {
+        .icon-btn,
+        .ha-btn {
           width: 28px;
         }
         .brand {
@@ -198,8 +246,16 @@ export class EdithaToolbar extends LitElement {
       ${this.button('insert', t('toolbar.insert'), icons.insert, { on: s.insertOpen, disabled: !s.hasTab && !s.insertOpen })}
       ${this.button('template', t('toolbar.template'), icons.template, { on: s.templateOpen, disabled: !s.hasTab && !s.templateOpen })}
       ${this.button('ha-hints', t('toolbar.haHints'), icons.haHints, { on: s.haHints, cls: 'hide-narrow' })}
-      ${this.button('ha-menu', t('toolbar.ha'), icons.homeAssistant, { disabled: s.haBusy })}
       <span class="spacer"></span>
+      <button
+        class="ha-btn"
+        title=${t('toolbar.ha')}
+        aria-label=${t('toolbar.ha')}
+        ?disabled=${s.haBusy}
+        @click=${(e: Event) => this.action('ha-menu', e)}
+      >
+        ${icon(icons.homeAssistant, 18)}<span class="ha-label">${t('toolbar.haLabel')}</span>${icon(icons.menuDown, 18)}
+      </button>
       ${this.renderPrefs()}
     `;
   }

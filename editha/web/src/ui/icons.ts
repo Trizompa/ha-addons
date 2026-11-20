@@ -5,6 +5,7 @@ import {
   mdiBrightnessAuto,
   mdiCheckCircleOutline,
   mdiChevronDown,
+  mdiMenuDown,
   mdiChevronLeft,
   mdiFilterOutline,
   mdiCancel,
@@ -82,6 +83,7 @@ export const icons = {
   themeDark: mdiWeatherNight,
   chevronRight: mdiChevronRight,
   chevronDown: mdiChevronDown,
+  menuDown: mdiMenuDown,
   chevronLeft: mdiChevronLeft,
   gallery: mdiViewGridOutline,
   /** Filtro per nome: diverso dalla lente, che cerca dentro i file. */
