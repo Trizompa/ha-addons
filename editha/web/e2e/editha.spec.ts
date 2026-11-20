@@ -507,6 +507,8 @@ test('UI – «Aa» cambia la grandezza del testo dell\'editor e la ricorda', as
   await page.locator('editha-toolbar button[data-action="font-size"]').click();
   await menuItem(page, '20 px').click();
   await expect.poll(size).toBe('20px');
+  // Si ricarica solo dopo il salvataggio della sessione, altrimenti la tab non torna.
+  await expect.poll(async () => (await (await page.request.get('api/session')).json()).tabs.map((t: { path: string }) => t.path)).toContain('tabs/a.yaml');
   await page.reload();
   await expect(page.locator('.cm-editor').first()).toBeVisible();
   await expect.poll(size).toBe('20px');
