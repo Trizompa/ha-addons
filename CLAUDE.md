@@ -43,3 +43,9 @@ hand the text over for the maintainer to paste instead of posting it myself.
 Never post comments, replies or reviews on GitHub (issues, PRs, discussions) myself: anything I
 post shows "with Claude" and the footer. I prepare the text, the maintainer approves it and
 pastes it.
+
+## No extra Claude mentions
+
+The maintainer does not hide that Claude helps, but does not want it repeated everywhere:
+commit messages get no `Co-Authored-By` / `Claude-Session` trailers, and nothing I write for the
+project (changelog, docs, release notes, posts) mentions Claude.
