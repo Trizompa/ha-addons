@@ -68,6 +68,8 @@ export const en: Record<keyof Dictionary, string> = {
   'tabs.menu.closeAll': 'Close all',
   'tabs.menu.keep': 'Keep open',
   'tabs.menu.keepHint': 'double-click',
+  'tabs.menu.moveLeft': 'Move left',
+  'tabs.menu.moveRight': 'Move right',
   'status.noFile': 'No file open',
   'status.yamlValid': 'Valid YAML',
   'status.yamlValidTitle': 'YAML syntax is valid',

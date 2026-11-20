@@ -69,6 +69,8 @@ export const it = {
   'tabs.menu.closeAll': 'Chiudi tutte',
   'tabs.menu.keep': 'Tieni aperta',
   'tabs.menu.keepHint': 'doppio clic',
+  'tabs.menu.moveLeft': 'Sposta a sinistra',
+  'tabs.menu.moveRight': 'Sposta a destra',
   'status.noFile': 'Nessun file aperto',
   'status.yamlValid': 'YAML valido',
   'status.yamlValidTitle': 'Sintassi YAML valida',

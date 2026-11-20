@@ -4,7 +4,7 @@ Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella ing
 
 ## 0.48.0
 
-- **Riordina le tab**: col mouse trascini una tab dove vuoi. L'ordine resta memorizzato.
+- **Riordina le tab**: col mouse trascini una tab dove vuoi. Sul telefono tieni premuta la tab e usa **Sposta a sinistra** / **Sposta a destra**. L'ordine resta memorizzato.
 - **La ricerca ti segue tra le tab**: con Cerca (Ctrl+F) aperto, cambiando tab resta la stessa ricerca, così cerchi la stessa entità in più file.
 - **Link a Ko-fi** in Informazioni, per chi vuole sostenere EDITHA.
 

@@ -812,7 +812,8 @@ export class EdithaApp extends LitElement {
   }
 
   /** ED-19: menu della tab (tasto destro, o pressione prolungata su touch). */
-  async tabMenu(path: string, x: number, y: number): Promise<void> {
+  /** Menu della tab; col dito (`touch`) anche gli spostamenti, che col mouse si fanno trascinando. */
+  async tabMenu(path: string, x: number, y: number, touch = false): Promise<void> {
     const tab = this.tabs.find(path);
     if (!tab) return;
     const list = this.tabs.tabs;
@@ -826,8 +827,21 @@ export class EdithaApp extends LitElement {
       { id: 'all', label: t('tabs.menu.closeAll') },
     ];
     if (tab.provisional) items.push('separator', { id: 'keep', label: t('tabs.menu.keep'), hint: t('tabs.menu.keepHint') });
+    if (touch) {
+      items.push(
+        'separator',
+        { id: 'left', label: t('tabs.menu.moveLeft'), disabled: index === 0 },
+        { id: 'move-right', label: t('tabs.menu.moveRight'), disabled: index === list.length - 1 },
+      );
+    }
     const choice = await this.menu.show(items, x, y);
     if (choice === 'keep') return this.pinTab(tab);
+    if (choice === 'left' || choice === 'move-right') {
+      this.tabs.move(tab.path, index + (choice === 'left' ? -1 : 1));
+      this.refreshTabs();
+      this.session.scheduleSession();
+      return;
+    }
     const targets =
       choice === 'close'
         ? [tab]
@@ -1266,8 +1280,8 @@ export class EdithaApp extends LitElement {
               this.refreshTabs();
               this.session.scheduleSession();
             }}
-            @tab-context=${(e: CustomEvent<{ path: string; x: number; y: number }>) =>
-              void this.tabMenu(e.detail.path, e.detail.x, e.detail.y)}
+            @tab-context=${(e: CustomEvent<{ path: string; x: number; y: number; touch?: boolean }>) =>
+              void this.tabMenu(e.detail.path, e.detail.x, e.detail.y, !!e.detail.touch)}
             @preview-activate=${() => this.showPreview()}
             @preview-close=${() => this.closePreview()}
           ></editha-tab-bar>

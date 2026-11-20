@@ -139,6 +139,29 @@ test('issue #11 – le tab si riordinano trascinandole col mouse, e l\'ordine re
   await expect.poll(order).toEqual(['tabs/b.yaml', 'tabs/c.yaml', 'tabs/a.yaml']);
 });
 
+test('issue #11 – sul telefono il menu della tab sposta la tab a sinistra e a destra', async ({ page }) => {
+  await openFile(page, 'tabs/a.yaml');
+  await openFile(page, 'tabs/b.yaml');
+  const order = () => page.locator('editha-tab-bar .tab').evaluateAll((els) => els.map((e) => e.getAttribute('data-path')));
+  // Col mouse il menu non ha gli spostamenti (si trascina).
+  await tab(page, 'tabs/b.yaml').click({ button: 'right' });
+  await expect(menuItem(page, 'Sposta a sinistra')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  // Pressione prolungata col dito: la stessa richiesta che manda la barra delle tab.
+  const longPress = (p: string) =>
+    page.locator('editha-tab-bar').evaluate((bar, p) => {
+      bar.dispatchEvent(new CustomEvent('tab-context', { detail: { path: p, x: 80, y: 80, touch: true }, bubbles: true, composed: true }));
+    }, p);
+  await longPress('tabs/a.yaml');
+  await expect(menuItem(page, 'Sposta a sinistra')).toBeDisabled();
+  await menuItem(page, 'Sposta a destra').click();
+  await expect.poll(order).toEqual(['tabs/b.yaml', 'tabs/a.yaml']);
+  await longPress('tabs/a.yaml');
+  await expect(menuItem(page, 'Sposta a destra')).toBeDisabled();
+  await menuItem(page, 'Sposta a sinistra').click();
+  await expect.poll(order).toEqual(['tabs/a.yaml', 'tabs/b.yaml']);
+});
+
 test('issue #11 – la ricerca aperta passa alla tab successiva con lo stesso testo', async ({ page }) => {
   await openFile(page, 'tabs/a.yaml');
   await openFile(page, 'tabs/b.yaml');

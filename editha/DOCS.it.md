@@ -64,8 +64,9 @@ attraverso Home Assistant (Ingress), con il tuo accesso a Home Assistant.
   telefono) chiudi quella tab, le altre, quelle a destra, quelle salvate o tutte, oppure la tieni
   aperta. Se preferisci aprire i file con un doppio clic, sceglilo nel menu della lingua: un clic
   allora seleziona soltanto il file. Sul telefono un tocco apre comunque il file, come Invio
-  nell'esplora file. Col mouse puoi trascinare una tab per cambiare l'ordine delle tab, che
-  resta memorizzato.
+  nell'esplora file. Col mouse puoi trascinare una tab per cambiare l'ordine delle tab; sul
+  telefono usa **Sposta a sinistra** e **Sposta a destra** nel menu della tab. L'ordine resta
+  memorizzato.
 - **Barra di stato** (in basso): percorso del file, esito del controllo YAML, posizione del
   cursore, codifica e linguaggio.
 

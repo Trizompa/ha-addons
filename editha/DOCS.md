@@ -61,7 +61,8 @@ through Home Assistant (Ingress), with your Home Assistant login.
   right, the saved ones or all of them, or to keep it open. If you prefer to open files with a
   double-click, choose it in the language menu: a click then only selects the file. On a phone a
   tap still opens the file, and so does Enter in the file explorer. With a mouse you can drag a
-  tab to change the order of the tabs; the order is kept.
+  tab to change the order of the tabs; on a phone, use **Move left** and **Move right** in the
+  tab menu. The order is kept.
 - **Status bar** (bottom): file path, YAML check result, cursor position, encoding and language.
 
 Open tabs (the temporary one too), the active tab, the theme and the language are remembered when you leave EDITHA or

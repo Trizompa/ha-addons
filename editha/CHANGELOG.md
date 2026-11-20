@@ -4,7 +4,7 @@ Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
 ## 0.48.0
 
-- **Reorder your tabs**: with a mouse, drag a tab where you want it. The order is kept.
+- **Reorder your tabs**: with a mouse, drag a tab where you want it. On a phone, long press a tab and use **Move left** / **Move right**. The order is kept.
 - **Search follows you across tabs**: with Find (Ctrl+F) open, switching tab keeps the same search, so you can look for the same entity in several files.
 - **Ko-fi link** in About, for anyone who wants to support EDITHA.
 

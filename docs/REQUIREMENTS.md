@@ -83,7 +83,7 @@ The IDs (`SEC-1`, `ED-3`, …) are for citing requirements in issues and commits
 | ED-17 | Split view in two columns: two files (or two places in the same file) side by side. | P1 |
 | ED-18 | Outline of the YAML file next to the editor (entries by alias: automations, scripts, sections, helpers), with jump to line and active entry; it can be turned on and off and the choice is kept. | P1 |
 | ED-19 | Temporary tab: one click in the file tree opens the file in a temporary tab (italic name) that the next one-click file replaces; typing, saving or a double-click keeps it. Tab context menu (close, close others, to the right, saved, all, keep open). Optional double-click to open, kept in the settings and the session. | P1 |
-| ED-20 | Tab order changed by dragging a tab with the mouse (touch unchanged: long press opens the tab menu), kept in the session. With the find panel open, switching tab carries the same search (text and options) to the new tab (issue #11). | P2 |
+| ED-20 | Tab order changed by dragging a tab with the mouse (on touch, Move left / Move right in the long-press tab menu), kept in the session. With the find panel open, switching tab carries the same search (text and options) to the new tab (issue #11). | P2 |
 
 ## 4. YAML and Home Assistant
 

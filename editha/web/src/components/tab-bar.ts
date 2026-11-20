@@ -273,7 +273,7 @@ export class EdithaTabBar extends LitElement {
     this.pressTimer = setTimeout(() => {
       this.pressOrigin = null;
       this.longPressAt = Date.now();
-      this.emit('tab-context', path, { x, y });
+      this.emit('tab-context', path, { x, y, touch: true });
     }, 500);
   }
 
@@ -324,7 +324,8 @@ export class EdithaTabBar extends LitElement {
               e.preventDefault();
               // Su Android il menu nativo può arrivare prima della pressione prolungata: una volta sola.
               this.cancelPress();
-              if (!this.pressedLong()) this.emit('tab-context', tab.path, { x: e.clientX, y: e.clientY });
+              const touch = (e as PointerEvent).pointerType === 'touch';
+              if (!this.pressedLong()) this.emit('tab-context', tab.path, { x: e.clientX, y: e.clientY, touch });
             }}
             @pointerdown=${(e: PointerEvent) => this.onPointerDown(e, tab.path)}
             @pointermove=${(e: PointerEvent) => this.onPointerMove(e)}
