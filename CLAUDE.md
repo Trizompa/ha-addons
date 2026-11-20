@@ -29,5 +29,4 @@ Never bundle a decision with another topic.
 
 While a topic is still being discussed, do only what the maintainer approved, nothing around it.
 Anything else (version bumps, changelog wording, other files, anything visible on GitHub) waits
-for its own answer. Commit messages never mention issues or PRs (`#11`, "fixes #11"): GitHub
-links them on the issue page, which is visible to others.
+for its own answer. (Mentioning an issue number such as `#11` in a commit message is fine.)
