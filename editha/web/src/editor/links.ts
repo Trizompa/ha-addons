@@ -46,13 +46,13 @@ export function linksIn(line: string): EditorLink[] {
   // Niente collegamenti dentro i commenti né dentro un testo tra virgolette ("!include x" è un testo).
   const { quoted: strings, end } = scanLine(line);
   for (const m of line.matchAll(LINK)) {
-    if (m.index! >= end) break;
-    if (strings.some(([a, b]) => m.index! > a && m.index! < b)) continue;
+    if (m.index >= end) break;
+    if (strings.some(([a, b]) => m.index > a && m.index < b)) continue;
     const raw = m[2]!;
     const quoted = raw.startsWith('"') || raw.startsWith("'");
     const target = quoted ? raw.slice(1, -1) : raw;
     if (!target) continue;
-    const from = m.index! + m[0].length - raw.length + (quoted ? 1 : 0);
+    const from = m.index + m[0].length - raw.length + (quoted ? 1 : 0);
     const kind: LinkKind = m[1] === 'secret' ? 'secret' : m[1] === 'include' ? 'include' : 'dir';
     links.push({ kind, target, from, to: from + target.length });
   }

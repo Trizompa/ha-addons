@@ -320,7 +320,7 @@ export class EdithaHistoryPanel extends LitElement {
     this.error = null;
     this.same = content === this.current;
     await this.updateComplete;
-    const parent = this.renderRoot.querySelector('.merge') as HTMLElement | null;
+    const parent = this.renderRoot.querySelector<HTMLElement>('.merge');
     if (!parent || token !== this.loadToken || !this.isConnected) return;
     const extensions = viewerExtensions(this.path, this.prefs);
     const collapse = { margin: 3, minSize: 6 };

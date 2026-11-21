@@ -275,10 +275,10 @@ export class EdithaGalleryPanel extends LitElement {
     const before = changed.get('open') as string | null | undefined;
     if (this.open !== null && before == null) {
       // Il visore prende il focus: frecce ed Esc vanno a lui, non alle miniature dietro.
-      (this.renderRoot.querySelector('.viewer') as HTMLElement | null)?.focus();
+      this.renderRoot.querySelector<HTMLElement>('.viewer')?.focus();
     } else if (this.open === null && before) {
       // Chiuso: il focus torna sulla miniatura da cui si era partiti.
-      (this.renderRoot.querySelector(`.card[data-path="${CSS.escape(before)}"]`) as HTMLElement | null)?.focus();
+      this.renderRoot.querySelector<HTMLElement>(`.card[data-path="${CSS.escape(before)}"]`)?.focus();
     }
   }
 

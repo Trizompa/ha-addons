@@ -145,7 +145,7 @@ export class EdithaComparePanel extends LitElement {
     this.requestUpdate();
     this.merge?.destroy();
     this.merge = null;
-    const parent = this.renderRoot.querySelector('.merge') as HTMLElement | null;
+    const parent = this.renderRoot.querySelector<HTMLElement>('.merge');
     if (!parent || !this.left.path || !this.right.path) return;
     const collapse = { margin: 3, minSize: 6 };
     const root = this.renderRoot as ShadowRoot;

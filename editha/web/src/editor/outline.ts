@@ -102,14 +102,14 @@ export function buildOutline(source: string): Outline {
 
   if (isSeq(root)) {
     root.items.forEach((item, i) => {
-      const line = startLine(item as Node, lc);
+      const line = startLine(item, lc);
       if (line !== null) out.push({ ...short2(itemLabel(item, i)), line, depth: 0 });
     });
   } else if (isMap(root)) {
     for (const pair of root.items) {
       if (!isPair(pair)) continue;
       const key = keyText(pair.key);
-      const line = startLine(pair.key as Node, lc);
+      const line = startLine(pair.key, lc);
       if (key === null || line === null) continue;
       // Al primo livello conta solo l'alias (script): "name" è spesso un'impostazione (homeassistant).
       const named = isMap(pair.value) ? text(pair.value, 'alias') : null;

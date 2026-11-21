@@ -115,12 +115,12 @@ export class EdithaContextMenu extends LitElement {
     window.addEventListener('resize', this.onBlur);
     void this.updateComplete.then(() => {
       // Il menu non deve uscire dalla finestra.
-      const menu = this.renderRoot.querySelector('.menu') as HTMLElement | null;
+      const menu = this.renderRoot.querySelector<HTMLElement>('.menu');
       if (!menu) return;
       const r = menu.getBoundingClientRect();
       this.x = Math.max(8, Math.min(x, window.innerWidth - r.width - 8));
       this.y = Math.max(8, Math.min(y, window.innerHeight - r.height - 8));
-      (menu.querySelector('button:not(:disabled)') as HTMLElement | null)?.focus();
+      menu.querySelector<HTMLElement>('button:not(:disabled)')?.focus();
     });
     return new Promise((resolve) => (this.resolve = resolve));
   }

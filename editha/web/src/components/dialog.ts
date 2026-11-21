@@ -152,7 +152,7 @@ export class EdithaDialog extends LitElement {
           dialog.focus();
           this.typingUntil = Date.now() + 1000;
         } else {
-          (this.renderRoot.querySelector(`[data-id="${p.defaultId}"]`) as HTMLElement | null)?.focus();
+          this.renderRoot.querySelector<HTMLElement>(`[data-id="${p.defaultId}"]`)?.focus();
         }
       });
     });

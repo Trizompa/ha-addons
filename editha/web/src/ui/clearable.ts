@@ -18,7 +18,7 @@ export function clearable(input: TemplateResult, value: string, onClear: () => v
           @mousedown=${(e: Event) => e.preventDefault()}
           @click=${(e: Event) => {
             onClear();
-            ((e.currentTarget as HTMLElement).parentElement?.querySelector('input') as HTMLInputElement | null)?.focus();
+            ((e.currentTarget as HTMLElement).parentElement?.querySelector<HTMLInputElement>('input'))?.focus();
           }}
         >
           ${icon(icons.close, 15)}

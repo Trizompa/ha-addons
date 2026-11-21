@@ -9,6 +9,7 @@
     "build": "node build.mjs",
     "watch": "node build.mjs --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
     "test": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test \".test-dist/test/**/*.test.js\"",
     "test:e2e": "npm run build && npm --prefix ../server run build && playwright test",
     "screenshots": "npm run build && npm --prefix ../server run build && node scripts/screenshots.mjs"
@@ -36,9 +37,12 @@
     "yaml": "2.9.1"
   },
   "devDependencies": {
+    "@eslint/js": "9.39.5",
     "@playwright/test": "1.65.1",
     "@types/node": "22.20.5",
     "esbuild-wasm": "0.28.2",
-    "typescript": "5.9.3"
+    "eslint": "9.39.5",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.73.0"
   }
 }

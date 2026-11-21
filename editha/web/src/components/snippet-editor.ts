@@ -85,7 +85,7 @@ export class EdithaSnippetEditor extends LitElement {
       void this.updateComplete.then(() => {
         const dialog = this.renderRoot.querySelector('dialog')!;
         if (!dialog.open) dialog.showModal();
-        (this.renderRoot.querySelector('textarea') as HTMLTextAreaElement | null)?.focus();
+        this.renderRoot.querySelector<HTMLTextAreaElement>('textarea')?.focus();
       });
     });
   }
@@ -93,7 +93,7 @@ export class EdithaSnippetEditor extends LitElement {
   private finish(result: { name: string; body: string } | null): void {
     const pending = this.pending;
     this.pending = null;
-    (this.renderRoot.querySelector('dialog') as HTMLDialogElement | null)?.close();
+    this.renderRoot.querySelector<HTMLDialogElement>('dialog')?.close();
     pending?.resolve(result);
   }
 

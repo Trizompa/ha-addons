@@ -128,7 +128,7 @@ export class EdithaFolderPicker extends LitElement {
       void this.updateComplete.then(() => {
         const dialog = this.renderRoot.querySelector('dialog')!;
         if (!dialog.open) dialog.showModal();
-        (this.renderRoot.querySelector('input') as HTMLInputElement | null)?.focus();
+        this.renderRoot.querySelector<HTMLInputElement>('input')?.focus();
       });
     });
   }
@@ -136,7 +136,7 @@ export class EdithaFolderPicker extends LitElement {
   private finish(folder: string | null): void {
     const pending = this.pending;
     this.pending = null;
-    (this.renderRoot.querySelector('dialog') as HTMLDialogElement | null)?.close();
+    this.renderRoot.querySelector<HTMLDialogElement>('dialog')?.close();
     pending?.resolve(folder);
   }
 

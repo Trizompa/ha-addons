@@ -41,6 +41,7 @@ jobs:
           done
           echo "version $app everywhere"
       - run: npm run typecheck
+      - run: npm run lint
       - run: npm test
 
   web:
@@ -59,10 +60,11 @@ jobs:
         run: |
           npm ci --prefix editha/server
           npm ci --prefix editha/web
-      - name: Type check and unit tests
+      - name: Type check, lint and unit tests
         working-directory: editha/web
         run: |
           npm run typecheck
+          npm run lint
           npm test
       - name: Test browser
         working-directory: editha/web

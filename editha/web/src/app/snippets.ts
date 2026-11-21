@@ -20,7 +20,7 @@ export class SnippetsController {
     this.app.refreshStatus();
     if (this.app.insertOpen) {
       void this.app.updateComplete.then(() =>
-        (this.app.renderRoot.querySelector('editha-insert-panel') as EdithaInsertPanel | null)?.focusSearch(),
+        this.app.renderRoot.querySelector<EdithaInsertPanel>('editha-insert-panel')?.focusSearch(),
       );
     }
   }

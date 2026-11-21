@@ -12,7 +12,7 @@ export class HistoryController {
 
   /** Versioni eliminate: la cronologia aperta di un file ricarica il suo elenco. */
   async afterHistoryPruned(): Promise<void> {
-    const panel = this.app.renderRoot.querySelector('editha-history-panel') as EdithaHistoryPanel | null;
+    const panel = this.app.renderRoot.querySelector<EdithaHistoryPanel>('editha-history-panel');
     if (panel && this.app.history) await panel.reload(this.app.history.current);
   }
 

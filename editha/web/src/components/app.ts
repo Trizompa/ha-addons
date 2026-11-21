@@ -4,7 +4,7 @@ import type { ViewUpdate } from '@codemirror/view';
 import { redoDepth, undoDepth } from '@codemirror/commands';
 import { forEachDiagnostic } from '@codemirror/lint';
 import { api, ApiError, errorText } from '../api/client.js';
-import { getLang, onLangChange, resolveLang, setLang, t, type LanguageSetting, type MessageKey } from '../i18n/index.js';
+import { getLang, onLangChange, resolveLang, setLang, t, type LanguageSetting } from '../i18n/index.js';
 import { connection } from '../api/connection.js';
 import type { Entry, Settings, ThemeMode } from '../api/types.js';
 import { createEditorState, docText, reconfigureEffects, type EditorPrefs } from '../editor/setup.js';
@@ -432,7 +432,7 @@ export class EdithaApp extends LitElement {
   }
   get side(): EdithaSidePane | null {
     // Chiamato anche dal costruttore, prima del primo render.
-    return (this.renderRoot?.querySelector('editha-side-pane') ?? null) as EdithaSidePane | null;
+    return this.renderRoot?.querySelector('editha-side-pane') ?? null;
   }
 
   /** Colonna su cui agiscono barra e scorciatoie: quella usata per ultima. */
@@ -1106,7 +1106,7 @@ export class EdithaApp extends LitElement {
   private computeToolbar(state?: EditorState): ToolbarState {
     const onSide = this.split && this.sideFocused && !!this.side?.shown;
     const tab = this.focusedTab();
-    const s = tab ? (onSide ? (this.side!.viewState ?? undefined) : (state ?? this.pane?.stateOf(tab))) : undefined;
+    const s = tab ? (onSide ? (this.side.viewState ?? undefined) : (state ?? this.pane?.stateOf(tab))) : undefined;
     return {
       hasTab: !!tab,
       canSave: !!tab && tab.dirty && !tab.readOnly,

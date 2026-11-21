@@ -63,7 +63,7 @@ async function send(method: Method, url: string, body: unknown): Promise<{ res: 
   const res = await fetch(url, {
     method,
     headers: body === undefined ? {} : { 'content-type': raw ? 'application/octet-stream' : 'application/json' },
-    body: body === undefined ? null : raw ? (body as RawBody).blob : json,
+    body: body === undefined ? null : raw ? body.blob : json,
     cache: 'no-store',
     keepalive: leaving && !raw && (json === null || new TextEncoder().encode(json).length < 60_000),
   });

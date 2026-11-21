@@ -155,7 +155,7 @@ const indentOf = (line: string) => /^ */.exec(line)![0].length;
 /** Riga che conta per la struttura: non vuota e non solo commento. */
 const isContent = (line: string) => line.trim() !== '' && !line.trimStart().startsWith('#');
 /** `chiave:valore` senza spazio (esclusi URL, orari, icone mdi: come valori). */
-const MISSING_COLON_VALUE = /^ *(?:- +)?([A-Za-z_][\w-]*) +([^\s:#\-][^:#]*)$/;
+const MISSING_COLON_VALUE = /^ *(?:- +)?([A-Za-z_][\w-]*) +([^\s:#-][^:#]*)$/;
 const MISSING_SPACE = /^(\s*)(- )?([A-Za-z_][\w-]*):([^\s:/][^\n]*)$/;
 
 /**
@@ -246,7 +246,7 @@ function explainIndent(lines: Lines, index: number): string | null {
     }
     if (!opensBlock(prevText)) {
       // Il caso più comune: una chiave scritta senza i due punti.
-      const bare = /^\s*(?:- +)?([^\s:#"'{}\[\],]+)$/.exec(prevText);
+      const bare = /^\s*(?:- +)?([^\s:#"'{}[\],]+)$/.exec(prevText);
       if (bare) return t('yaml.explain.missingColon', { prev: prev + 1, key: bare[1]!, line: n });
       // La riga sopra ha già un valore: non può contenere altre righe.
       const valued = /^\s*(?:- +)?([^:#]+?):\s+(\S.*)$/.exec(prevText);
@@ -276,7 +276,7 @@ function brokenBlocks(lines: Lines): Map<number, number> {
     const line = lines.text[i]!;
     if (!isContent(line) || /^ *- /.test(line)) continue;
     const text = line.replace(/\s+#.*$/, '').trimEnd();
-    const opensNothing = /^\s*[^\s:#"'{}\[\],]+$/.test(text) || /^\s*[^:#]+?:\s+\S/.test(text);
+    const opensNothing = /^\s*[^\s:#"'{}[\],]+$/.test(text) || /^\s*[^:#]+?:\s+\S/.test(text);
     if (!opensNothing || opensBlock(text)) continue;
     const base = indentOf(line);
     let j = i + 1;

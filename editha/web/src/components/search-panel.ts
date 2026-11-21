@@ -328,7 +328,7 @@ export class EdithaSearchPanel extends LitElement {
 
   focusInput(): void {
     void this.updateComplete.then(() => {
-      const input = this.renderRoot.querySelector('input') as HTMLInputElement | null;
+      const input = this.renderRoot.querySelector<HTMLInputElement>('input');
       input?.focus();
       input?.select();
     });
@@ -546,7 +546,7 @@ export class EdithaSearchPanel extends LitElement {
                 @click=${() => {
                   this.query = '';
                   this.schedule();
-                  (this.renderRoot.querySelector('.box .input') as HTMLInputElement | null)?.focus();
+                  this.renderRoot.querySelector<HTMLInputElement>('.box .input')?.focus();
                 }}
               >
                 ${icon(icons.close, 15)}
