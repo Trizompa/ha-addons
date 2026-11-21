@@ -635,6 +635,9 @@ export class FileService {
     }
     const computed = await new Promise<Extract<ReplaceMessage, { type: 'file' }>[]>((resolve, reject) => {
       const out: Extract<ReplaceMessage, { type: 'file' }>[] = [];
+      // I contenuti nuovi restano qui finché non sono pronti tutti: un tetto complessivo, come per
+      // gli ZIP. Superato, non si salva niente.
+      let bytes = 0;
       const worker = new Worker(new URL('./search-worker.js', import.meta.url), {
         workerData: { mode: 'replace', files: targets, opts, replacement, maxFileSize: this.maxFileSize },
         resourceLimits: WORKER_LIMITS,
@@ -653,7 +656,11 @@ export class FileService {
         SEARCH_BUDGET_MS,
       );
       worker.on('message', (msg: ReplaceMessage) => {
-        if (msg.type === 'file') out.push(msg);
+        if (msg.type === 'file') {
+          bytes += Buffer.byteLength(msg.content, 'utf8');
+          if (bytes > this.maxDownload) end(new EdithaError('too_large', 'Sostituzione troppo grande per la memoria disponibile'));
+          else out.push(msg);
+        }
         else if (msg.type === 'skip') skipped.push({ path: msg.rel, reason: msg.reason });
         else end();
       });

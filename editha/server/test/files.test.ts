@@ -584,6 +584,17 @@ describe('FileService', () => {
       assert.deepEqual(res.results.map((r) => r.path), ['sub/ok.yaml']);
     });
 
+    it('una sostituzione oltre il tetto complessivo non salva niente', async () => {
+      await writeTree(sb.configDir, { 'big/a.yaml': 'x'.repeat(600), 'big/b.yaml': 'x'.repeat(600) });
+      const small = new FileService(await PathGuard.create(sb.configDir), backups, 1024, 1000);
+      await assert.rejects(small.replace(['big/a.yaml', 'big/b.yaml'], { query: 'x' }, 'y'), rejectsWith('too_large'));
+      assert.equal(await readFile(abs('big/a.yaml'), 'utf8'), 'x'.repeat(600));
+      assert.equal(await readFile(abs('big/b.yaml'), 'utf8'), 'x'.repeat(600));
+      // Sotto il tetto funziona.
+      const ok = await small.replace(['big/a.yaml'], { query: 'x' }, 'y');
+      assert.equal(ok.files.length, 1);
+    });
+
     it('la sostituzione salta i file invariati e segnala binari e codifica', async () => {
       await writeTree(sb.configDir, {
         'same.yaml': 'a: x\n',
