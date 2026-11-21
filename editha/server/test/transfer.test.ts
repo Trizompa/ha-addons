@@ -155,6 +155,17 @@ describe('upload e download (FS-6)', () => {
     await writeFile(path.join(sb.configDir, 'packages/copia/.storage/auth'), 'TOKEN');
     assert.ok(![...readZip((await download('packages')).rawPayload).keys()].some((n) => n.includes('.storage')));
     await rm(path.join(sb.configDir, 'packages/copia'), { recursive: true });
+    // Anche i repository git annidati: la loro cronologia può contenere un vecchio secrets.yaml.
+    await mkdir(path.join(sb.configDir, 'packages/componente/.git/objects'), { recursive: true });
+    await writeFile(path.join(sb.configDir, 'packages/componente/.git/objects/ab'), 'blob');
+    await writeFile(path.join(sb.configDir, 'packages/componente/.git/secrets.yaml'), 'pw: z\n');
+    await writeFile(path.join(sb.configDir, 'packages/componente/init.py'), 'x = 1\n');
+    const conGit = [...readZip((await download('packages')).rawPayload).keys()];
+    assert.ok(conGit.includes('componente/init.py'), conGit.join(','));
+    assert.ok(!conGit.some((n) => n.includes('.git')), conGit.join(','));
+    const avviso = await app.inject({ method: 'GET', url: '/api/download/excluded?path=packages', remoteAddress: INGRESS });
+    assert.deepEqual(avviso.json().excluded, ['packages/secrets_old.yaml']);
+    await rm(path.join(sb.configDir, 'packages/componente'), { recursive: true });
     // Da solo, secrets.yaml si scarica (lo chiede chi lo vuole).
     assert.equal((await download('secrets.yaml')).statusCode, 200);
     // Gli altri test di questo file usano la stessa cartella.

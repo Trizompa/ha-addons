@@ -432,6 +432,8 @@ export class FileService {
       for (const d of await readdir(abs, { withFileTypes: true })) {
         if (d.isSymbolicLink()) continue;
         if (abs === this.guard.root && d.isDirectory() && READ_ONLY_DIRS.includes(d.name)) continue;
+        // Le stesse cartelle che lo ZIP salta del tutto.
+        if (d.isDirectory() && NESTED_SKIP_DIRS.includes(d.name)) continue;
         const name = prefix ? `${prefix}/${d.name}` : d.name;
         if (d.isDirectory()) await walk(path.join(abs, d.name), name);
         else if (d.isFile() && isSecretsFile(d.name)) out.push(dir.rel ? `${dir.rel}/${name}` : name);
@@ -456,9 +458,10 @@ export class FileService {
         // Scaricando tutta /config le cartelle di sistema (SEC-8) restano fuori: dati interni
         // di HA, token, dipendenze. Si possono scaricare chiedendo la cartella da sola.
         if (abs === this.guard.root && d.isDirectory() && READ_ONLY_DIRS.includes(d.name)) continue;
-        // Copie di .storage e .cloud più in basso (dentro backup di altre app): token e dati
-        // interni di HA, fuori come in ricerca e in Git.
-        if (d.isDirectory() && (d.name === '.storage' || d.name === '.cloud')) continue;
+        // Copie di .storage e .cloud più in basso (dentro backup di altre app) e repository git
+        // annidati: token, dati interni di HA, cronologie che possono contenere vecchi secrets.yaml.
+        // Fuori a qualunque profondità, come in ricerca e in Git.
+        if (d.isDirectory() && NESTED_SKIP_DIRS.includes(d.name)) continue;
         // SEC-7: secrets.yaml e le sue copie non escono mai in uno ZIP (si scaricano solo da soli).
         if (d.isFile() && isSecretsFile(d.name)) continue;
         const childAbs = path.join(abs, d.name);
