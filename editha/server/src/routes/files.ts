@@ -84,7 +84,11 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
         },
       },
     },
-    async (req) => files.rename(req.body.from, req.body.to),
+    async (req) =>
+      files.rename(req.body.from, req.body.to, (err, from, to) =>
+        // Solo percorsi e motivo, mai contenuti (SEC-9).
+        req.log.warn({ from, to, reason: err instanceof Error ? err.message : String(err) }, 'rinomina: cronologia non spostata, resta sotto il vecchio nome'),
+      ),
   );
 
   // Oltre EDITHA_MAX_TRANSFER non si conserva una copia: 409 no_backup, a meno di noBackup=true.

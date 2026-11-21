@@ -241,6 +241,20 @@ describe('FileService', () => {
       assert.equal((await files.versions('automations.yaml')).length, 0);
     });
 
+    it('se la cronologia non si sposta la rinomina riesce comunque e lo segnala a chi chiama', async () => {
+      const f = await files.read('automations.yaml');
+      await files.write('automations.yaml', 'v2\n', f.etag);
+      backups.move = () => Promise.reject(new Error('disco pieno'));
+      const segnalati: string[] = [];
+      const entry = await files.rename('automations.yaml', 'nuovo.yaml', (err, from, to) =>
+        segnalati.push(`${from} -> ${to}: ${(err as Error).message}`),
+      );
+      assert.equal(entry.path, 'nuovo.yaml');
+      assert.equal(await readFile(abs('nuovo.yaml'), 'utf8'), 'v2\n');
+      assert.deepEqual(segnalati, ['automations.yaml -> nuovo.yaml: disco pieno']);
+      assert.equal((await files.versions('automations.yaml')).length, 1);
+    });
+
     it('rinomina una cartella', async () => {
       await files.rename('packages', 'pacchetti');
       assert.equal(await readFile(abs('pacchetti/lights.yaml'), 'utf8'), 'light: []\n');

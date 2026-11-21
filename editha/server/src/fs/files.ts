@@ -339,7 +339,15 @@ export class FileService {
   }
 
   /** FS-3: rinomina o sposta; la destinazione non deve esistere. */
-  async rename(fromInput: string, toInput: string): Promise<Entry> {
+  /**
+   * `onHistoryError`: la rinomina è riuscita ma la cronologia non si è spostata (resta sotto il
+   * vecchio nome). Chi chiama lo registra: per l'utente l'operazione è comunque riuscita.
+   */
+  async rename(
+    fromInput: string,
+    toInput: string,
+    onHistoryError?: (err: unknown, from: string, to: string) => void,
+  ): Promise<Entry> {
     const from = await this.guard.resolveEntry(fromInput);
     const to = await this.guard.resolveEntry(toInput);
     this.guard.assertWritable(from);
@@ -364,8 +372,8 @@ export class FileService {
       try {
         if (st.isFile()) await this.backups.move(fromKey, toKey);
         else if (st.isDirectory()) await this.backups.moveTree(fromKey, toKey);
-      } catch {
-        // cronologia non spostata
+      } catch (err) {
+        onHistoryError?.(err, from.rel, to.rel);
       }
       return this.entryOf(to);
     });
