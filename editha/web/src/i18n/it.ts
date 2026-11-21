@@ -348,6 +348,7 @@ export const it = {
   'error.unexpected': 'errore inatteso',
   'error.forbidden_path': 'percorso non consentito',
   'error.read_only': 'percorso in sola lettura',
+  'error.git_zip': 'Le cartelle .git non si scaricano come zip: la cronologia può contenere vecchie versioni dei file, anche di secrets.yaml',
   'error.not_found': 'percorso non trovato',
   'error.already_exists': 'esiste già',
   'error.conflict': 'il file è stato modificato da un altro programma',

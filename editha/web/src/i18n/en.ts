@@ -337,6 +337,7 @@ export const en: Record<keyof Dictionary, string> = {
   'error.unexpected': 'unexpected error',
   'error.forbidden_path': 'path not allowed',
   'error.read_only': 'read-only path',
+  'error.git_zip': ".git folders can't be downloaded as a zip: their history may contain old versions of files, including secrets.yaml",
   'error.not_found': 'path not found',
   'error.already_exists': 'already exists',
   'error.conflict': 'the file was changed by another program',

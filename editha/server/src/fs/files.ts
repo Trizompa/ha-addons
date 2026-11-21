@@ -450,6 +450,14 @@ export class FileService {
     if (!(await stat(dir.abs)).isDirectory()) {
       throw new EdithaError('not_a_directory', `Non è una cartella: ${dir.rel}`);
     }
+    // SEC-7: una cartella .git (o una sua parte) contiene la cronologia, con eventuali vecchie
+    // versioni di secrets.yaml. Conta il percorso reale, così un link non la fa passare.
+    if (this.guard.relativeOf(dir.abs).split('/').includes('.git')) {
+      throw new EdithaError(
+        'git_zip',
+        'Le cartelle .git non si scaricano come zip: la cronologia può contenere vecchie versioni dei file, anche di secrets.yaml',
+      );
+    }
     const entries: ZipEntry[] = [];
     let total = 0;
     const walk = async (abs: string, prefix: string): Promise<void> => {

@@ -166,6 +166,18 @@ describe('upload e download (FS-6)', () => {
     const avviso = await app.inject({ method: 'GET', url: '/api/download/excluded?path=packages', remoteAddress: INGRESS });
     assert.deepEqual(avviso.json().excluded, ['packages/secrets_old.yaml']);
     await rm(path.join(sb.configDir, 'packages/componente'), { recursive: true });
+    // Da sola nemmeno: né la .git della radice, né una annidata, né una sua parte, né tramite un link.
+    await mkdir(path.join(sb.configDir, '.git/objects'), { recursive: true });
+    await mkdir(path.join(sb.configDir, 'packages/repo/.git/objects'), { recursive: true });
+    await symlink(path.join(sb.configDir, 'packages/repo/.git'), path.join(sb.configDir, 'packages/link-git'));
+    for (const p of ['.git', '.git/objects', 'packages/repo/.git', 'packages/repo/.git/objects', 'packages/link-git']) {
+      const res = await download(p);
+      assert.equal(res.statusCode, 403, p);
+      assert.equal(res.json().error.code, 'git_zip', p);
+    }
+    await rm(path.join(sb.configDir, 'packages/repo'), { recursive: true });
+    await rm(path.join(sb.configDir, 'packages/link-git'));
+    await rm(path.join(sb.configDir, '.git'), { recursive: true });
     // Da solo, secrets.yaml si scarica (lo chiede chi lo vuole).
     assert.equal((await download('secrets.yaml')).statusCode, 200);
     // Gli altri test di questo file usano la stessa cartella.

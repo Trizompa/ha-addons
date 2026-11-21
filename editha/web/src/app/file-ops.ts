@@ -399,7 +399,9 @@ export class FileOpsController {
         { id: 'new-file', label: t('tree.newFile'), icon: icons.fileNew, disabled: dirRo },
         { id: 'new-folder', label: t('tree.newFolder'), icon: icons.folderNew, disabled: dirRo },
         { id: 'upload', label: t('tree.uploadHere'), icon: icons.upload, disabled: dirRo },
-        { id: 'download', label: t('tree.downloadZip'), icon: icons.zip },
+        // SEC-7: le cartelle .git (e le loro parti) non escono come ZIP: la cronologia può
+        // contenere vecchie versioni di secrets.yaml. Anche il server lo rifiuta.
+        { id: 'download', label: t('tree.downloadZip'), icon: icons.zip, disabled: entry.path.split('/').includes('.git') },
         'separator',
         { id: 'rename', label: t('common.rename'), icon: icons.rename, hint: 'F2', disabled: ro },
         { id: 'move', label: t('move.menu'), icon: icons.move, disabled: ro },

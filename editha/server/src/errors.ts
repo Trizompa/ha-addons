@@ -19,7 +19,8 @@ export type ErrorCode =
   | 'io_error'
   | 'cross_device'
   | 'git_unavailable'
-  | 'git_error';
+  | 'git_error'
+  | 'git_zip';
 
 const STATUS: Record<ErrorCode, number> = {
   invalid_request: 400,
@@ -43,6 +44,7 @@ const STATUS: Record<ErrorCode, number> = {
   cross_device: 409,
   git_unavailable: 503,
   git_error: 500,
+  git_zip: 403,
 };
 
 /** Errore previsto, con codice stabile per il frontend. */
