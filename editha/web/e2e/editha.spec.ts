@@ -15,6 +15,11 @@ const dialogButton = (page: Page, label: string) =>
 const menuItem = (page: Page, label: string) =>
   page.locator('editha-context-menu button', { hasText: label });
 
+// Prima di ricaricare si aspetta che sessione e impostazioni siano davvero salvate, non un tempo fisso.
+const savedSession = async (page: Page) => (await page.request.get('api/session')).json();
+const savedSettings = async (page: Page) => (await page.request.get('api/settings')).json();
+const tabPaths = async (page: Page) => (await savedSession(page)).tabs.map((t: { path: string }) => t.path);
+
 async function openFile(page: Page, p: string) {
   const parts = p.split('/');
   for (let i = 1; i < parts.length; i++) {
@@ -77,7 +82,8 @@ test('ED-19 – un clic apre una tab provvisoria che il file successivo sostitui
   await expect(page.locator('editha-tab-bar .tab')).toHaveCount(3);
 
   // Si ritrova dopo un ricaricamento.
-  await page.waitForTimeout(800);
+  await expect.poll(async () => (await savedSession(page)).provisional).toBe('tabs/a.yaml');
+  await expect.poll(() => tabPaths(page)).toHaveLength(3);
   await page.reload();
   await expect(tab(page, 'tabs/a.yaml')).toHaveClass(/provisional/);
   await expect(tab(page, 'tabs/b.yaml')).not.toHaveClass(/provisional/);
@@ -134,7 +140,7 @@ test('issue #11 – le tab si riordinano trascinandole col mouse, e l\'ordine re
   await expect(activeTab(page)).toHaveAttribute('data-path', 'tabs/b.yaml');
   await expect.poll(order).toEqual(['tabs/b.yaml', 'tabs/c.yaml', 'tabs/a.yaml']);
 
-  await page.waitForTimeout(1500);
+  await expect.poll(() => tabPaths(page)).toEqual(['tabs/b.yaml', 'tabs/c.yaml', 'tabs/a.yaml']);
   await page.reload();
   await expect.poll(order).toEqual(['tabs/b.yaml', 'tabs/c.yaml', 'tabs/a.yaml']);
 });
@@ -271,7 +277,7 @@ test('FEP #6 – il tema scelto resta dopo essere usciti e rientrati', async ({ 
   await themeButton.click(); // chiaro
   await themeButton.click(); // scuro
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await page.waitForTimeout(300);
+  await expect.poll(async () => (await savedSettings(page)).theme).toBe('dark');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('editha-toolbar button[title="Tema: Scuro"]')).toBeVisible();
@@ -281,7 +287,8 @@ test('FEP #13 – rientrando si ritrovano le tab e la tab attiva', async ({ page
   await openFile(page, 'session/uno.yaml');
   await openFile(page, 'session/due.yaml');
   await tab(page, 'session/uno.yaml').click();
-  await page.waitForTimeout(900); // salvataggio della sessione
+  await expect.poll(async () => (await savedSession(page)).active).toBe('session/uno.yaml');
+  await expect.poll(() => tabPaths(page)).toEqual(['session/uno.yaml', 'session/due.yaml']);
   await page.reload();
   await expect(tab(page, 'session/uno.yaml')).toBeVisible();
   await expect(tab(page, 'session/due.yaml')).toBeVisible();
@@ -355,7 +362,7 @@ test('SEC-8 – le cartelle di sistema sono nascoste, si mostrano a richiesta e 
   await expect(row(page, 'configuration.yaml')).toBeVisible();
   await page.locator('editha-file-tree button[data-action="toggle-system"]').click();
   await expect(row(page, '.storage')).toBeVisible();
-  await page.waitForTimeout(300);
+  await expect.poll(async () => (await savedSettings(page)).showSystem).toBe(true);
   await page.reload();
   await expect(row(page, '.storage')).toBeVisible();
   await page.locator('editha-file-tree button[data-action="toggle-system"]').click();
@@ -507,8 +514,7 @@ test('UI – «Aa» cambia la grandezza del testo dell\'editor e la ricorda', as
   await page.locator('editha-toolbar button[data-action="font-size"]').click();
   await menuItem(page, '20 px').click();
   await expect.poll(size).toBe('20px');
-  // Si ricarica solo dopo il salvataggio della sessione, altrimenti la tab non torna.
-  await expect.poll(async () => (await (await page.request.get('api/session')).json()).tabs.map((t: { path: string }) => t.path)).toContain('tabs/a.yaml');
+  await expect.poll(() => tabPaths(page)).toContain('tabs/a.yaml');
   await page.reload();
   await expect(page.locator('.cm-editor').first()).toBeVisible();
   await expect.poll(size).toBe('20px');
@@ -801,7 +807,7 @@ test('Lingua: passa all\'inglese dal menu e la scelta resta dopo il rientro', as
   await expect(page.locator('editha-file-tree header')).toHaveAttribute('aria-label', 'File explorer');
   await expect(page.locator('editha-status-bar')).toContainText('No file open');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await page.waitForTimeout(300);
+  await expect.poll(async () => (await savedSettings(page)).language).toBe('en');
   await page.reload();
   await expect(page.locator('editha-file-tree header')).toHaveAttribute('aria-label', 'File explorer');
   await openFile(page, 'configuration.yaml');
@@ -1092,7 +1098,7 @@ test.describe('Vista divisa (ED-17)', () => {
     expect(await disk('split/destra.yaml')).toBe('lato: destra\nmodificato: a_destra\n');
     expect(await disk('split/fermo.yaml')).toBe('lato: fermo\n');
 
-    await page.waitForTimeout(800);
+    await expect.poll(async () => (await savedSession(page)).side).toBe('split/destra.yaml');
     await page.reload();
     await expect(side(page)).toContainText('lato: destra');
     await expect(editor(page)).toContainText('lato: fermo');
