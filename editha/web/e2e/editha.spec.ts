@@ -4,6 +4,8 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const configDir = path.join(process.env.EDITHA_E2E_ROOT!, 'config');
+// Le chiamate dirette che cambiano qualcosa portano l'intestazione dell'interfaccia.
+const H = { 'x-editha': '1' };
 const disk = (rel: string) => readFile(path.join(configDir, rel), 'utf8');
 
 const row = (page: Page, p: string) => page.locator(`editha-file-tree .row[data-path="${p}"]`);
@@ -43,11 +45,11 @@ async function openSpaceDialog(page: Page) {
 
 test.beforeEach(async ({ page, request }) => {
   // Ogni test parte da sessione e impostazioni pulite.
-  await request.put('api/session', { data: { tabs: [], active: null } });
+  await request.put('api/session', { headers: H, data: { tabs: [], active: null } });
   for (const d of (await (await request.get('api/drafts')).json()).drafts) {
-    await request.delete(`api/draft?path=${encodeURIComponent(d.path)}`);
+    await request.delete(`api/draft?path=${encodeURIComponent(d.path)}`, { headers: H });
   }
-  await request.post('api/settings', { data: { theme: 'auto', sidebarVisible: true, wordWrap: false, showSystem: false, language: 'it', outlineVisible: false, openMode: 'click' } });
+  await request.post('api/settings', { headers: H, data: { theme: 'auto', sidebarVisible: true, wordWrap: false, showSystem: false, language: 'it', outlineVisible: false, openMode: 'click' } });
   await page.goto('./');
   // Su telefono l'albero parte chiuso: basta che sia caricato.
   await expect(row(page, 'configuration.yaml')).toBeAttached();
@@ -815,7 +817,7 @@ test('Lingua: passa all\'inglese dal menu e la scelta resta dopo il rientro', as
   await editor(page).click();
   await page.keyboard.press('Control+f');
   await expect(page.locator('.cm-search input[name=search]')).toHaveAttribute('placeholder', 'Find');
-  await request.post('api/settings', { data: { language: 'it' } });
+  await request.post('api/settings', { headers: H, data: { language: 'it' } });
 });
 
 test('Lingua: il pannello di ricerca dell\'editor è in italiano', async ({ page }) => {
@@ -896,7 +898,7 @@ test.describe('Bozze (ED-14)', () => {
   test.beforeEach(async ({ request }) => {
     const drafts = (await (await request.get('api/drafts')).json()).drafts as { path: string; client?: string }[];
     for (const d of drafts) {
-      await request.delete(`api/draft?path=${encodeURIComponent(d.path)}${d.client ? `&client=${encodeURIComponent(d.client)}` : ''}`);
+      await request.delete(`api/draft?path=${encodeURIComponent(d.path)}${d.client ? `&client=${encodeURIComponent(d.client)}` : ''}`, { headers: H });
     }
   });
 
@@ -1008,8 +1010,8 @@ test.describe('Bozze (ED-14)', () => {
     const p = 'drafts/conteso.yaml';
     const etag = (await (await request.get(`api/file?path=${encodeURIComponent(p)}`)).json()).etag;
     // Bozza lasciata da una finestra che si è chiusa.
-    await request.post('api/drafts/alive', { data: { client: 'chiusa', closing: true } });
-    await request.put('api/draft', { data: { path: p, content: 'stato: salvato\nrecuperata: si\n', etag, client: 'chiusa' } });
+    await request.post('api/drafts/alive', { headers: H, data: { client: 'chiusa', closing: true } });
+    await request.put('api/draft', { headers: H, data: { path: p, content: 'stato: salvato\nrecuperata: si\n', etag, client: 'chiusa' } });
 
     const second = await page.context().newPage();
     await Promise.all([page.goto('./'), second.goto('./')]);
@@ -1346,7 +1348,7 @@ test.describe('telefono', () => {
   });
 
   test('UI-2 – colonna dei numeri compatta e righe spezzate allineate alla loro indentazione', async ({ page, request }) => {
-    await request.post('api/settings', { data: { wordWrap: true } });
+    await request.post('api/settings', { headers: H, data: { wordWrap: true } });
     await page.reload();
     await page.locator('editha-toolbar button[title^="Mostra"]').click();
     await row(page, 'long').click();
@@ -1367,7 +1369,7 @@ test.describe('telefono', () => {
     expect(box.lines).toBeGreaterThan(1);
     // Il seguito della riga non riparte dal margine: resta più a destra dell'inizio della chiave.
     expect(box.last).toBeGreaterThan(box.first);
-    await request.post('api/settings', { data: { wordWrap: false } });
+    await request.post('api/settings', { headers: H, data: { wordWrap: false } });
   });
 
   test('pressione prolungata su un file apre il menu contestuale', async ({ page }) => {

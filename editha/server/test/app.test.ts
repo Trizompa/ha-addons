@@ -27,7 +27,7 @@ describe('API', () => {
   });
 
   const call = (opts: { method: 'GET' | 'PUT' | 'POST' | 'DELETE'; url: string; payload?: object }) =>
-    app.inject({ ...opts, remoteAddress: INGRESS });
+    app.inject({ ...opts, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
 
   describe('Ingress (SEC-1)', () => {
     it('accetta il proxy Ingress, anche in forma IPv6', async () => {
@@ -53,6 +53,19 @@ describe('API', () => {
       assert.equal(cross.json().error.code, 'forbidden_origin');
       const same = await app.inject({ method: 'GET', url: '/api/tree', remoteAddress: INGRESS, headers: { 'sec-fetch-site': 'same-origin' } });
       assert.equal(same.statusCode, 200);
+    });
+
+    it('le richieste che cambiano qualcosa senza l\'intestazione dell\'interfaccia sono rifiutate', async () => {
+      // Anche senza Sec-Fetch-Site (browser vecchi): per esempio un modulo di un altro sito.
+      for (const [method, url] of [['POST', '/api/ha/restart'], ['PUT', '/api/file'], ['DELETE', '/api/file?path=x']] as const) {
+        const res = await app.inject({ method, url, remoteAddress: INGRESS, headers: { 'content-type': 'text/plain' }, payload: 'x' });
+        assert.equal(res.statusCode, 403, `${method} ${url}`);
+        assert.equal(res.json().error.code, 'forbidden_origin');
+      }
+      const wrong = await app.inject({ method: 'POST', url: '/api/ha/restart', remoteAddress: INGRESS, headers: { 'x-editha': '0' } });
+      assert.equal(wrong.statusCode, 403);
+      // Le letture non ne hanno bisogno.
+      assert.equal((await app.inject({ method: 'GET', url: '/api/tree', remoteAddress: INGRESS })).statusCode, 200);
     });
 
     it('normalizza gli indirizzi IPv4 mappati', () => {

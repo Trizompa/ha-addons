@@ -96,9 +96,9 @@ describe('integrazione con Home Assistant', () => {
     ha.checkResult = { result: 'valid', errors: null };
   });
 
-  const call = (method: 'GET' | 'POST', url: string) => app.inject({ method, url, remoteAddress: INGRESS });
+  const call = (method: 'GET' | 'POST', url: string) => app.inject({ method, url, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
   const template = (payload: Record<string, unknown>) =>
-    app.inject({ method: 'POST', url: '/api/ha/template', payload, remoteAddress: INGRESS });
+    app.inject({ method: 'POST', url: '/api/ha/template', payload, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
 
   it('HA-7: rende un template e distingue errori di sintassi e di valutazione', async () => {
     const ok = await template({ template: 'Totale: {{ 1 + 1 }}\n', path: 'automations.yaml' });
@@ -224,7 +224,7 @@ describe('senza Home Assistant', () => {
   it('lo segnala con un errore chiaro', async () => {
     const status = await app.inject({ method: 'GET', url: '/api/ha/status', remoteAddress: INGRESS });
     assert.deepEqual(status.json(), { available: false });
-    const res = await app.inject({ method: 'POST', url: '/api/ha/check', remoteAddress: INGRESS });
+    const res = await app.inject({ method: 'POST', url: '/api/ha/check', remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
     assert.equal(res.statusCode, 503);
     assert.equal(res.json().error.code, 'ha_unavailable');
   });
@@ -246,7 +246,7 @@ describe('snippet personali', () => {
 
   it('salva e rilegge gli snippet', async () => {
     const list = { snippets: [{ id: 'a1', name: 'Luce', body: 'light.turn_on' }] };
-    const put = await app.inject({ method: 'PUT', url: '/api/snippets', payload: list, remoteAddress: INGRESS });
+    const put = await app.inject({ method: 'PUT', url: '/api/snippets', payload: list, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
     assert.equal(put.statusCode, 200);
     const get = await app.inject({ method: 'GET', url: '/api/snippets', remoteAddress: INGRESS });
     assert.deepEqual(get.json(), list);
@@ -257,7 +257,7 @@ describe('snippet personali', () => {
       method: 'PUT',
       url: '/api/snippets',
       payload: { snippets: [{ id: '', name: 'x', body: 'y' }] },
-      remoteAddress: INGRESS,
+      remoteAddress: INGRESS, headers: { 'x-editha': '1' },
     });
     assert.equal(res.statusCode, 400);
   });

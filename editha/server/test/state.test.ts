@@ -25,7 +25,7 @@ describe('impostazioni e sessione', () => {
   });
 
   const call = (method: 'GET' | 'POST' | 'PUT', url: string, payload?: object) =>
-    app.inject({ method, url, remoteAddress: INGRESS, ...(payload ? { payload } : {}) });
+    app.inject({ method, url, remoteAddress: INGRESS, headers: { 'x-editha': '1' }, ...(payload ? { payload } : {}) });
 
   it('parte dai valori predefiniti', async () => {
     assert.deepEqual((await call('GET', '/api/settings')).json(), DEFAULT_SETTINGS);

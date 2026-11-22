@@ -25,9 +25,9 @@ describe('Git locale (GIT-1)', () => {
     await sb.cleanup();
   });
 
-  const call = (method: 'GET' | 'POST', url: string) => app.inject({ method, url, remoteAddress: INGRESS });
+  const call = (method: 'GET' | 'POST', url: string) => app.inject({ method, url, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
   const commit = (payload: Record<string, unknown>) =>
-    app.inject({ method: 'POST', url: '/api/git/commit', payload, remoteAddress: INGRESS });
+    app.inject({ method: 'POST', url: '/api/git/commit', payload, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
   const gitOut = (...args: string[]) => execFileSync('git', ['-C', sb.configDir, ...args], { encoding: 'utf8' }).trim();
 
   it('senza repository: lo dice; dopo l\'inizializzazione è pronto, sul ramo main, con il .gitignore di base', async () => {
@@ -424,7 +424,7 @@ describe('Git locale (GIT-1)', () => {
     });
 
     // Escludi: la riga va nel .gitignore, ancorata e con i caratteri speciali protetti.
-    const ignore = (p: string) => app.inject({ method: 'POST', url: '/api/git/ignore', payload: { path: p }, remoteAddress: INGRESS });
+    const ignore = (p: string) => app.inject({ method: 'POST', url: '/api/git/ignore', payload: { path: p }, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
     assert.equal((await ignore('custom_components/')).statusCode, 200);
     assert.equal((await ignore('pacchetti/[strano] #1.yaml')).statusCode, 200);
     assert.equal((await ignore('custom_components/')).statusCode, 200);
@@ -439,7 +439,7 @@ describe('Git locale (GIT-1)', () => {
       { line: '/pacchetti/\\[strano\\] \\#1.yaml', path: 'pacchetti/[strano] #1.yaml' },
     ]);
     // Includi di nuovo: la riga se ne va e la cartella ricompare.
-    const unignore = (line: string) => app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line }, remoteAddress: INGRESS });
+    const unignore = (line: string) => app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line }, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
     assert.equal((await unignore('/custom_components/')).statusCode, 200);
     assert.equal((await unignore('/custom_components/')).statusCode, 404);
     assert.equal((await unignore('*.db')).statusCode, 400);
@@ -534,8 +534,8 @@ describe('Git locale (GIT-1)', () => {
     await writeFile(path.join(sb.configDir, '.gitignore'), '*.db\r\n');
     await mkdir(path.join(sb.configDir, 'x'));
     await writeFile(path.join(sb.configDir, 'x/a.yaml'), 'a\n');
-    await app.inject({ method: 'POST', url: '/api/git/ignore', payload: { path: 'x/' }, remoteAddress: INGRESS });
-    await app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line: '/x/' }, remoteAddress: INGRESS });
+    await app.inject({ method: 'POST', url: '/api/git/ignore', payload: { path: 'x/' }, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
+    await app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line: '/x/' }, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
     assert.equal(await readFile(path.join(sb.configDir, '.gitignore'), 'utf8'), '*.db\r\n');
   });
 
@@ -545,10 +545,10 @@ describe('Git locale (GIT-1)', () => {
     await writeFile(path.join(sb.configDir, '.gitignore'), `*.db\n\n${old}\n/a/\n`);
     await mkdir(path.join(sb.configDir, 'b'));
     await writeFile(path.join(sb.configDir, 'b/x.yaml'), 'x\n');
-    await app.inject({ method: 'POST', url: '/api/git/ignore', payload: { path: 'b/' }, remoteAddress: INGRESS });
+    await app.inject({ method: 'POST', url: '/api/git/ignore', payload: { path: 'b/' }, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
     assert.equal(await readFile(path.join(sb.configDir, '.gitignore'), 'utf8'), `*.db\n\n${old}\n/a/\n/b/\n`);
-    await app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line: '/a/' }, remoteAddress: INGRESS });
-    await app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line: '/b/' }, remoteAddress: INGRESS });
+    await app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line: '/a/' }, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
+    await app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line: '/b/' }, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
     assert.equal(await readFile(path.join(sb.configDir, '.gitignore'), 'utf8'), '*.db\n');
   });
 
@@ -557,8 +557,8 @@ describe('Git locale (GIT-1)', () => {
     await writeFile(path.join(sb.configDir, '.gitignore'), '*.log\n');
     await writeFile(path.join(sb.configDir, 'a '), 'x');
     await writeFile(path.join(sb.configDir, 'b.log'), 'x');
-    const ignore = (p: string) => app.inject({ method: 'POST', url: '/api/git/ignore', payload: { path: p }, remoteAddress: INGRESS });
-    const unignore = (line: string) => app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line }, remoteAddress: INGRESS });
+    const ignore = (p: string) => app.inject({ method: 'POST', url: '/api/git/ignore', payload: { path: p }, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
+    const unignore = (line: string) => app.inject({ method: 'POST', url: '/api/git/unignore', payload: { line }, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
     await writeFile(path.join(sb.configDir, 'c.yaml'), 'c');
     await ignore('c.yaml');
     await ignore('a ');

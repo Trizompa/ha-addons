@@ -7,7 +7,11 @@ const base = process.argv[2];
 async function call(method, path, body) {
   const res = await fetch(base + path, {
     method,
-    headers: body === undefined ? {} : { 'content-type': 'application/json' },
+    // x-editha: the server accepts changes only with this header (as the web interface sends it).
+    headers: {
+      ...(method === 'GET' ? {} : { 'x-editha': '1' }),
+      ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await res.text();
@@ -62,7 +66,7 @@ console.log('ok  GET /api/download?path=packages');
 
 // Home Assistant through the Supervisor: there is none in CI, so the call fails,
 // but it must fail as "not reachable" (DNS and sockets allowed), not crash the server.
-const ha = await fetch(`${base}/api/ha/check`, { method: 'POST' });
+const ha = await fetch(`${base}/api/ha/check`, { method: 'POST', headers: { 'x-editha': '1' } });
 console.log(`ok  POST /api/ha/check -> ${ha.status} (no Supervisor in CI)`);
 await call('GET', '/api/health');
 

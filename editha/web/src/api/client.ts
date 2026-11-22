@@ -62,7 +62,11 @@ async function send(method: Method, url: string, body: unknown): Promise<{ res: 
   const json = body === undefined || raw ? null : JSON.stringify(body);
   const res = await fetch(url, {
     method,
-    headers: body === undefined ? {} : { 'content-type': raw ? 'application/octet-stream' : 'application/json' },
+    // x-editha: il server accetta le modifiche solo con questa intestazione (protezione da altri siti).
+    headers: {
+      ...(method === 'GET' ? {} : { 'x-editha': '1' }),
+      ...(body === undefined ? {} : { 'content-type': raw ? 'application/octet-stream' : 'application/json' }),
+    },
     body: body === undefined ? null : raw ? body.blob : json,
     cache: 'no-store',
     keepalive: leaving && !raw && (json === null || new TextEncoder().encode(json).length < 60_000),

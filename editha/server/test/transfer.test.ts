@@ -64,7 +64,7 @@ describe('upload e download (FS-6)', () => {
     app.inject({
       method: 'POST',
       url: `/api/upload?dir=${encodeURIComponent(dir)}&name=${encodeURIComponent(name)}&overwrite=${overwrite}`,
-      headers: { 'content-type': 'application/octet-stream' },
+      headers: { 'x-editha': '1', 'content-type': 'application/octet-stream' },
       payload: body,
       remoteAddress: INGRESS,
     });
@@ -80,7 +80,7 @@ describe('upload e download (FS-6)', () => {
       method: 'PUT',
       url: '/api/file',
       payload: { path: 'configuration.yaml', content: null, etag: read.json().etag },
-      remoteAddress: INGRESS,
+      remoteAddress: INGRESS, headers: { 'x-editha': '1' },
     });
     assert.equal(res.statusCode, 400);
     assert.equal(await readFile(path.join(sb.configDir, 'configuration.yaml'), 'utf8'), 'a: 1\n');
@@ -229,7 +229,7 @@ describe('upload e download (FS-6)', () => {
     assert.equal(over.statusCode, 409);
     assert.equal(over.json().error.code, 'no_backup');
     assert.equal(over.json().error.details.limit, 2 * 1024 * 1024);
-    const del = (q: string) => app.inject({ method: 'DELETE', url: `/api/file?path=enorme.bin${q}`, remoteAddress: INGRESS });
+    const del = (q: string) => app.inject({ method: 'DELETE', url: `/api/file?path=enorme.bin${q}`, remoteAddress: INGRESS, headers: { 'x-editha': '1' } });
     assert.equal((await del('')).json().error.code, 'no_backup');
     assert.equal((await del('&noBackup=si')).statusCode, 400);
     const ok = await del('&noBackup=true');

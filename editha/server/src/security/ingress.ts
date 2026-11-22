@@ -1,5 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 
+/** Intestazione che l'interfaccia aggiunge a ogni richiesta che cambia qualcosa. */
+export const CLIENT_HEADER = 'x-editha';
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 /** "::ffff:172.30.32.2" → "172.30.32.2" */
 export function normalizeIp(ip: string | undefined): string {
   if (!ip) return '';
@@ -24,6 +28,15 @@ export function registerIngressGuard(app: FastifyInstance, allowedIps: readonly 
     // browser dell'utente: i browser lo dicono con Sec-Fetch-Site.
     if (request.headers['sec-fetch-site'] === 'cross-site') {
       request.log.warn('richiesta rifiutata: arriva da un altro sito');
+      return reply.code(403).send({
+        error: { code: 'forbidden_origin', message: 'Richiesta da un altro sito rifiutata' },
+      });
+    }
+    // Le richieste che cambiano qualcosa portano un'intestazione che solo l'interfaccia aggiunge:
+    // una pagina di un altro sito non può metterla senza un permesso (CORS) che qui non si dà.
+    // Così la protezione non dipende dal fatto che il browser mandi Sec-Fetch-Site.
+    if (!SAFE_METHODS.has(request.method) && request.headers[CLIENT_HEADER] !== '1') {
+      request.log.warn('richiesta rifiutata: manca l\'intestazione dell\'interfaccia');
       return reply.code(403).send({
         error: { code: 'forbidden_origin', message: 'Richiesta da un altro sito rifiutata' },
       });
