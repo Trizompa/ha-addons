@@ -19,6 +19,8 @@ const ICONS: Record<ToastKind, string> = {
   info: icons.info,
 };
 
+const supportsPopover = typeof HTMLElement !== 'undefined' && 'showPopover' in HTMLElement.prototype;
+
 /** Notifiche non bloccanti (UI-4). */
 export class EdithaToasts extends LitElement {
   static override properties = { toasts: { state: true } };
@@ -44,6 +46,14 @@ export class EdithaToasts extends LitElement {
         gap: 8px;
         pointer-events: none;
         max-width: calc(100vw - 32px);
+        /* Da popover (sopra le finestre aperte) senza l'aspetto predefinito dei popover. */
+        inset: auto 16px 40px auto;
+        margin: 0;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: inherit;
+        overflow: visible;
       }
       .toast {
         display: flex;
@@ -100,14 +110,31 @@ export class EdithaToasts extends LitElement {
     `,
   ];
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    // Popover: i messaggi restano visibili anche sopra una finestra aperta (che altrimenti li
+    // coprirebbe con il suo sfondo). Nei browser senza popover restano come prima.
+    if (supportsPopover) this.setAttribute('popover', 'manual');
+  }
+
   show(message: string, kind: ToastKind = 'info'): void {
     const toast = { id: this.next++, kind, message };
     this.toasts = [...this.toasts.slice(-3), toast];
     setTimeout(() => this.dismiss(toast.id), kind === 'error' ? 7000 : 3500);
+    if (supportsPopover) {
+      try {
+        // Riaperto ogni volta, così sta sopra anche a una finestra aperta dopo di lui.
+        if (this.matches(':popover-open')) this.hidePopover();
+        this.showPopover();
+      } catch {
+        // non ancora nella pagina: si vede comunque come prima
+      }
+    }
   }
 
   private dismiss(id: number): void {
     this.toasts = this.toasts.filter((t) => t.id !== id);
+    if (supportsPopover && this.toasts.length === 0 && this.matches(':popover-open')) this.hidePopover();
   }
 
   override render() {

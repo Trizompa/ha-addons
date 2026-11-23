@@ -189,7 +189,10 @@ export class FileOpsController {
           noBackup = true;
           continue;
         }
-        this.app.toasts.show(t('delete.failed', { name, error: this.app.errorText(err) }), 'error');
+        // Interrotta a metà: la copia c'è (il server lo dice), e si dice dove ritrovarla.
+        const kept = err instanceof ApiError && typeof err.details.backup === 'string';
+        const text = t('delete.failed', { name, error: this.app.errorText(err) });
+        this.app.toasts.show(kept ? `${text}. ${t('delete.copyKept')}` : text, 'error');
         return;
       }
     }

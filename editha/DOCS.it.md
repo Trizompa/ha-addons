@@ -335,10 +335,7 @@ viene conservato). La cronologia funziona sui file di testo fino a 5 MB.
 
 ![Cronologia del file](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/history.png)
 
-**Recuperare un file eliminato**: crea un nuovo file con lo stesso nome nella stessa cartella, poi
-apri **Cronologia…** su di lui: le sue versioni sono ancora lì, compresa quella conservata
-all'eliminazione. Le cartelle non si possono ripristinare così, e degli elementi oltre 50 MB non
-resta copia (EDITHA avvisa prima di eliminarli).
+**Recuperare un file o una cartella eliminati**: apri **Cronologia: spazio e pulizia** (il pulsante a forma di disco nell'intestazione della cronologia). Gli elementi eliminati hanno l'etichetta *eliminato* e il pulsante **Ripristina**, che li rimette al loro posto com'erano al momento dell'eliminazione, dopo una conferma. Se lì esiste già qualcosa con lo stesso nome non viene toccato niente. Degli elementi oltre 50 MB non resta copia (EDITHA avvisa prima di eliminarli).
 
 **Spazio occupato dalla cronologia**: con il pulsante a forma di disco nell'intestazione della
 cronologia (aperta dal pulsante **Cronologia del file** nella barra, che con un secondo clic la

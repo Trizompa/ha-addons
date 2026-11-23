@@ -147,6 +147,21 @@ export class EdithaHistorySpace extends LitElement {
         text-align: right;
         font-variant-numeric: tabular-nums;
       }
+      .restore {
+        margin-left: 8px;
+        padding: 2px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--accent);
+        background: transparent;
+        color: var(--accent);
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        vertical-align: middle;
+      }
+      .restore:hover {
+        background: var(--hover);
+      }
       .tag {
         margin-left: 6px;
         padding: 1px 6px;
@@ -243,6 +258,16 @@ export class EdithaHistorySpace extends LitElement {
     await this.updateComplete;
     if (!this.dialog.open) this.dialog.showModal();
     await this.loadUsage(token);
+  }
+
+  /** BK-1: il ripristino lo gestisce l'app (conferma, messaggi, albero); poi l'elenco si aggiorna. */
+  private askRestore(path: string, kind: 'file' | 'directory', newest: string): void {
+    this.dispatchEvent(new CustomEvent('restore-deleted', { detail: { path, kind, newest }, bubbles: true, composed: true }));
+  }
+
+  /** Dopo un ripristino: numeri ed etichette di nuovo dal server. */
+  async reload(): Promise<void> {
+    if (this.dialog.open) await this.loadUsage();
   }
 
   /** Ricarica i numeri lasciando visibile il contenuto attuale (il focus resta nella finestra). */
@@ -470,7 +495,13 @@ export class EdithaHistorySpace extends LitElement {
               (f) => html`<tr>
                 <td class="path">
                   ${f.path ?? t('space.unknown')}${f.path !== null && !f.exists
-                    ? html`<span class="tag">${t('space.deleted')}</span>`
+                    ? html`<span class="tag">${t('space.deleted')}</span><button
+                          class="restore"
+                          data-action="restore"
+                          @click=${() => this.askRestore(f.path!, f.kind, f.newest)}
+                        >
+                          ${t('space.restore')}
+                        </button>`
                     : nothing}
                 </td>
                 <td class="num">${formatCount(f.versions)}</td>

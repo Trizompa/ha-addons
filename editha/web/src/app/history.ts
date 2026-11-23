@@ -1,7 +1,7 @@
-import { api } from '../api/client.js';
-import { t } from '../i18n/index.js';
+import { api, ApiError } from '../api/client.js';
+import { getLang, t } from '../i18n/index.js';
 import { docText } from '../editor/setup.js';
-import { basename } from '../state/paths.js';
+import { basename, dirname } from '../state/paths.js';
 import type { EdithaApp } from '../components/app.js';
 import { formatVersionDate, type EdithaHistoryPanel } from '../components/history-panel.js';
 import type { EdithaHistorySpace } from '../components/history-space.js';
@@ -14,6 +14,38 @@ export class HistoryController {
   async afterHistoryPruned(): Promise<void> {
     const panel = this.app.renderRoot.querySelector<EdithaHistoryPanel>('editha-history-panel');
     if (panel && this.app.history) await panel.reload(this.app.history.current);
+  }
+
+  /**
+   * BK-1: un file o una cartella eliminati tornano al loro posto, dopo una conferma. Se lì c'è già
+   * qualcosa con lo stesso nome il server non tocca niente e lo si dice.
+   */
+  async restoreDeleted(item: { path: string; kind: 'file' | 'directory'; newest: string }): Promise<void> {
+    const when = new Date(item.newest);
+    const lang = getLang();
+    const ok = await this.app.dialog.confirm({
+      title: item.kind === 'directory' ? t('restore.folderTitle') : t('restore.fileTitle'),
+      message: t(item.kind === 'directory' ? 'restore.folderMessage' : 'restore.fileMessage', {
+        name: item.path,
+        date: new Intl.DateTimeFormat(lang, { dateStyle: 'short' }).format(when),
+        time: new Intl.DateTimeFormat(lang, { hour: '2-digit', minute: '2-digit' }).format(when),
+      }),
+      confirmLabel: t('restore.confirm'),
+    });
+    if (!ok) return;
+    try {
+      await api.restoreDeleted(item.path);
+      this.app.toasts.show(t('restore.done', { name: item.path }), 'info');
+      await this.app.tree.refresh(dirname(item.path));
+    } catch (err) {
+      this.app.toasts.show(
+        err instanceof ApiError && err.code === 'already_exists'
+          ? t('restore.exists', { name: item.path })
+          : t('restore.failed', { name: item.path, error: this.app.errorText(err) }),
+        'error',
+      );
+    }
+    await (this.app.renderRoot.querySelector('editha-history-space') as EdithaHistorySpace).reload();
   }
 
   /** BK-7: spazio occupato dalla cronologia. */

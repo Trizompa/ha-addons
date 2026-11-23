@@ -149,14 +149,14 @@ export function keepClientId(): void {
   }
 }
 
-/** Spazio della cronologia come lo manda il server (`files`: i più pesanti, al massimo 200). */
+/** Spazio della cronologia come lo manda il server (`files`: i 200 più pesanti più tutti gli eliminati). */
 export interface HistoryUsageInfo {
   totalBytes: number;
   versions: number;
   fileCount: number;
   /** Versioni conservate per file. */
   keep: number;
-  files: { path: string | null; bytes: number; versions: number; oldest: string; newest: string; exists: boolean }[];
+  files: { path: string | null; bytes: number; versions: number; oldest: string; newest: string; exists: boolean; kind: 'file' | 'directory' }[];
 }
 
 /** GIT-1: stato del Git locale in /config. */
@@ -234,6 +234,8 @@ export const api = {
   version: (path: string, id: string) =>
     request<{ path: string; id: string; content: string }>('GET', `api/version${q(path)}&id=${encodeURIComponent(id)}`),
   restore: (path: string, id: string) => request<SaveResult>('POST', 'api/restore', { path, id }),
+  /** BK-1: file o cartella eliminati di nuovo al loro posto, dall'ultima copia. */
+  restoreDeleted: (path: string) => request<Entry>('POST', 'api/restore-deleted', { path }),
   copy: (from: string, to: string) => request<Entry>('POST', 'api/copy', { from, to }),
   settings: () => request<Settings>('GET', 'api/settings'),
   updateSettings: (changes: Partial<Settings>) => request<Settings>('POST', 'api/settings', changes),

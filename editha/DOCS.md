@@ -323,10 +323,7 @@ because the current content is kept too). History works on text files up to 5 MB
 
 ![File history](https://raw.githubusercontent.com/Trizompa/ha-addons/main/docs/images/history.png)
 
-**Bring back a deleted file**: create a new file with the same name in the same folder, then open
-**History…** on it: its versions are still there, including the one kept when it was deleted.
-Folders cannot be restored this way, and items larger than 50 MB have no copy (EDITHA warns you
-before deleting them).
+**Bring back a deleted file or folder**: open **History: space and cleanup** (the disk-shaped button in the history header). Deleted items have the *deleted* tag and a **Restore** button, which puts them back where they were, as they were when deleted, after a confirmation. If something with the same name is already there, nothing is touched. Items larger than 50 MB have no copy (EDITHA warns you before deleting them).
 
 **Space taken by the history**: with the disk button in the history header (opened by the **File
 history** toolbar button, which closes it on a second click), EDITHA shows how much disk space the

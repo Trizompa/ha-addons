@@ -1790,3 +1790,36 @@ test('BK-7 – cancella tutta la cronologia solo dopo aver scritto CANCELLA', as
   // I file in /config restano come erano.
   expect(await disk('spazio/pulisci.yaml')).toBe(before);
 });
+
+test('BK-1 – una cartella eliminata si ripristina dallo spazio della cronologia, mai sopra qualcosa che c\'è già', async ({ page, request }) => {
+  await request.post('api/file', { headers: H, data: { path: 'ripristino', type: 'directory' } });
+  await request.post('api/file', { headers: H, data: { path: 'ripristino/dentro.yaml', type: 'file', content: 'torna: si\n' } });
+  await request.delete('api/file?path=ripristino', { headers: H });
+  await page.reload();
+
+  await openSpaceDialog(page);
+  const space = page.locator('editha-history-space dialog[open]');
+  const spaceRow = space.locator('tr', { hasText: 'ripristino' });
+  await expect(spaceRow).toContainText('eliminato');
+  await spaceRow.locator('button[data-action="restore"]').click();
+  const dialog = page.locator('editha-dialog dialog[open]');
+  await expect(dialog).toContainText('Ripristina cartella');
+  await expect(dialog).toContainText('Vuoi ripristinare la cartella ripristino com\'era il');
+  await dialog.locator('button', { hasText: 'Ripristina' }).click();
+  await expect(page.locator('editha-toasts')).toContainText('Ripristinato: ripristino');
+  expect(await disk('ripristino/dentro.yaml')).toBe('torna: si\n');
+  await expect(spaceRow).not.toContainText('eliminato');
+  await expect(spaceRow.locator('button[data-action="restore"]')).toHaveCount(0);
+  await expect(row(page, 'ripristino')).toBeVisible();
+
+  // Di nuovo eliminata; mentre la finestra è aperta compare un file con lo stesso nome: non si tocca niente.
+  await space.locator('button', { hasText: 'Chiudi' }).click();
+  await request.delete('api/file?path=ripristino', { headers: H });
+  await page.locator('editha-history-panel button[title="Spazio occupato dalla cronologia"]').click();
+  await expect(spaceRow).toContainText('eliminato');
+  await request.post('api/file', { headers: H, data: { path: 'ripristino', type: 'file', content: 'altro\n' } });
+  await spaceRow.locator('button[data-action="restore"]').click();
+  await dialog.locator('button', { hasText: 'Ripristina' }).click();
+  await expect(page.locator('editha-toasts')).toContainText('Impossibile ripristinare ripristino: esiste già un file o una cartella con questo nome.');
+  expect(await disk('ripristino')).toBe('altro\n');
+});

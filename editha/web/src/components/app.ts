@@ -1380,7 +1380,10 @@ export class EdithaApp extends LitElement {
       <editha-dialog></editha-dialog>
       <editha-context-menu></editha-context-menu>
       <editha-about-dialog></editha-about-dialog>
-      <editha-history-space @history-pruned=${() => void this.versions.afterHistoryPruned()}></editha-history-space>
+      <editha-history-space
+        @history-pruned=${() => void this.versions.afterHistoryPruned()}
+        @restore-deleted=${(e: CustomEvent<{ path: string; kind: 'file' | 'directory'; newest: string }>) => void this.versions.restoreDeleted(e.detail)}
+      ></editha-history-space>
       <editha-folder-picker></editha-folder-picker>
       <editha-snippet-editor></editha-snippet-editor>
       <editha-toasts></editha-toasts>
