@@ -24,6 +24,8 @@ export interface HistoryFileUsage {
   versions: number;
   oldest: string;
   newest: string;
+  /** Che cos'è l'ultima versione: un file o una cartella (copia fatta eliminandola). */
+  kind: 'file' | 'directory';
 }
 
 export interface HistoryUsage {
@@ -294,6 +296,12 @@ export class BackupStore {
     return stat(path.join(this.keyDir(rel), id));
   }
 
+  /** Copia una versione che è una cartella (copia fatta eliminandola) in `dest`, che non deve esistere. */
+  async copyTreeTo(rel: string, id: string, dest: string): Promise<void> {
+    if (!VERSION_RE.test(id)) throw Object.assign(new Error('versione non valida'), { code: 'ENOENT' });
+    await cp(path.join(this.keyDir(rel), id), dest, { recursive: true, verbatimSymlinks: true, errorOnExist: true, force: false });
+  }
+
   async read(rel: string, id: string): Promise<Buffer> {
     if (!VERSION_RE.test(id)) throw Object.assign(new Error('versione non valida'), { code: 'ENOENT' });
     return readFile(path.join(this.keyDir(rel), id));
@@ -399,7 +407,14 @@ export class BackupStore {
       } catch {
         // indice mancante: il file resta senza nome
       }
+      let kind: 'file' | 'directory' = 'file';
+      try {
+        if ((await stat(path.join(dir, ids[ids.length - 1]!))).isDirectory()) kind = 'directory';
+      } catch {
+        // versione sparita nel frattempo: resta "file"
+      }
       files.push({
+        kind,
         path: rel,
         bytes,
         versions: ids.length,

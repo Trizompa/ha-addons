@@ -230,6 +230,58 @@ describe('FileService', () => {
     });
   });
 
+  describe('ripristino di elementi eliminati (BK-1)', () => {
+    it('una cartella eliminata torna com\'era, con le sottocartelle', async () => {
+      await files.create('packages/sub', 'directory');
+      await files.create('packages/sub/x.yaml', 'file', 'x: 1\n');
+      await files.remove('packages');
+      const usage = await files.historyUsage();
+      const row = usage.files.find((f) => f.path === 'packages')!;
+      assert.equal(row.kind, 'directory');
+      assert.equal(row.exists, false);
+      const entry = await files.restoreDeleted('packages');
+      assert.equal(entry.type, 'directory');
+      assert.equal(await readFile(abs('packages/lights.yaml'), 'utf8'), 'light: []\n');
+      assert.equal(await readFile(abs('packages/sub/x.yaml'), 'utf8'), 'x: 1\n');
+      // Nessun avanzo temporaneo accanto.
+      assert.deepEqual((await readdir(sb.configDir)).filter((n) => n.startsWith('.editha-')), []);
+    });
+
+    it('un file eliminato torna com\'era', async () => {
+      await files.remove('automations.yaml');
+      const row = (await files.historyUsage()).files.find((f) => f.path === 'automations.yaml')!;
+      assert.equal(row.kind, 'file');
+      await files.restoreDeleted('automations.yaml');
+      assert.equal(await readFile(abs('automations.yaml'), 'utf8'), '[]\n');
+    });
+
+    it('se c\'è già qualcosa con lo stesso nome non tocca niente', async () => {
+      await files.remove('packages');
+      await files.create('packages', 'file', 'nuovo\n');
+      await assert.rejects(files.restoreDeleted('packages'), rejectsWith('already_exists'));
+      assert.equal(await readFile(abs('packages'), 'utf8'), 'nuovo\n');
+    });
+
+    it('senza copia: non trovato; nelle cartelle di sistema: sola lettura', async () => {
+      await assert.rejects(files.restoreDeleted('mai_esistito.yaml'), rejectsWith('not_found'));
+      await assert.rejects(files.restoreDeleted('.storage/core.config'), rejectsWith('read_only'));
+    });
+
+    it('gli eliminati compaiono sempre nell\'elenco, anche oltre i 200 più grandi', async () => {
+      // 205 cronologie da 8 KB, più grandi di quella (minima) del file eliminato.
+      const big = new FileService(await PathGuard.create(sb.configDir), backups, 64 * 1024);
+      for (let i = 0; i < 205; i++) {
+        await big.create(`f${i}.yaml`, 'file', 'x'.repeat(8000));
+        const f = await big.read(`f${i}.yaml`);
+        await big.write(`f${i}.yaml`, 'y'.repeat(8000), f.etag);
+      }
+      await big.remove('automations.yaml');
+      const usage = await big.historyUsage();
+      assert.equal(usage.files.length, 201);
+      assert.deepEqual(usage.files.slice(200).map((f) => [f.path, f.exists]), [['automations.yaml', false]]);
+    });
+  });
+
   describe('rename', () => {
     it('rinomina un file e sposta la sua cronologia (FEP #18)', async () => {
       const f = await files.read('automations.yaml');

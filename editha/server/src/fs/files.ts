@@ -1,12 +1,12 @@
 import path from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { constants as fsConstants } from 'node:fs';
 import { copyFile, cp, lstat, mkdir, open, opendir, readdir, readFile, realpath, rename, rm, stat } from 'node:fs/promises';
 import type { Stats } from 'node:fs';
 import { isMap, isScalar, LineCounter, parseDocument } from 'yaml';
 import { EdithaError, fromFsError } from '../errors.js';
 import type { BackupStore, HistoryFileUsage, HistoryUsage, PruneResult, Version } from '../backups/store.js';
-import { isTempName, writeFileAtomic } from './atomic.js';
+import { isTempName, TEMP_PREFIX, writeFileAtomic } from './atomic.js';
 import { KeyedLock } from './lock.js';
 import { createZip, type ZipEntry } from './zip.js';
 import {
@@ -405,7 +405,12 @@ export class FileService {
       try {
         await rm(target.abs, { recursive: st.isDirectory(), force: false });
       } catch (err) {
-        throw fromFsError(err, target.rel);
+        const mapped = fromFsError(err, target.rel);
+        // Interrotta a metà: la copia c'è comunque, e chi chiama lo deve sapere.
+        if (backup && mapped instanceof EdithaError) {
+          throw new EdithaError(mapped.code, mapped.message, { ...mapped.details, backup });
+        }
+        throw mapped;
       }
       return { path: target.rel, backup };
     });
@@ -826,8 +831,8 @@ export class FileService {
    */
   async historyUsage(): Promise<Omit<HistoryUsage, 'files'> & { fileCount: number; keep: number; files: (HistoryFileUsage & { exists: boolean })[] }> {
     const usage = await this.backups.usage();
-    const files = await Promise.all(
-      usage.files.slice(0, 200).map(async (f) => {
+    const all = await Promise.all(
+      usage.files.map(async (f) => {
         let exists = false;
         if (f.path !== null) {
           try {
@@ -840,6 +845,8 @@ export class FileService {
         return { ...f, exists };
       }),
     );
+    // I 200 più grandi, più tutti gli eliminati: sono quelli che si possono ripristinare da qui.
+    const files = all.filter((f, i) => i < 200 || (f.path !== null && !f.exists));
     return { ...usage, fileCount: usage.files.length, keep: this.backups.keep, files };
   }
 
@@ -908,6 +915,39 @@ export class FileService {
       }
       const after = await stat(target.abs);
       return { path: target.rel, etag: etagOf(data), size: data.length, mtime: after.mtime.toISOString() };
+    });
+  }
+
+  /**
+   * BK-1: rimette al suo posto un file o una cartella eliminati, com'erano nell'ultima copia.
+   * Se lì c'è già qualcosa con lo stesso nome non si tocca niente.
+   */
+  async restoreDeleted(input: string): Promise<Entry> {
+    const target = await this.guard.resolveEntry(input);
+    this.guard.assertWritable(target);
+    const key = this.guard.relativeOf(target.abs);
+    return this.locked([target.abs], async () => {
+      if (await this.exists(target.abs)) {
+        throw new EdithaError('already_exists', `Esiste già: ${target.rel}`, { path: target.rel });
+      }
+      const newest = (await this.backups.list(key))[0];
+      if (!newest) throw new EdithaError('not_found', `Nessuna copia di ${target.rel}`, { path: target.rel });
+      if (newest.kind === 'directory') {
+        // Copiata accanto con un nome temporaneo e poi rinominata: niente cartelle a metà.
+        const tmp = path.join(path.dirname(target.abs), `${TEMP_PREFIX}${randomBytes(6).toString('hex')}.tmp`);
+        try {
+          await this.backups.copyTreeTo(key, newest.id, tmp);
+          await rename(tmp, target.abs);
+        } catch (err) {
+          await rm(tmp, { recursive: true, force: true });
+          throw fromFsError(err, target.rel);
+        }
+      } else {
+        const version = await this.backups.statVersion(key, newest.id);
+        const data = await this.backups.read(key, newest.id);
+        await writeFileAtomic(target.abs, data, { mode: version.mode & 0o777, expect: null });
+      }
+      return this.entryOf(target);
     });
   }
 

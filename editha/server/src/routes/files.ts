@@ -249,6 +249,22 @@ export function registerFileRoutes(app: FastifyInstance, files: FileService): vo
     async (req) => files.versionContent(req.query.path, req.query.id),
   );
 
+  // BK-1: un file o una cartella eliminati tornano al loro posto (mai sopra qualcosa che c'è già).
+  app.post<{ Body: { path: string } }>(
+    '/api/restore-deleted',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['path'],
+          properties: { path: { type: 'string', minLength: 1 } },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (req) => files.restoreDeleted(req.body.path),
+  );
+
   app.post<{ Body: { path: string; id: string } }>(
     '/api/restore',
     {
