@@ -2,6 +2,16 @@
 
 Italian version: [CHANGELOG.it.md](CHANGELOG.it.md).
 
+## 1.0.0
+
+**Out of testing**: EDITHA is no longer marked as experimental. Thanks to everyone who tried it and sent feedback.
+
+- **Bring back deleted files and folders**: in **History: space and cleanup** (the disk button in the history header), deleted items have a **Restore** button that puts them back where they were, after a confirmation. It never overwrites something with the same name. Folders can be restored too, for the first time.
+- **Messages above open windows**: notifications can now be read even when a window, like the history space, is open.
+- **ZIP downloads without `.git` folders**: a folder's ZIP leaves out the `.git` folders of nested repositories, and `.git` folders can't be downloaded as a ZIP: their history may contain old versions of `secrets.yaml`.
+- **More safety under the hood**: changes are accepted only from EDITHA's own interface, Git stops if it can't check the repository's filter settings, and a very large search and replace stops before saving anything.
+- Updated libraries.
+
 ## 0.48.0
 
 - **Reorder your tabs** ([#11](https://github.com/Trizompa/ha-addons/issues/11)): with a mouse, drag a tab where you want it. On a phone, long press a tab and use **Move left** / **Move right**. The order is kept.

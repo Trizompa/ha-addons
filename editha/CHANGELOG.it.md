@@ -2,6 +2,16 @@
 
 Versione inglese: [CHANGELOG.md](CHANGELOG.md). Home Assistant mostra quella inglese nella finestra di aggiornamento.
 
+## 1.0.0
+
+**Fuori dalla fase di test**: EDITHA non è più segnata come sperimentale. Grazie a tutti quelli che l'hanno provata e hanno mandato un parere.
+
+- **Recupera file e cartelle eliminati**: in **Cronologia: spazio e pulizia** (il pulsante a forma di disco nell'intestazione della cronologia), gli elementi eliminati hanno il pulsante **Ripristina**, che li rimette al loro posto dopo una conferma. Non sovrascrive mai qualcosa con lo stesso nome. Per la prima volta si possono ripristinare anche le cartelle.
+- **Messaggi sopra le finestre aperte**: le notifiche ora si leggono anche quando è aperta una finestra, come quella dello spazio della cronologia.
+- **ZIP senza cartelle `.git`**: lo zip di una cartella lascia fuori le cartelle `.git` dei repository annidati, e le cartelle `.git` non si scaricano come zip: la loro cronologia può contenere vecchie versioni di `secrets.yaml`.
+- **Più sicurezza dietro le quinte**: le modifiche vengono accettate solo dall'interfaccia di EDITHA, Git si ferma se non riesce a controllare le impostazioni dei filtri del repository, e una sostituzione molto grande si ferma prima di salvare qualunque cosa.
+- Librerie aggiornate.
+
 ## 0.48.0
 
 - **Riordina le tab** ([#11](https://github.com/Trizompa/ha-addons/issues/11)): col mouse trascini una tab dove vuoi. Sul telefono tieni premuta la tab e usa **Sposta a sinistra** / **Sposta a destra**. L'ordine resta memorizzato.
