@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
-import { access, chmod, mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
+import { access, appendFile, chmod, mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
 import { isSecretsFile } from '../src/fs/search.js';
 import { DEFAULT_GITIGNORE } from '../src/git/git.js';
 import type { FastifyInstance } from 'fastify';
@@ -233,6 +233,23 @@ describe('Git locale (GIT-1)', () => {
     assert.equal(gitOut('ls-files'), '.gitattributes\nb.yaml');
     await writeFile(path.join(sb.configDir, 'a.yaml'), 'a: 2\n');
     assert.equal((await call('GET', '/api/git/status')).statusCode, 200);
+    await assert.rejects(access(marker));
+  });
+
+  it('se i filtri non si riescono a leggere da .git/config, stato e commit si fermano', async () => {
+    await call('POST', '/api/git/init');
+    const marker = path.join(sb.base, 'eseguito-2');
+    const script = path.join(sb.base, 'filtro2.sh');
+    await writeFile(script, `#!/bin/sh\ntouch ${marker}\ncat\n`);
+    await chmod(script, 0o755);
+    gitOut('config', 'filter.y.clean', script);
+    await writeFile(path.join(sb.configDir, '.gitattributes'), '* filter=y\n');
+    // Una riga non valida: git config non riesce a elencare i filtri (non è "nessun filtro").
+    await appendFile(path.join(sb.configDir, '.git/config'), '[rotto\n');
+    for (const res of [await call('GET', '/api/git/status'), await commit({ message: 'x', all: true })]) {
+      assert.equal(res.statusCode, 500);
+      assert.equal(res.json().error.message, 'Configurazione dei filtri di git non sicura in .git/config');
+    }
     await assert.rejects(access(marker));
   });
 

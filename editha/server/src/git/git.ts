@@ -196,7 +196,13 @@ export class GitService {
    * scritti in .git/config. Non si possono spegnere tutti insieme: si azzerano uno per uno.
    */
   private async runOnFiles(args: string[], input?: string): Promise<string> {
-    const names = await this.run(['config', '--name-only', '--get-regexp', '^filter\\.']).catch(() => '');
+    // Uscita 1 = nessun filtro. Qualunque altro errore (config illeggibile, troppo grande, troppo
+    // lenta): i filtri non si possono spegnere, quindi non si va avanti.
+    const names = await this.run(['config', '--name-only', '--get-regexp', '^filter\\.']).catch((err: unknown) => {
+      if (err instanceof EdithaError && err.code === 'git_error' && err.details?.exit === 1) return '';
+      if (err instanceof EdithaError && err.code === 'git_unavailable') throw err;
+      throw new EdithaError('git_error', 'Configurazione dei filtri di git non sicura in .git/config');
+    });
     const overrides: string[] = [];
     for (const key of new Set(names.split('\n').filter(Boolean))) {
       const name = /^filter\.(.*)\.[^.]+$/s.exec(key)?.[1];
@@ -255,7 +261,9 @@ export class GitService {
             );
           }
           const message = (stderr || err.message).trim().split('\n').slice(-3).join('\n').slice(0, 500);
-          reject(new EdithaError('git_error', message || 'git ha risposto con un errore', { args: args[0] }));
+          // Codice di uscita di git (per chi deve distinguere, es. "nessun risultato" da un errore vero).
+          const exit = typeof (err as { code?: unknown }).code === 'number' ? (err as { code: number }).code : undefined;
+          reject(new EdithaError('git_error', message || 'git ha risposto con un errore', { args: args[0], exit }));
         },
       );
       // Elenchi di percorsi da stdin: niente limiti di lunghezza della riga di comando.
