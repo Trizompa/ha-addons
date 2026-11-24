@@ -1,9 +1,8 @@
 name: EDITHA
-version: "0.48.0"
+version: "1.0.0"
 slug: editha
 description: "Smart file editor for Home Assistant"
 url: https://github.com/Trizompa/ha-addons/tree/main/editha
-stage: experimental
 arch:
   - aarch64
   - amd64

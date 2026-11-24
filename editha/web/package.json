@@ -1,6 +1,6 @@
 {
   "name": "editha-web",
-  "version": "0.48.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Interfaccia di Editha: albero dei file, tab ed editor CodeMirror 6",
   "license": "MIT",
